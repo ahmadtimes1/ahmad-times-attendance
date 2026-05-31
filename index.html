@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ahmad Times Attendance & Wages</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">AT</div>
+          <div>
+            <h1>Ahmad Times</h1>
+            <p>Building Maintenance</p>
+          </div>
+        </div>
+        <nav class="nav" aria-label="Main navigation">
+          <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="workers">Workers</button>
+          <button class="nav-item" data-view="attendance">Attendance</button>
+          <button class="nav-item" data-view="reports">Reports</button>
+          <button class="nav-item" data-view="backup">Backup</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Automatic attendance and daily wage system</p>
+            <h2 id="pageTitle">Dashboard</h2>
+          </div>
+          <div class="top-actions">
+            <span class="cloud-chip" id="cloudStatus">Local mode</span>
+            <button id="authButton">Login</button>
+            <label class="date-chip">
+              <span>Today</span>
+              <input id="todayInput" type="date">
+            </label>
+            <button class="primary" id="quickAddWorker">+ Worker</button>
+          </div>
+        </header>
+
+        <section id="dashboard" class="view active">
+          <div class="stat-grid">
+            <article class="stat-card">
+              <span>Total workers</span>
+              <strong id="statTotalWorkers">0</strong>
+            </article>
+            <article class="stat-card green">
+              <span>Active workers</span>
+              <strong id="statActiveWorkers">0</strong>
+            </article>
+            <article class="stat-card muted">
+              <span>Inactive workers</span>
+              <strong id="statInactiveWorkers">0</strong>
+            </article>
+            <article class="stat-card amber">
+              <span>Present today</span>
+              <strong id="statPresentToday">0</strong>
+            </article>
+            <article class="stat-card blue">
+              <span>This month wages</span>
+              <strong id="statMonthWages">AED 0</strong>
+            </article>
+            <article class="stat-card">
+              <span>Attendance days</span>
+              <strong id="statAttendanceDays">0</strong>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-head">
+                <h3>Monthly Wage Summary</h3>
+                <input id="dashboardMonth" type="month">
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Worker</th>
+                      <th>Days</th>
+                      <th>Daily wage</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashboardSummary"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h3>Daily Attendance</h3>
+                <span id="dashboardDateLabel" class="pill">Today</span>
+              </div>
+              <div id="todayList" class="worker-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="workers" class="view">
+          <div class="toolbar">
+            <div class="searchbox">
+              <span>Search</span>
+              <input id="workerSearch" type="search" placeholder="Name, role, phone, Emirates ID">
+            </div>
+            <button class="primary" id="addWorkerBtn">Add worker</button>
+          </div>
+          <div id="workersList" class="worker-cards"></div>
+        </section>
+
+        <section id="attendance" class="view">
+          <div class="mode-tabs" role="tablist">
+            <button class="mode-tab active" data-mode="day">One day</button>
+            <button class="mode-tab" data-mode="month">Full month</button>
+          </div>
+
+          <div id="dayAttendancePanel" class="panel">
+            <div class="panel-head">
+              <h3>Mark One Day</h3>
+              <input id="attendanceDate" type="date">
+            </div>
+            <div id="dayAttendanceList" class="attendance-list"></div>
+          </div>
+
+          <div id="monthAttendancePanel" class="panel hidden">
+            <div class="panel-head">
+              <h3>Mark Full Month</h3>
+              <input id="attendanceMonth" type="month">
+            </div>
+            <div class="bulk-tools">
+              <button id="markAllPresent">Mark visible days present</button>
+              <button id="markAllOff">Mark visible days off</button>
+              <button id="clearMonth">Clear visible month</button>
+            </div>
+            <div id="monthAttendanceGrid" class="month-grid-wrap"></div>
+          </div>
+        </section>
+
+        <section id="reports" class="view">
+          <div class="report-controls">
+            <label>
+              Report type
+              <select id="reportType">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly" selected>Monthly</option>
+              </select>
+            </label>
+            <label>
+              Date
+              <input id="reportDate" type="date">
+            </label>
+            <label>
+              Month
+              <input id="reportMonth" type="month">
+            </label>
+            <label>
+              Worker
+              <select id="reportWorker"></select>
+            </label>
+            <button id="printReport">Print</button>
+            <button id="exportReport">Export CSV</button>
+          </div>
+          <section class="panel report-panel" id="reportOutput"></section>
+        </section>
+
+        <section id="backup" class="view">
+          <div class="content-grid">
+            <section class="panel">
+              <h3>Data Backup</h3>
+              <p class="help-text">Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.</p>
+              <div class="button-row">
+                <button class="primary" id="exportBackup">Export backup</button>
+                <label class="file-button">
+                  Import backup
+                  <input id="importBackup" type="file" accept="application/json">
+                </label>
+              </div>
+            </section>
+            <section class="panel">
+              <h3>Storage</h3>
+              <div class="storage-list">
+                <div><span>Workers</span><strong id="storageWorkers">0</strong></div>
+                <div><span>Attendance records</span><strong id="storageAttendance">0</strong></div>
+                <div><span>Last saved</span><strong id="storageSaved">Never</strong></div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="workerDialog">
+      <form method="dialog" id="workerForm" class="worker-form">
+        <div class="dialog-head">
+          <h3 id="workerDialogTitle">Add worker</h3>
+          <button type="button" class="icon-button" id="closeWorkerDialog" aria-label="Close">x</button>
+        </div>
+        <input type="hidden" id="workerId">
+        <div class="form-grid">
+          <label>Full name<input id="workerName" required placeholder="Worker name"></label>
+          <label>Role / trade<input id="workerRole" placeholder="Electrician, plumber, helper"></label>
+          <label>Phone<input id="workerPhone" placeholder="+971..."></label>
+          <label>Emirates ID<input id="workerEmiratesId" placeholder="Optional"></label>
+          <label>Daily wage (AED)<input id="workerDailyWage" type="number" min="0" step="0.01" required></label>
+          <label>Joining date<input id="workerJoinDate" type="date"></label>
+          <label>Status
+            <select id="workerStatus">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+          <label class="full">Notes<textarea id="workerNotes" rows="3" placeholder="Optional notes"></textarea></label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="deleteWorkerBtn" class="danger ghost">Remove worker</button>
+          <div>
+            <button type="button" id="cancelWorker">Cancel</button>
+            <button class="primary" id="saveWorker">Save worker</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="authDialog">
+      <form method="dialog" id="authForm" class="worker-form">
+        <div class="dialog-head">
+          <h3>Manager Login</h3>
+          <button type="button" class="icon-button" id="closeAuthDialog" aria-label="Close">x</button>
+        </div>
+        <div class="form-grid">
+          <label class="full">Email<input id="authEmail" type="email" autocomplete="email" required></label>
+          <label class="full">Password<input id="authPassword" type="password" autocomplete="current-password" required></label>
+        </div>
+        <p class="help-text" id="authHelp">Use the manager email created in Supabase.</p>
+        <div class="dialog-actions">
+          <span></span>
+          <div>
+            <button type="button" id="cancelAuth">Cancel</button>
+            <button class="primary" id="loginButton">Login</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
