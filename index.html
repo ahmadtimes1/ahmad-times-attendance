@@ -35,37 +35,44 @@
             <span class="cloud-chip" id="cloudStatus">Local mode</span>
             <button id="authButton">Login</button>
             <label class="date-chip">
-              <span>Today</span>
+              <span data-i18n="language">Language</span>
+              <select id="languageSelect">
+                <option value="en">English</option>
+                <option value="ps">پښتو</option>
+              </select>
+            </label>
+            <label class="date-chip">
+              <span data-i18n="today">Today</span>
               <input id="todayInput" type="date">
             </label>
-            <button class="primary" id="quickAddWorker">+ Worker</button>
+            <button class="primary" id="quickAddWorker" data-i18n="addWorkerShort">+ Worker</button>
           </div>
         </header>
 
         <section id="dashboard" class="view active">
           <div class="stat-grid">
             <article class="stat-card">
-              <span>Total workers</span>
+              <span data-i18n="totalWorkers">Total workers</span>
               <strong id="statTotalWorkers">0</strong>
             </article>
             <article class="stat-card green">
-              <span>Active workers</span>
+              <span data-i18n="activeWorkers">Active workers</span>
               <strong id="statActiveWorkers">0</strong>
             </article>
             <article class="stat-card muted">
-              <span>Inactive workers</span>
+              <span data-i18n="inactiveWorkers">Inactive workers</span>
               <strong id="statInactiveWorkers">0</strong>
             </article>
             <article class="stat-card amber">
-              <span>Present today</span>
+              <span data-i18n="presentToday">Present today</span>
               <strong id="statPresentToday">0</strong>
             </article>
             <article class="stat-card blue">
-              <span>This month wages</span>
+              <span data-i18n="monthWages">This month wages</span>
               <strong id="statMonthWages">AED 0</strong>
             </article>
             <article class="stat-card">
-              <span>Monthly overtime</span>
+              <span data-i18n="monthlyOvertime">Monthly overtime</span>
               <strong id="statAttendanceDays">0</strong>
             </article>
           </div>
@@ -73,19 +80,19 @@
           <div class="content-grid">
             <section class="panel">
               <div class="panel-head">
-                <h3>Monthly Wage Summary</h3>
+                <h3 data-i18n="monthlyWageSummary">Monthly Wage Summary</h3>
                 <input id="dashboardMonth" type="month">
               </div>
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>Worker</th>
-                      <th>Days</th>
-                      <th>Hours</th>
-                      <th>Overtime</th>
-                      <th>Daily wage</th>
-                      <th>Total</th>
+                      <th data-i18n="worker">Worker</th>
+                      <th data-i18n="days">Days</th>
+                      <th data-i18n="hours">Hours</th>
+                      <th data-i18n="overtime">Overtime</th>
+                      <th data-i18n="dailyWage">Daily wage</th>
+                      <th data-i18n="total">Total</th>
                     </tr>
                   </thead>
                   <tbody id="dashboardSummary"></tbody>
@@ -95,7 +102,7 @@
 
             <section class="panel">
               <div class="panel-head">
-                <h3>Daily Attendance</h3>
+                <h3 data-i18n="dailyAttendance">Daily Attendance</h3>
                 <span id="dashboardDateLabel" class="pill">Today</span>
               </div>
               <div id="todayList" class="worker-list"></div>
@@ -109,20 +116,20 @@
               <span>Search</span>
               <input id="workerSearch" type="search" placeholder="Name, role, phone, Emirates ID">
             </div>
-            <button class="primary" id="addWorkerBtn">Add worker</button>
+            <button class="primary" id="addWorkerBtn" data-i18n="addWorker">Add worker</button>
           </div>
           <div id="workersList" class="worker-cards"></div>
         </section>
 
         <section id="attendance" class="view">
           <div class="mode-tabs" role="tablist">
-            <button class="mode-tab active" data-mode="day">One day</button>
-            <button class="mode-tab" data-mode="month">Full month</button>
+            <button class="mode-tab active" data-mode="day" data-i18n="oneDay">One day</button>
+            <button class="mode-tab" data-mode="month" data-i18n="fullMonth">Full month</button>
           </div>
 
           <div id="dayAttendancePanel" class="panel">
             <div class="panel-head">
-              <h3>Mark One Day</h3>
+              <h3 data-i18n="markOneDay">Mark One Day</h3>
               <input id="attendanceDate" type="date">
             </div>
             <div id="dayAttendanceList" class="attendance-list"></div>
@@ -130,7 +137,7 @@
 
           <div id="monthAttendancePanel" class="panel hidden">
             <div class="panel-head">
-              <h3>Mark Full Month</h3>
+              <h3 data-i18n="markFullMonth">Mark Full Month</h3>
               <input id="attendanceMonth" type="month">
             </div>
             <div class="bulk-tools">

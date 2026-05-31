@@ -1,4 +1,95 @@
 const STORAGE_KEY = "ahmad-times-attendance-v1";
+const LANG_KEY = "ahmad-times-language";
+const STANDARD_HOURS = 8;
+
+const translations = {
+  en: {
+    language: "Language",
+    today: "Today",
+    addWorkerShort: "+ Worker",
+    totalWorkers: "Total workers",
+    activeWorkers: "Active workers",
+    inactiveWorkers: "Inactive workers",
+    presentToday: "Present today",
+    monthWages: "This month wages",
+    monthlyOvertime: "Monthly overtime",
+    monthlyWageSummary: "Monthly Wage Summary",
+    worker: "Worker",
+    days: "Days",
+    hours: "Hours",
+    overtime: "Overtime",
+    dailyWage: "Daily wage",
+    total: "Total",
+    dailyAttendance: "Daily Attendance",
+    addWorker: "Add worker",
+    oneDay: "One day",
+    fullMonth: "Full month",
+    markOneDay: "Mark One Day",
+    markFullMonth: "Mark Full Month",
+    present: "Present",
+    absent: "Absent",
+    off: "Off",
+    notMarked: "Not marked",
+    in: "In",
+    out: "Out",
+    startNow: "Start now",
+    outNow: "Out now",
+    roleWorker: "Worker",
+    noWorkers: "No workers added yet.",
+    noActiveWorkers: "No active workers. Add or reactivate a worker first.",
+    noWageRecords: "No wage records for this month.",
+    cloudReady: "Cloud ready",
+    localMode: "Local mode",
+    setupLogin: "Setup login",
+    login: "Login",
+    logout: "Logout",
+    noAccess: "No access",
+    online: "online",
+  },
+  ps: {
+    language: "ژبه",
+    today: "نن",
+    addWorkerShort: "+ کارکوونکی",
+    totalWorkers: "ټول کارکوونکي",
+    activeWorkers: "فعال کارکوونکي",
+    inactiveWorkers: "غیر فعال کارکوونکي",
+    presentToday: "نن حاضر",
+    monthWages: "د دې میاشتې مزدوري",
+    monthlyOvertime: "د میاشتې اضافي وخت",
+    monthlyWageSummary: "د میاشتې مزدورۍ لنډیز",
+    worker: "کارکوونکی",
+    days: "ورځې",
+    hours: "ساعتونه",
+    overtime: "اضافي وخت",
+    dailyWage: "ورځنۍ مزدوري",
+    total: "ټول",
+    dailyAttendance: "ورځنی حاضري",
+    addWorker: "کارکوونکی اضافه کړئ",
+    oneDay: "یوه ورځ",
+    fullMonth: "ټوله میاشت",
+    markOneDay: "یوه ورځ ثبت کړئ",
+    markFullMonth: "ټوله میاشت ثبت کړئ",
+    present: "حاضر",
+    absent: "غیر حاضر",
+    off: "رخصت",
+    notMarked: "نه دی ثبت",
+    in: "داخل",
+    out: "وتل",
+    startNow: "اوس داخل",
+    outNow: "اوس وتل",
+    roleWorker: "کارکوونکی",
+    noWorkers: "تر اوسه کارکوونکی نشته.",
+    noActiveWorkers: "فعال کارکوونکی نشته. کارکوونکی اضافه يا فعال کړئ.",
+    noWageRecords: "د دې میاشتې لپاره د مزدورۍ ریکارډ نشته.",
+    cloudReady: "کلاوډ چمتو دی",
+    localMode: "محلي حالت",
+    setupLogin: "ننوتل تنظیم کړئ",
+    login: "ننوتل",
+    logout: "وتل",
+    noAccess: "اجازه نشته",
+    online: "آنلاین",
+  },
+};
 
 const app = {
   workers: [],
@@ -7,6 +98,7 @@ const app = {
   storageMode: "local",
   user: null,
   profile: null,
+  language: localStorage.getItem(LANG_KEY) || "en",
 };
 
 let supabaseClient = null;
@@ -18,6 +110,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
 const money = (value) => `AED ${Number(value || 0).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+const t = (key) => translations[app.language]?.[key] || translations.en[key] || key;
 
 function cloudConfigured() {
   const config = window.AHMAD_TIMES_SUPABASE || {};
@@ -146,6 +239,7 @@ function toast(message) {
 function setDefaults() {
   const today = todayISO();
   const month = monthISO();
+  $("#languageSelect").value = app.language;
   $("#todayInput").value = today;
   $("#attendanceDate").value = today;
   $("#reportDate").value = today;
@@ -181,10 +275,11 @@ function setAttendance(date, workerId, status) {
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   if (status) {
+    const now = currentTime();
     app.attendance[date][workerId] = {
       ...current,
       status,
-      inTime: status === "present" ? current.inTime : "",
+      inTime: status === "present" ? (current.inTime || now) : "",
       outTime: status === "present" ? current.outTime : "",
     };
   }
@@ -206,8 +301,12 @@ function setAttendanceTime(date, workerId, field, value) {
 }
 
 function setNowTime(date, workerId, field) {
+  setAttendanceTime(date, workerId, field, currentTime());
+}
+
+function currentTime() {
   const now = new Date();
-  setAttendanceTime(date, workerId, field, `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
 function calculateHours(record) {
@@ -221,7 +320,7 @@ function calculateHours(record) {
   const total = Math.max(0, (end - start) / 60);
   return {
     total,
-    overtime: Math.max(0, total - 8),
+    overtime: Math.max(0, total - STANDARD_HOURS),
   };
 }
 
@@ -292,6 +391,7 @@ function monthSummary(month, workerId = "all") {
 }
 
 function renderAll() {
+  applyLanguage();
   renderAuthStatus();
   renderDashboard();
   renderWorkers();
@@ -301,6 +401,16 @@ function renderAll() {
   renderStorage();
 }
 
+function applyLanguage() {
+  document.documentElement.lang = app.language;
+  document.documentElement.dir = app.language === "ps" ? "rtl" : "ltr";
+  $$("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  const languageSelect = $("#languageSelect");
+  if (languageSelect) languageSelect.value = app.language;
+}
+
 function renderAuthStatus() {
   const status = $("#cloudStatus");
   const authButton = $("#authButton");
@@ -308,29 +418,29 @@ function renderAuthStatus() {
 
   status.classList.remove("online", "warning");
   if (!supabaseClient) {
-    status.textContent = "Local mode";
+    status.textContent = t("localMode");
     status.classList.add("warning");
-    authButton.textContent = "Setup login";
+    authButton.textContent = t("setupLogin");
     return;
   }
 
   if (!app.user) {
-    status.textContent = "Cloud ready";
+    status.textContent = t("cloudReady");
     status.classList.add("warning");
-    authButton.textContent = "Login";
+    authButton.textContent = t("login");
     return;
   }
 
   if (!app.profile?.active) {
-    status.textContent = "No access";
+    status.textContent = t("noAccess");
     status.classList.add("warning");
-    authButton.textContent = "Logout";
+    authButton.textContent = t("logout");
     return;
   }
 
-  status.textContent = `${app.profile.role} online`;
+  status.textContent = `${app.profile.role} ${t("online")}`;
   status.classList.add("online");
-  authButton.textContent = "Logout";
+  authButton.textContent = t("logout");
 }
 
 function renderDashboard() {
@@ -408,7 +518,7 @@ function renderWorkers() {
 
 function renderDayAttendance() {
   const date = $("#attendanceDate").value || todayISO();
-  $("#dayAttendanceList").innerHTML = activeWorkers().map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState("No active workers. Add or reactivate a worker first.");
+  $("#dayAttendanceList").innerHTML = activeWorkers().map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"));
 }
 
 function attendanceRowWithTime(worker, date) {
@@ -418,8 +528,8 @@ function attendanceRowWithTime(worker, date) {
     <div class="attendance-row">
       <div>
         <strong>${escapeHTML(worker.name)}</strong>
-        <p>${escapeHTML(worker.role || "Worker")} · ${money(worker.dailyWage)}</p>
-        <p class="time-summary">In: ${record.inTime || "-"} · Out: ${record.outTime || "-"} · Hours: ${formatHours(hours.total)} · OT: ${formatHours(hours.overtime)}</p>
+        <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(worker.dailyWage)}</p>
+        <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
       </div>
       <div class="attendance-control">
         <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
@@ -428,10 +538,10 @@ function attendanceRowWithTime(worker, date) {
           `).join("")}
         </div>
         <div class="time-grid" data-worker="${worker.id}" data-date="${date}">
-          <label>In<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
-          <label>Out<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
-          <button data-now-field="inTime">Start now</button>
-          <button data-now-field="outTime">Out now</button>
+          <label>${t("in")}<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
+          <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
+          <button data-now-field="inTime">${t("startNow")}</button>
+          <button data-now-field="outTime">${t("outNow")}</button>
         </div>
       </div>
     </div>
@@ -719,10 +829,10 @@ function escapeHTML(value) {
 
 function statusLabel(status) {
   return {
-    present: "Present",
-    absent: "Absent",
-    off: "Off",
-    "not marked": "Not marked",
+    present: t("present"),
+    absent: t("absent"),
+    off: t("off"),
+    "not marked": t("notMarked"),
   }[status] || status;
 }
 
@@ -779,6 +889,11 @@ function bindEvents() {
   });
 
   $("#quickAddWorker").addEventListener("click", () => openWorkerDialog());
+  $("#languageSelect").addEventListener("change", (event) => {
+    app.language = event.target.value;
+    localStorage.setItem(LANG_KEY, app.language);
+    renderAll();
+  });
   $("#authButton").addEventListener("click", async () => {
     if (supabaseClient && app.user) {
       await logout();
@@ -866,6 +981,52 @@ function bulkSetMonth(status) {
     });
   });
   saveData();
+}
+
+function renderDashboard() {
+  const date = $("#todayInput").value || todayISO();
+  const month = $("#dashboardMonth").value || monthISO();
+  const summary = monthSummary(month);
+  const todayRecords = app.attendance[date] || {};
+  const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
+  const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
+
+  $("#statTotalWorkers").textContent = app.workers.length;
+  $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
+  $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
+  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => normalizeAttendanceRecord(record).status === "present").length;
+  $("#statMonthWages").textContent = money(monthWages);
+  $("#statAttendanceDays").textContent = formatHours(monthOvertime);
+  $("#dashboardDateLabel").textContent = date;
+
+  $("#dashboardSummary").innerHTML = summary
+    .filter((row) => row.present || row.worker.status === "active")
+    .map((row) => `
+      <tr>
+        <td>${escapeHTML(row.worker.name)}</td>
+        <td>${row.present}</td>
+        <td>${formatHours(row.hours)}</td>
+        <td>${formatHours(row.overtime)}</td>
+        <td>${money(row.worker.dailyWage)}</td>
+        <td><strong>${money(row.wage)}</strong></td>
+      </tr>
+    `).join("") || `<tr><td colspan="6">${t("noWageRecords")}</td></tr>`;
+
+  $("#todayList").innerHTML = app.workers.map((worker) => {
+    const record = normalizeAttendanceRecord(todayRecords[worker.id]);
+    const status = record.status || "not marked";
+    const hours = calculateHours(record);
+    return `
+      <div class="today-row">
+        <div>
+          <strong>${escapeHTML(worker.name)}</strong>
+          <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(worker.dailyWage)}</p>
+        </div>
+        <span class="pill">${statusLabel(status)}</span>
+      </div>
+    `;
+  }).join("") || emptyState(t("noWorkers"));
 }
 
 setDefaults();
