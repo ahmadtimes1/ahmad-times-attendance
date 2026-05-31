@@ -160,15 +160,78 @@ function activeWorkers() {
 }
 
 function getAttendance(date, workerId) {
-  return app.attendance[date]?.[workerId] || "";
+  return getAttendanceRecord(date, workerId).status;
+}
+
+function getAttendanceRecord(date, workerId) {
+  return normalizeAttendanceRecord(app.attendance[date]?.[workerId]);
+}
+
+function normalizeAttendanceRecord(record) {
+  if (!record) return { status: "", inTime: "", outTime: "" };
+  if (typeof record === "string") return { status: record, inTime: "", outTime: "" };
+  return {
+    status: record.status || "",
+    inTime: record.inTime || "",
+    outTime: record.outTime || "",
+  };
 }
 
 function setAttendance(date, workerId, status) {
   app.attendance[date] ||= {};
-  if (status) app.attendance[date][workerId] = status;
+  const current = getAttendanceRecord(date, workerId);
+  if (status) {
+    app.attendance[date][workerId] = {
+      ...current,
+      status,
+      inTime: status === "present" ? current.inTime : "",
+      outTime: status === "present" ? current.outTime : "",
+    };
+  }
   else delete app.attendance[date][workerId];
   if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
   saveData();
+}
+
+function setAttendanceTime(date, workerId, field, value) {
+  app.attendance[date] ||= {};
+  const current = getAttendanceRecord(date, workerId);
+  app.attendance[date][workerId] = {
+    ...current,
+    status: current.status || "present",
+    [field]: value,
+  };
+  if (field === "inTime" && value && !current.outTime) app.attendance[date][workerId].outTime = "";
+  saveData();
+}
+
+function setNowTime(date, workerId, field) {
+  const now = new Date();
+  setAttendanceTime(date, workerId, field, `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+}
+
+function calculateHours(record) {
+  const item = normalizeAttendanceRecord(record);
+  if (!item.inTime || !item.outTime) return { total: 0, overtime: 0 };
+  const [inHour, inMinute] = item.inTime.split(":").map(Number);
+  const [outHour, outMinute] = item.outTime.split(":").map(Number);
+  let start = inHour * 60 + inMinute;
+  let end = outHour * 60 + outMinute;
+  if (end < start) end += 24 * 60;
+  const total = Math.max(0, (end - start) / 60);
+  return {
+    total,
+    overtime: Math.max(0, total - 8),
+  };
+}
+
+function formatHours(value) {
+  if (!value) return "0h";
+  const hours = Math.floor(value);
+  const minutes = Math.round((value - hours) * 60);
+  if (!hours) return `${minutes}m`;
+  if (!minutes) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
 function daysInMonth(month) {
@@ -186,12 +249,18 @@ function recordsForRange(start, end, workerId = "all") {
     const day = app.attendance[date] || {};
     app.workers.forEach((worker) => {
       if (workerId !== "all" && worker.id !== workerId) return;
-      const status = day[worker.id] || "";
+      const record = normalizeAttendanceRecord(day[worker.id]);
+      const status = record.status;
       if (!status) return;
+      const hours = calculateHours(record);
       rows.push({
         date,
         worker,
         status,
+        inTime: record.inTime,
+        outTime: record.outTime,
+        hours: hours.total,
+        overtime: hours.overtime,
         wage: status === "present" ? Number(worker.dailyWage || 0) : 0,
       });
     });
@@ -208,11 +277,15 @@ function monthSummary(month, workerId = "all") {
       const present = dates.filter((date) => getAttendance(date, worker.id) === "present").length;
       const absent = dates.filter((date) => getAttendance(date, worker.id) === "absent").length;
       const off = dates.filter((date) => getAttendance(date, worker.id) === "off").length;
+      const hours = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
+      const overtime = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).overtime, 0);
       return {
         worker,
         present,
         absent,
         off,
+        hours,
+        overtime,
         wage: present * Number(worker.dailyWage || 0),
       };
     });
@@ -266,13 +339,14 @@ function renderDashboard() {
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
+  const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
 
   $("#statTotalWorkers").textContent = app.workers.length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
-  $("#statPresentToday").textContent = Object.values(todayRecords).filter((status) => status === "present").length;
+  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => normalizeAttendanceRecord(record).status === "present").length;
   $("#statMonthWages").textContent = money(monthWages);
-  $("#statAttendanceDays").textContent = Object.keys(app.attendance).length;
+  $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
@@ -281,17 +355,22 @@ function renderDashboard() {
       <tr>
         <td>${escapeHTML(row.worker.name)}</td>
         <td>${row.present}</td>
+        <td>${formatHours(row.hours)}</td>
+        <td>${formatHours(row.overtime)}</td>
         <td>${money(row.worker.dailyWage)}</td>
         <td><strong>${money(row.wage)}</strong></td>
       </tr>
-    `).join("") || `<tr><td colspan="4">No wage records for this month.</td></tr>`;
+    `).join("") || `<tr><td colspan="6">No wage records for this month.</td></tr>`;
 
   $("#todayList").innerHTML = app.workers.map((worker) => {
-    const status = todayRecords[worker.id] || "not marked";
+    const record = normalizeAttendanceRecord(todayRecords[worker.id]);
+    const status = record.status || "not marked";
+    const hours = calculateHours(record);
     return `
       <div class="today-row">
         <div>
           <strong>${escapeHTML(worker.name)}</strong>
+          <p>In: ${record.inTime || "-"} · Out: ${record.outTime || "-"} · Hours: ${formatHours(hours.total)} · OT: ${formatHours(hours.overtime)}</p>
           <p>${escapeHTML(worker.role || "Worker")} · ${money(worker.dailyWage)}</p>
         </div>
         <span class="pill">${statusLabel(status)}</span>
@@ -329,7 +408,34 @@ function renderWorkers() {
 
 function renderDayAttendance() {
   const date = $("#attendanceDate").value || todayISO();
-  $("#dayAttendanceList").innerHTML = activeWorkers().map((worker) => attendanceRow(worker, date)).join("") || emptyState("No active workers. Add or reactivate a worker first.");
+  $("#dayAttendanceList").innerHTML = activeWorkers().map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState("No active workers. Add or reactivate a worker first.");
+}
+
+function attendanceRowWithTime(worker, date) {
+  const record = getAttendanceRecord(date, worker.id);
+  const hours = calculateHours(record);
+  return `
+    <div class="attendance-row">
+      <div>
+        <strong>${escapeHTML(worker.name)}</strong>
+        <p>${escapeHTML(worker.role || "Worker")} · ${money(worker.dailyWage)}</p>
+        <p class="time-summary">In: ${record.inTime || "-"} · Out: ${record.outTime || "-"} · Hours: ${formatHours(hours.total)} · OT: ${formatHours(hours.overtime)}</p>
+      </div>
+      <div class="attendance-control">
+        <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
+          ${["present", "absent", "off"].map((status) => `
+            <button data-status="${status}" class="${record.status === status ? "active" : ""}">${statusLabel(status)}</button>
+          `).join("")}
+        </div>
+        <div class="time-grid" data-worker="${worker.id}" data-date="${date}">
+          <label>In<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
+          <label>Out<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
+          <button data-now-field="inTime">Start now</button>
+          <button data-now-field="outTime">Out now</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function attendanceRow(worker, date) {
@@ -419,9 +525,11 @@ function renderReport() {
     acc.present += row.present;
     acc.absent += row.absent;
     acc.off += row.off;
+    acc.hours += row.hours || 0;
+    acc.overtime += row.overtime || 0;
     acc.wage += row.wage;
     return acc;
-  }, { present: 0, absent: 0, off: 0, wage: 0 });
+  }, { present: 0, absent: 0, off: 0, hours: 0, overtime: 0, wage: 0 });
 
   $("#reportOutput").innerHTML = `
     <h3>${title}</h3>
@@ -430,6 +538,8 @@ function renderReport() {
       <div><span>Present days</span><strong>${totals.present}</strong></div>
       <div><span>Absent days</span><strong>${totals.absent}</strong></div>
       <div><span>Off days</span><strong>${totals.off}</strong></div>
+      <div><span>Total hours</span><strong>${formatHours(totals.hours)}</strong></div>
+      <div><span>Overtime</span><strong>${formatHours(totals.overtime)}</strong></div>
       <div><span>Total wages</span><strong>${money(totals.wage)}</strong></div>
     </div>
     <div class="table-wrap">
@@ -441,6 +551,8 @@ function renderReport() {
             <th>Present</th>
             <th>Absent</th>
             <th>Off</th>
+            <th>Hours</th>
+            <th>Overtime</th>
             <th>Daily wage</th>
             <th>Total wage</th>
           </tr>
@@ -453,10 +565,12 @@ function renderReport() {
               <td>${row.present}</td>
               <td>${row.absent}</td>
               <td>${row.off}</td>
+              <td>${formatHours(row.hours || 0)}</td>
+              <td>${formatHours(row.overtime || 0)}</td>
               <td>${money(row.worker.dailyWage)}</td>
               <td><strong>${money(row.wage)}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="7">No records for this report.</td></tr>`}
+          `).join("") || `<tr><td colspan="9">No records for this report.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -466,8 +580,10 @@ function renderReport() {
 function summarizeRecords(records) {
   const grouped = new Map();
   records.forEach((record) => {
-    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, absent: 0, off: 0, wage: 0 };
+    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, absent: 0, off: 0, hours: 0, overtime: 0, wage: 0 };
     item[record.status] += 1;
+    item.hours += record.hours || 0;
+    item.overtime += record.overtime || 0;
     item.wage += record.wage;
     grouped.set(record.worker.id, item);
   });
@@ -569,10 +685,10 @@ function importBackup(file) {
 }
 
 function exportReportCSV() {
-  const rows = [["Worker", "Status", "Present", "Absent", "Off", "Daily wage", "Total wage"]];
+  const rows = [["Worker", "Status", "Present", "Absent", "Off", "Hours", "Overtime", "Daily wage", "Total wage"]];
   $("#reportOutput tbody tr").forEach((tr) => {
     const cells = Array.from(tr.children).map((td) => td.textContent.trim());
-    if (cells.length === 7) rows.push(cells);
+    if (cells.length === 9) rows.push(cells);
   });
   downloadFile(`attendance-report-${todayISO()}.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv");
 }
@@ -696,11 +812,23 @@ function bindEvents() {
       const status = statusButton.classList.contains("active") ? "" : statusButton.dataset.status;
       setAttendance(parent.dataset.date, parent.dataset.worker, status);
     }
+
+    const nowButton = event.target.closest("[data-now-field]");
+    if (nowButton) {
+      const parent = nowButton.closest(".time-grid");
+      setNowTime(parent.dataset.date, parent.dataset.worker, nowButton.dataset.nowField);
+    }
   });
 
   document.addEventListener("change", (event) => {
     const select = event.target.closest("[data-month-worker]");
     if (select) setAttendance(select.dataset.monthDate, select.dataset.monthWorker, select.value);
+
+    const timeInput = event.target.closest("[data-time-field]");
+    if (timeInput) {
+      const parent = timeInput.closest(".time-grid");
+      setAttendanceTime(parent.dataset.date, parent.dataset.worker, timeInput.dataset.timeField, timeInput.value);
+    }
   });
 
   ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "reportType", "reportDate", "reportMonth", "reportWorker"].forEach((id) => {

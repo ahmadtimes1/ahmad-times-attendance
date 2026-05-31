@@ -402,6 +402,39 @@ th {
   gap: 6px;
 }
 
+.attendance-control {
+  display: grid;
+  gap: 8px;
+  min-width: min(520px, 100%);
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(92px, 1fr));
+  gap: 6px;
+  align-items: end;
+}
+
+.time-grid label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.time-grid input,
+.time-grid button {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.time-summary {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .attendance-actions button {
   min-height: 36px;
   padding: 6px 8px;
@@ -486,7 +519,7 @@ th {
 
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 10px;
   margin: 12px 0 18px;
 }
@@ -677,6 +710,10 @@ dialog::backdrop {
 
   .attendance-actions {
     grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .time-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
