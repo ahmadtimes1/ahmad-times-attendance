@@ -13,23 +13,23 @@
           <div class="brand-mark">AT</div>
           <div>
             <h1>Ahmad Times</h1>
-            <p>Building Maintenance</p>
+            <p data-i18n="buildingMaintenance">Building Maintenance</p>
           </div>
         </div>
-        <nav class="nav" aria-label="Main navigation">
-          <button class="nav-item active" data-view="dashboard">Dashboard</button>
-          <button class="nav-item" data-view="workers">Workers</button>
-          <button class="nav-item" data-view="attendance">Attendance</button>
-          <button class="nav-item" data-view="reports">Reports</button>
-          <button class="nav-item" data-view="backup">Backup</button>
+        <nav class="nav" aria-label="Main navigation" data-i18n-aria-label="mainNavigation">
+          <button class="nav-item active" data-view="dashboard" data-i18n="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="workers" data-i18n="workers">Workers</button>
+          <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
+          <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
+          <button class="nav-item" data-view="backup" data-i18n="backup">Backup</button>
         </nav>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Automatic attendance and daily wage system</p>
-            <h2 id="pageTitle">Dashboard</h2>
+            <p class="eyebrow" data-i18n="appSubtitle">Automatic attendance and daily wage system</p>
+            <h2 id="pageTitle" data-view-title="dashboard">Dashboard</h2>
           </div>
           <div class="top-actions">
             <span class="cloud-chip" id="cloudStatus">Local mode</span>
@@ -52,7 +52,7 @@
         <section id="dashboard" class="view active">
           <div class="stat-grid">
             <article class="stat-card">
-              <span data-i18n="totalWorkers">Total workers</span>
+              <span data-i18n="totalActiveLabour">Total active labour</span>
               <strong id="statTotalWorkers">0</strong>
             </article>
             <article class="stat-card green">
@@ -113,8 +113,13 @@
         <section id="workers" class="view">
           <div class="toolbar">
             <div class="searchbox">
-              <span>Search</span>
-              <input id="workerSearch" type="search" placeholder="Name, role, phone, Emirates ID">
+              <span data-i18n="search">Search</span>
+              <input id="workerSearch" type="search" data-i18n-placeholder="searchPlaceholder" placeholder="Name, role, phone, Emirates ID">
+            </div>
+            <div class="mode-tabs compact-tabs" role="tablist">
+              <button class="worker-filter active" data-worker-filter="active" data-i18n="activeLabour">Active labour</button>
+              <button class="worker-filter" data-worker-filter="inactive" data-i18n="inactiveLabour">Inactive labour</button>
+              <button class="worker-filter" data-worker-filter="all" data-i18n="allLabour">All labour</button>
             </div>
             <button class="primary" id="addWorkerBtn" data-i18n="addWorker">Add worker</button>
           </div>
@@ -141,9 +146,9 @@
               <input id="attendanceMonth" type="month">
             </div>
             <div class="bulk-tools">
-              <button id="markAllPresent">Mark visible days present</button>
-              <button id="markAllOff">Mark visible days off</button>
-              <button id="clearMonth">Clear visible month</button>
+              <button id="markAllPresent" data-i18n="markVisiblePresent">Mark visible days present</button>
+              <button id="markAllOff" data-i18n="markVisibleOff">Mark visible days off</button>
+              <button id="clearMonth" data-i18n="clearVisibleMonth">Clear visible month</button>
             </div>
             <div id="monthAttendanceGrid" class="month-grid-wrap"></div>
           </div>
@@ -152,27 +157,29 @@
         <section id="reports" class="view">
           <div class="report-controls">
             <label>
-              Report type
+              <span data-i18n="reportType">Report type</span>
               <select id="reportType">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly" selected>Monthly</option>
+                <option value="daily" data-i18n="daily">Daily</option>
+                <option value="weekly" data-i18n="weekly">Weekly</option>
+                <option value="monthly" data-i18n="monthly" selected>Monthly</option>
               </select>
             </label>
             <label>
-              Date
+              <span data-i18n="date">Date</span>
               <input id="reportDate" type="date">
             </label>
             <label>
-              Month
+              <span data-i18n="month">Month</span>
               <input id="reportMonth" type="month">
             </label>
             <label>
-              Worker
+              <span data-i18n="worker">Worker</span>
               <select id="reportWorker"></select>
             </label>
-            <button id="printReport">Print</button>
-            <button id="exportReport">Export CSV</button>
+            <button id="printReport" data-i18n="print">Print</button>
+            <button id="printAllWages" data-i18n="printAllWages">Print all wages</button>
+            <button id="printSelectedWage" data-i18n="printSelectedWage">Print selected wage</button>
+            <button id="exportReport" data-i18n="exportCsv">Export CSV</button>
           </div>
           <section class="panel report-panel" id="reportOutput"></section>
         </section>
@@ -180,22 +187,22 @@
         <section id="backup" class="view">
           <div class="content-grid">
             <section class="panel">
-              <h3>Data Backup</h3>
-              <p class="help-text">Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.</p>
+              <h3 data-i18n="dataBackup">Data Backup</h3>
+              <p class="help-text" data-i18n="backupHelp">Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.</p>
               <div class="button-row">
-                <button class="primary" id="exportBackup">Export backup</button>
+                <button class="primary" id="exportBackup" data-i18n="exportBackup">Export backup</button>
                 <label class="file-button">
-                  Import backup
+                  <span data-i18n="importBackup">Import backup</span>
                   <input id="importBackup" type="file" accept="application/json">
                 </label>
               </div>
             </section>
             <section class="panel">
-              <h3>Storage</h3>
+              <h3 data-i18n="storage">Storage</h3>
               <div class="storage-list">
-                <div><span>Workers</span><strong id="storageWorkers">0</strong></div>
-                <div><span>Attendance records</span><strong id="storageAttendance">0</strong></div>
-                <div><span>Last saved</span><strong id="storageSaved">Never</strong></div>
+                <div><span data-i18n="workers">Workers</span><strong id="storageWorkers">0</strong></div>
+                <div><span data-i18n="attendanceRecords">Attendance records</span><strong id="storageAttendance">0</strong></div>
+                <div><span data-i18n="lastSaved">Last saved</span><strong id="storageSaved">Never</strong></div>
               </div>
             </section>
           </div>
@@ -207,29 +214,38 @@
       <form method="dialog" id="workerForm" class="worker-form">
         <div class="dialog-head">
           <h3 id="workerDialogTitle">Add worker</h3>
-          <button type="button" class="icon-button" id="closeWorkerDialog" aria-label="Close">x</button>
+          <button type="button" class="icon-button" id="closeWorkerDialog" aria-label="Close" data-i18n-aria-label="close">x</button>
         </div>
         <input type="hidden" id="workerId">
         <div class="form-grid">
-          <label>Full name<input id="workerName" required placeholder="Worker name"></label>
-          <label>Role / trade<input id="workerRole" placeholder="Electrician, plumber, helper"></label>
-          <label>Phone<input id="workerPhone" placeholder="+971..."></label>
-          <label>Emirates ID<input id="workerEmiratesId" placeholder="Optional"></label>
-          <label>Daily wage (AED)<input id="workerDailyWage" type="number" min="0" step="0.01" required></label>
-          <label>Joining date<input id="workerJoinDate" type="date"></label>
-          <label>Status
-            <select id="workerStatus">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+          <label><span data-i18n="fullName">Full name</span><input id="workerName" required data-i18n-placeholder="workerNamePlaceholder" placeholder="Worker name"></label>
+          <label><span data-i18n="roleTrade">Role / trade</span><input id="workerRole" data-i18n-placeholder="rolePlaceholder" placeholder="Electrician, plumber, helper"></label>
+          <label><span data-i18n="city">City</span><input id="workerCity" data-i18n-placeholder="cityPlaceholder" placeholder="Dubai, Sharjah..."></label>
+          <label><span data-i18n="performance">Performance</span>
+            <select id="workerPerformance">
+              <option value="excellent" data-i18n="excellent">Excellent</option>
+              <option value="good" data-i18n="good">Good</option>
+              <option value="average" data-i18n="average">Average</option>
+              <option value="needs_improvement" data-i18n="needsImprovement">Needs improvement</option>
             </select>
           </label>
-          <label class="full">Notes<textarea id="workerNotes" rows="3" placeholder="Optional notes"></textarea></label>
+          <label><span data-i18n="phone">Phone</span><input id="workerPhone" placeholder="+971..."></label>
+          <label><span data-i18n="emiratesId">Emirates ID</span><input id="workerEmiratesId" data-i18n-placeholder="optional" placeholder="Optional"></label>
+          <label><span data-i18n="dailyWageAed">Daily wage (AED)</span><input id="workerDailyWage" type="number" min="0" step="0.01" required></label>
+          <label><span data-i18n="joiningDate">Joining date</span><input id="workerJoinDate" type="date"></label>
+          <label><span data-i18n="status">Status</span>
+            <select id="workerStatus">
+              <option value="active" data-i18n="active">Active</option>
+              <option value="inactive" data-i18n="inactive">Inactive</option>
+            </select>
+          </label>
+          <label class="full"><span data-i18n="notes">Notes</span><textarea id="workerNotes" rows="3" data-i18n-placeholder="optionalNotes" placeholder="Optional notes"></textarea></label>
         </div>
         <div class="dialog-actions">
-          <button type="button" id="deleteWorkerBtn" class="danger ghost">Remove worker</button>
+          <button type="button" id="deleteWorkerBtn" class="danger ghost" data-i18n="removeWorker">Remove worker</button>
           <div>
-            <button type="button" id="cancelWorker">Cancel</button>
-            <button class="primary" id="saveWorker">Save worker</button>
+            <button type="button" id="cancelWorker" data-i18n="cancel">Cancel</button>
+            <button class="primary" id="saveWorker" data-i18n="saveWorker">Save worker</button>
           </div>
         </div>
       </form>
@@ -238,19 +254,19 @@
     <dialog id="authDialog">
       <form method="dialog" id="authForm" class="worker-form">
         <div class="dialog-head">
-          <h3>Manager Login</h3>
-          <button type="button" class="icon-button" id="closeAuthDialog" aria-label="Close">x</button>
+          <h3 data-i18n="managerLogin">Manager Login</h3>
+          <button type="button" class="icon-button" id="closeAuthDialog" aria-label="Close" data-i18n-aria-label="close">x</button>
         </div>
         <div class="form-grid">
-          <label class="full">Email<input id="authEmail" type="email" autocomplete="email" required></label>
-          <label class="full">Password<input id="authPassword" type="password" autocomplete="current-password" required></label>
+          <label class="full"><span data-i18n="email">Email</span><input id="authEmail" type="email" autocomplete="email" required></label>
+          <label class="full"><span data-i18n="password">Password</span><input id="authPassword" type="password" autocomplete="current-password" required></label>
         </div>
-        <p class="help-text" id="authHelp">Use the manager email created in Supabase.</p>
+        <p class="help-text" id="authHelp" data-i18n="authHelp">Use the manager email created in Supabase.</p>
         <div class="dialog-actions">
           <span></span>
           <div>
-            <button type="button" id="cancelAuth">Cancel</button>
-            <button class="primary" id="loginButton">Login</button>
+            <button type="button" id="cancelAuth" data-i18n="cancel">Cancel</button>
+            <button class="primary" id="loginButton" data-i18n="login">Login</button>
           </div>
         </div>
       </form>

@@ -45,6 +45,85 @@ const translations = {
     logout: "Logout",
     noAccess: "No access",
     online: "online",
+    dashboard: "Dashboard",
+    workers: "Workers",
+    attendance: "Attendance",
+    reports: "Reports",
+    backup: "Backup",
+    appSubtitle: "Automatic attendance and daily wage system",
+    buildingMaintenance: "Building Maintenance",
+    mainNavigation: "Main navigation",
+    search: "Search",
+    searchPlaceholder: "Name, role, phone, Emirates ID",
+    markVisiblePresent: "Mark visible days present",
+    markVisibleOff: "Mark visible days off",
+    clearVisibleMonth: "Clear visible month",
+    reportType: "Report type",
+    daily: "Daily",
+    weekly: "Weekly",
+    monthly: "Monthly",
+    date: "Date",
+    month: "Month",
+    print: "Print",
+    exportCsv: "Export CSV",
+    dataBackup: "Data Backup",
+    backupHelp: "Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.",
+    exportBackup: "Export backup",
+    importBackup: "Import backup",
+    storage: "Storage",
+    attendanceRecords: "Attendance records",
+    lastSaved: "Last saved",
+    never: "Never",
+    addWorkerTitle: "Add worker",
+    editWorkerTitle: "Edit worker",
+    close: "Close",
+    fullName: "Full name",
+    workerNamePlaceholder: "Worker name",
+    roleTrade: "Role / trade",
+    rolePlaceholder: "Electrician, plumber, helper",
+    phone: "Phone",
+    emiratesId: "Emirates ID",
+    optional: "Optional",
+    dailyWageAed: "Daily wage (AED)",
+    joiningDate: "Joining date",
+    status: "Status",
+    active: "Active",
+    inactive: "Inactive",
+    notes: "Notes",
+    optionalNotes: "Optional notes",
+    removeWorker: "Remove worker",
+    cancel: "Cancel",
+    saveWorker: "Save worker",
+    managerLogin: "Manager Login",
+    email: "Email",
+    password: "Password",
+    authHelp: "Use the manager email created in Supabase.",
+    companyWideReport: "Company-wide report",
+    wageAttendanceReport: "wage and attendance report.",
+    dailyReport: "Daily report",
+    weeklyReport: "Weekly report",
+    monthlyReport: "Monthly report",
+    to: "to",
+    statusColumn: "Status",
+    totalHours: "Total hours",
+    totalWages: "Total wages",
+    noRecordsReport: "No records for this report.",
+    noWorkerSearch: "No workers match this search.",
+    workerNameRequired: "Worker name is required",
+    workerAdded: "Worker added",
+    workerUpdated: "Worker updated",
+    saved: "Saved",
+    savedOnline: "Saved online",
+    savedLocalLogin: "Saved locally. Login to save online.",
+    savedLocal: "Saved locally",
+    backupImported: "Backup imported",
+    backupImportFailed: "Could not import this backup file",
+    loginMissingConfig: "Add Supabase URL and anon key first.",
+    emailNoManager: "This email is not added as manager yet.",
+    loggedIn: "Logged in",
+    loggedOut: "Logged out",
+    cloudSaveFailed: "Cloud save failed",
+    startupCloudFailed: "Could not start cloud mode. Local mode is still available.",
   },
   ps: {
     language: "ژبه",
@@ -88,17 +167,166 @@ const translations = {
     logout: "وتل",
     noAccess: "اجازه نشته",
     online: "آنلاین",
+    dashboard: "ډشبورډ",
+    workers: "کارکوونکي",
+    attendance: "حاضري",
+    reports: "راپورونه",
+    backup: "بیک اپ",
+    appSubtitle: "اتومات حاضري او ورځنۍ مزدوري سیستم",
+    buildingMaintenance: "بلډنګ مینټیننس",
+    mainNavigation: "اصلي مینو",
+    search: "لټون",
+    searchPlaceholder: "نوم، کار، تلیفون، امارات ID",
+    markVisiblePresent: "ښکاره ورځې حاضر کړئ",
+    markVisibleOff: "ښکاره ورځې رخصت کړئ",
+    clearVisibleMonth: "ښکاره میاشت پاکه کړئ",
+    reportType: "د راپور ډول",
+    daily: "ورځنی",
+    weekly: "اونیز",
+    monthly: "میاشتنی",
+    date: "نېټه",
+    month: "میاشت",
+    print: "چاپ",
+    exportCsv: "CSV وباسئ",
+    dataBackup: "د معلوماتو بیک اپ",
+    backupHelp: "ټول کارکوونکي، حاضري او مزدوري ریکارډونه د JSON بیک اپ فایل په توګه وباسئ. وروسته یې د سیستم د بحالولو لپاره داخل کړئ.",
+    exportBackup: "بیک اپ وباسئ",
+    importBackup: "بیک اپ داخل کړئ",
+    storage: "ذخیره",
+    attendanceRecords: "د حاضري ریکارډونه",
+    lastSaved: "وروستی ذخیره",
+    never: "هیڅکله",
+    addWorkerTitle: "کارکوونکی اضافه کړئ",
+    editWorkerTitle: "کارکوونکی سم کړئ",
+    close: "بندول",
+    fullName: "مکمل نوم",
+    workerNamePlaceholder: "د کارکوونکي نوم",
+    roleTrade: "کار / مسلک",
+    rolePlaceholder: "برقي، پلمبر، مرسته کوونکی",
+    phone: "تلیفون",
+    emiratesId: "امارات ID",
+    optional: "اختیاري",
+    dailyWageAed: "ورځنۍ مزدوري (AED)",
+    joiningDate: "د شاملېدو نېټه",
+    status: "حالت",
+    active: "فعال",
+    inactive: "غیر فعال",
+    notes: "یادښتونه",
+    optionalNotes: "اختیاري یادښتونه",
+    removeWorker: "کارکوونکی لرې کړئ",
+    cancel: "لغوه",
+    saveWorker: "کارکوونکی ذخیره کړئ",
+    managerLogin: "د مدیر ننوتل",
+    email: "ایمیل",
+    password: "پاسورډ",
+    authHelp: "هغه مدیر ایمیل وکاروئ چې په Supabase کې جوړ شوی.",
+    companyWideReport: "د ټول شرکت راپور",
+    wageAttendanceReport: "د مزدورۍ او حاضري راپور.",
+    dailyReport: "ورځنی راپور",
+    weeklyReport: "اونیز راپور",
+    monthlyReport: "میاشتنی راپور",
+    to: "تر",
+    statusColumn: "حالت",
+    totalHours: "ټول ساعتونه",
+    totalWages: "ټوله مزدوري",
+    noRecordsReport: "د دې راپور لپاره ریکارډ نشته.",
+    noWorkerSearch: "د دې لټون لپاره کارکوونکی ونه موندل شو.",
+    workerNameRequired: "د کارکوونکي نوم اړین دی",
+    workerAdded: "کارکوونکی اضافه شو",
+    workerUpdated: "کارکوونکی تازه شو",
+    saved: "ذخیره شو",
+    savedOnline: "آنلاین ذخیره شو",
+    savedLocalLogin: "محلي ذخیره شو. د آنلاین ذخیرې لپاره ننوتل وکړئ.",
+    savedLocal: "محلي ذخیره شو",
+    backupImported: "بیک اپ داخل شو",
+    backupImportFailed: "دا بیک اپ فایل داخل نه شو",
+    loginMissingConfig: "لومړی د Supabase URL او anon key اضافه کړئ.",
+    emailNoManager: "دا ایمیل لا د مدیر په توګه نه دی اضافه شوی.",
+    loggedIn: "ننوتل وشول",
+    loggedOut: "وتل وشول",
+    cloudSaveFailed: "کلاوډ ذخیره ناکامه شوه",
+    startupCloudFailed: "کلاوډ حالت پیل نه شو. محلي حالت لا هم کار کوي.",
   },
 };
+
+Object.assign(translations.en, {
+  totalActiveLabour: "Total active labour",
+  activeLabour: "Active labour",
+  inactiveLabour: "Inactive labour",
+  allLabour: "All labour",
+  city: "City",
+  cityPlaceholder: "Dubai, Sharjah...",
+  performance: "Performance",
+  excellent: "Excellent",
+  good: "Good",
+  average: "Average",
+  needsImprovement: "Needs improvement",
+  duplicateWorker: "Another worker already has the same name, Emirates ID, or phone number.",
+  halfday: "Half day",
+  halfDays: "Half days",
+  printAllWages: "Print all wages",
+  printSelectedWage: "Print selected wage",
+  baseWage: "Base wage",
+  overtimeWage: "Overtime wage",
+  payments: "Payments",
+  paid: "Paid",
+  pending: "Pending",
+  paidAmount: "Paid amount",
+  paymentDate: "Payment date",
+  paymentMethod: "Payment method",
+  paymentNote: "Payment note",
+  savePayment: "Save payment",
+  cash: "Cash",
+  bank: "Bank transfer",
+  exchange: "Exchange",
+  other: "Other",
+  paymentSaved: "Payment saved",
+});
+
+Object.assign(translations.ps, {
+  totalActiveLabour: "ټول فعال مزدوران",
+  activeLabour: "فعال مزدوران",
+  inactiveLabour: "غیر فعال مزدوران",
+  allLabour: "ټول مزدوران",
+  city: "ښار",
+  cityPlaceholder: "دوبۍ، شارجه...",
+  performance: "کارکردګي",
+  excellent: "ډېر ښه",
+  good: "ښه",
+  average: "منځنی",
+  needsImprovement: "ښه والي ته اړتیا",
+  duplicateWorker: "بل کارکوونکی همدا نوم، امارات ID یا تلیفون لري.",
+  halfday: "نیمه ورځ",
+  halfDays: "نیمې ورځې",
+  printAllWages: "د ټولو مزدوري چاپ",
+  printSelectedWage: "د یو مزدور مزدوري چاپ",
+  baseWage: "اصلي مزدوري",
+  overtimeWage: "د اضافي وخت مزدوري",
+  payments: "تادیات",
+  paid: "ورکړل شوي",
+  pending: "پاتې",
+  paidAmount: "ورکړل شوې اندازه",
+  paymentDate: "د تادیې نېټه",
+  paymentMethod: "د تادیې طریقه",
+  paymentNote: "د تادیې یادښت",
+  savePayment: "تادیه ذخیره کړئ",
+  cash: "نغدې",
+  bank: "بانکي حواله",
+  exchange: "صرافۍ",
+  other: "نور",
+  paymentSaved: "تادیه ذخیره شوه",
+});
 
 const app = {
   workers: [],
   attendance: {},
+  payments: {},
   lastSaved: null,
   storageMode: "local",
   user: null,
   profile: null,
   language: localStorage.getItem(LANG_KEY) || "en",
+  workerFilter: "active",
 };
 
 let supabaseClient = null;
@@ -151,6 +379,7 @@ async function loadData() {
       .maybeSingle();
     if (!error && data?.data) {
       Object.assign(app, data.data);
+      app.payments ||= {};
       app.storageMode = "cloud";
       app.user = (await supabaseClient.auth.getUser()).data.user;
       await loadProfile();
@@ -163,6 +392,7 @@ async function loadData() {
   if (saved) {
     try {
       Object.assign(app, JSON.parse(saved));
+      app.payments ||= {};
       app.storageMode = supabaseClient ? "login required" : "local";
       return;
     } catch {
@@ -171,6 +401,7 @@ async function loadData() {
   }
 
   app.workers = [];
+  app.payments = {};
   saveData(false);
 }
 
@@ -182,19 +413,20 @@ async function saveData(show = true) {
     const payload = {
       workers: app.workers,
       attendance: app.attendance,
+      payments: app.payments,
       lastSaved: app.lastSaved,
     };
     const { error } = await supabaseClient
       .from("app_data")
       .upsert({ id: "main", data: payload, updated_by: app.user.id, updated_at: new Date().toISOString() });
     if (error) {
-      toast(`Cloud save failed: ${error.message}`);
+      toast(`${t("cloudSaveFailed")}: ${error.message}`);
     } else {
       app.storageMode = "cloud";
-      if (show) toast("Saved online");
+      if (show) toast(t("savedOnline"));
     }
   } else if (show) {
-    toast(supabaseClient ? "Saved locally. Login to save online." : "Saved locally");
+    toast(supabaseClient ? t("savedLocalLogin") : t("savedLocal"));
   }
 
   renderAll();
@@ -213,6 +445,7 @@ function setBrowserBackup() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       workers: app.workers,
       attendance: app.attendance,
+      payments: app.payments,
       lastSaved: app.lastSaved,
     }));
   } catch {
@@ -271,16 +504,16 @@ function normalizeAttendanceRecord(record) {
   };
 }
 
-function setAttendance(date, workerId, status) {
+function setAttendance(date, workerId, status, autoTime = true) {
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   if (status) {
-    const now = currentTime();
+    const now = autoTime ? currentTime() : "";
     app.attendance[date][workerId] = {
       ...current,
       status,
-      inTime: status === "present" ? (current.inTime || now) : "",
-      outTime: status === "present" ? current.outTime : "",
+      inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
+      outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
     };
   }
   else delete app.attendance[date][workerId];
@@ -324,6 +557,51 @@ function calculateHours(record) {
   };
 }
 
+function attendanceBaseWage(worker, status) {
+  const daily = Number(worker.dailyWage || 0);
+  if (status === "present") return daily;
+  if (status === "halfday") return daily / 2;
+  return 0;
+}
+
+function attendanceOvertimeWage(worker, overtimeHours) {
+  const hourlyRate = Number(worker.dailyWage || 0) / STANDARD_HOURS;
+  return overtimeHours * hourlyRate;
+}
+
+function attendanceWage(worker, status, overtimeHours = 0) {
+  return attendanceBaseWage(worker, status) + attendanceOvertimeWage(worker, overtimeHours);
+}
+
+function paymentKey(workerId, start, end) {
+  return `${workerId}__${start}__${end}`;
+}
+
+function paymentRecord(workerId, start, end) {
+  return app.payments[paymentKey(workerId, start, end)] || { paidAmount: 0, paymentDate: "", method: "cash", note: "" };
+}
+
+function paymentTotals(rows, start, end) {
+  return rows.reduce((acc, row) => {
+    const paid = Number(paymentRecord(row.worker.id, start, end).paidAmount || 0);
+    acc.paid += paid;
+    acc.pending += Math.max(0, Number(row.wage || 0) - paid);
+    return acc;
+  }, { paid: 0, pending: 0 });
+}
+
+function savePayment(workerId, start, end, paidAmount, paymentDate, method, note) {
+  app.payments[paymentKey(workerId, start, end)] = {
+    paidAmount: Number(paidAmount || 0),
+    paymentDate,
+    method,
+    note,
+    updatedAt: new Date().toISOString(),
+  };
+  saveData();
+  toast(t("paymentSaved"));
+}
+
 function formatHours(value) {
   if (!value) return "0h";
   const hours = Math.floor(value);
@@ -360,7 +638,9 @@ function recordsForRange(start, end, workerId = "all") {
         outTime: record.outTime,
         hours: hours.total,
         overtime: hours.overtime,
-        wage: status === "present" ? Number(worker.dailyWage || 0) : 0,
+        baseWage: attendanceBaseWage(worker, status),
+        overtimeWage: attendanceOvertimeWage(worker, hours.overtime),
+        wage: attendanceWage(worker, status, hours.overtime),
       });
     });
     current.setDate(current.getDate() + 1);
@@ -374,18 +654,24 @@ function monthSummary(month, workerId = "all") {
     .filter((worker) => workerId === "all" || worker.id === workerId)
     .map((worker) => {
       const present = dates.filter((date) => getAttendance(date, worker.id) === "present").length;
+      const halfday = dates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
       const absent = dates.filter((date) => getAttendance(date, worker.id) === "absent").length;
       const off = dates.filter((date) => getAttendance(date, worker.id) === "off").length;
       const hours = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
       const overtime = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).overtime, 0);
+      const baseWage = dates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id)), 0);
+      const overtimeWage = dates.reduce((sum, date) => sum + attendanceOvertimeWage(worker, calculateHours(getAttendanceRecord(date, worker.id)).overtime), 0);
       return {
         worker,
         present,
+        halfday,
         absent,
         off,
         hours,
         overtime,
-        wage: present * Number(worker.dailyWage || 0),
+        baseWage,
+        overtimeWage,
+        wage: baseWage + overtimeWage,
       };
     });
 }
@@ -407,8 +693,17 @@ function applyLanguage() {
   $$("[data-i18n]").forEach((element) => {
     element.textContent = t(element.dataset.i18n);
   });
+  $$("[data-i18n-placeholder]").forEach((element) => {
+    element.placeholder = t(element.dataset.i18nPlaceholder);
+  });
+  $$("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  });
   const languageSelect = $("#languageSelect");
   if (languageSelect) languageSelect.value = app.language;
+  const activeView = $(".view.active")?.id || "dashboard";
+  const pageTitle = $("#pageTitle");
+  if (pageTitle) pageTitle.textContent = t(activeView);
 }
 
 function renderAuthStatus() {
@@ -451,20 +746,20 @@ function renderDashboard() {
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
 
-  $("#statTotalWorkers").textContent = app.workers.length;
+  $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
-  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => normalizeAttendanceRecord(record).status === "present").length;
+  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
-    .filter((row) => row.present || row.worker.status === "active")
+    .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
     .map((row) => `
       <tr>
         <td>${escapeHTML(row.worker.name)}</td>
-        <td>${row.present}</td>
+        <td>${row.present + (row.halfday * 0.5)}</td>
         <td>${formatHours(row.hours)}</td>
         <td>${formatHours(row.overtime)}</td>
         <td>${money(row.worker.dailyWage)}</td>
@@ -472,7 +767,7 @@ function renderDashboard() {
       </tr>
     `).join("") || `<tr><td colspan="6">No wage records for this month.</td></tr>`;
 
-  $("#todayList").innerHTML = app.workers.map((worker) => {
+  $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
     const status = record.status || "not marked";
     const hours = calculateHours(record);
@@ -492,7 +787,9 @@ function renderDashboard() {
 function renderWorkers() {
   const query = ($("#workerSearch").value || "").trim().toLowerCase();
   const workers = app.workers.filter((worker) => {
-    const haystack = [worker.name, worker.role, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
+    const filter = app.workerFilter || "active";
+    if (filter !== "all" && worker.status !== filter) return false;
+    const haystack = [worker.name, worker.role, worker.city, worker.performance, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
     return haystack.includes(query);
   });
 
@@ -501,19 +798,21 @@ function renderWorkers() {
       <div class="worker-card-head">
         <div>
           <h3>${escapeHTML(worker.name)}</h3>
-          <p>${escapeHTML(worker.role || "Worker")}</p>
+          <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
         </div>
-        <span class="status-pill ${worker.status}">${worker.status}</span>
+        <span class="status-pill ${worker.status}">${t(worker.status)}</span>
       </div>
       <div class="worker-meta">
-        <div><span>Daily wage</span><strong>${money(worker.dailyWage)}</strong></div>
-        <div><span>Joined</span><strong>${worker.joinDate || "-"}</strong></div>
-        <div><span>Phone</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
-        <div><span>Emirates ID</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
+        <div><span>${t("dailyWage")}</span><strong>${money(worker.dailyWage)}</strong></div>
+        <div><span>${t("joiningDate")}</span><strong>${worker.joinDate || "-"}</strong></div>
+        <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
+        <div><span>${t("performance")}</span><strong>${performanceLabel(worker.performance)}</strong></div>
+        <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
+        <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
       </div>
-      <button data-edit-worker="${worker.id}">Edit details</button>
+      <button data-edit-worker="${worker.id}">${t("editWorkerTitle")}</button>
     </article>
-  `).join("") || emptyState("No workers match this search.");
+  `).join("") || emptyState(t("noWorkerSearch"));
 }
 
 function renderDayAttendance() {
@@ -533,7 +832,7 @@ function attendanceRowWithTime(worker, date) {
       </div>
       <div class="attendance-control">
         <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
-          ${["present", "absent", "off"].map((status) => `
+          ${["present", "halfday", "absent", "off"].map((status) => `
             <button data-status="${status}" class="${record.status === status ? "active" : ""}">${statusLabel(status)}</button>
           `).join("")}
         </div>
@@ -557,7 +856,7 @@ function attendanceRow(worker, date) {
         <p>${escapeHTML(worker.role || "Worker")} · ${money(worker.dailyWage)}</p>
       </div>
       <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
-        ${["present", "absent", "off"].map((status) => `
+        ${["present", "halfday", "absent", "off"].map((status) => `
           <button data-status="${status}" class="${current === status ? "active" : ""}">${statusLabel(status)}</button>
         `).join("")}
       </div>
@@ -579,6 +878,7 @@ function renderMonthAttendance() {
           <select class="mini-select" data-month-worker="${worker.id}" data-month-date="${date}" aria-label="${escapeHTML(worker.name)} ${date}">
             <option value="" ${getAttendance(date, worker.id) === "" ? "selected" : ""}>-</option>
             <option value="present" ${getAttendance(date, worker.id) === "present" ? "selected" : ""}>P</option>
+            <option value="halfday" ${getAttendance(date, worker.id) === "halfday" ? "selected" : ""}>H</option>
             <option value="absent" ${getAttendance(date, worker.id) === "absent" ? "selected" : ""}>A</option>
             <option value="off" ${getAttendance(date, worker.id) === "off" ? "selected" : ""}>O</option>
           </select>
@@ -591,11 +891,11 @@ function renderMonthAttendance() {
     <table class="month-table">
       <thead>
         <tr>
-          <th>Worker</th>
+          <th>${t("worker")}</th>
           ${dates.map((date) => `<th class="month-day">${Number(date.slice(-2))}</th>`).join("")}
         </tr>
       </thead>
-      <tbody>${rows || `<tr><td colspan="${dates.length + 1}">No active workers.</td></tr>`}</tbody>
+      <tbody>${rows || `<tr><td colspan="${dates.length + 1}">${t("noActiveWorkers")}</td></tr>`}</tbody>
     </table>
   `;
 }
@@ -607,7 +907,7 @@ function renderReport() {
   const reportDate = $("#reportDate").value || todayISO();
   let start = reportDate;
   let end = reportDate;
-  let title = `Daily report · ${reportDate}`;
+  let title = `${t("dailyReport")} · ${reportDate}`;
 
   if (type === "weekly") {
     const date = new Date(`${reportDate}T00:00:00`);
@@ -616,71 +916,118 @@ function renderReport() {
     start = date.toISOString().slice(0, 10);
     date.setDate(date.getDate() + 6);
     end = date.toISOString().slice(0, 10);
-    title = `Weekly report · ${start} to ${end}`;
+    title = `${t("weeklyReport")} · ${start} ${t("to")} ${end}`;
   }
 
   if (type === "monthly") {
     const dates = daysInMonth(month);
     start = dates[0];
     end = dates[dates.length - 1];
-    title = `Monthly report · ${month}`;
+    title = `${t("monthlyReport")} · ${month}`;
   }
 
-  const workerOptions = [`<option value="all">Company-wide report</option>`]
+  const workerOptions = [`<option value="all">${t("companyWideReport")}</option>`]
     .concat(app.workers.map((worker) => `<option value="${worker.id}" ${worker.id === workerId ? "selected" : ""}>${escapeHTML(worker.name)}</option>`));
   $("#reportWorker").innerHTML = workerOptions.join("");
 
   const rows = type === "monthly" ? monthSummary(month, workerId) : summarizeRecords(recordsForRange(start, end, workerId));
   const totals = rows.reduce((acc, row) => {
     acc.present += row.present;
+    acc.halfday += row.halfday || 0;
     acc.absent += row.absent;
     acc.off += row.off;
     acc.hours += row.hours || 0;
     acc.overtime += row.overtime || 0;
+    acc.baseWage += row.baseWage || 0;
+    acc.overtimeWage += row.overtimeWage || 0;
     acc.wage += row.wage;
     return acc;
-  }, { present: 0, absent: 0, off: 0, hours: 0, overtime: 0, wage: 0 });
+  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, wage: 0 });
+  const payTotals = paymentTotals(rows, start, end);
 
   $("#reportOutput").innerHTML = `
     <h3>${title}</h3>
-    <p class="help-text">${workerId === "all" ? "Company-wide" : escapeHTML(app.workers.find((worker) => worker.id === workerId)?.name || "Worker")} wage and attendance report.</p>
+    <p class="help-text">${workerId === "all" ? t("companyWideReport") : escapeHTML(app.workers.find((worker) => worker.id === workerId)?.name || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
     <div class="summary-strip">
-      <div><span>Present days</span><strong>${totals.present}</strong></div>
-      <div><span>Absent days</span><strong>${totals.absent}</strong></div>
-      <div><span>Off days</span><strong>${totals.off}</strong></div>
-      <div><span>Total hours</span><strong>${formatHours(totals.hours)}</strong></div>
-      <div><span>Overtime</span><strong>${formatHours(totals.overtime)}</strong></div>
-      <div><span>Total wages</span><strong>${money(totals.wage)}</strong></div>
+      <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
+      <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>
+      <div><span>${t("absent")} ${t("days")}</span><strong>${totals.absent}</strong></div>
+      <div><span>${t("off")} ${t("days")}</span><strong>${totals.off}</strong></div>
+      <div><span>${t("totalHours")}</span><strong>${formatHours(totals.hours)}</strong></div>
+      <div><span>${t("overtime")}</span><strong>${formatHours(totals.overtime)}</strong></div>
+      <div><span>${t("baseWage")}</span><strong>${money(totals.baseWage)}</strong></div>
+      <div><span>${t("overtimeWage")}</span><strong>${money(totals.overtimeWage)}</strong></div>
+      <div><span>${t("totalWages")}</span><strong>${money(totals.wage)}</strong></div>
+      <div><span>${t("paid")}</span><strong>${money(payTotals.paid)}</strong></div>
+      <div><span>${t("pending")}</span><strong>${money(payTotals.pending)}</strong></div>
+    </div>
+    <div class="payment-list">
+      <h3>${t("payments")}</h3>
+      ${rows.map((row) => {
+        const payment = paymentRecord(row.worker.id, start, end);
+        const paid = Number(payment.paidAmount || 0);
+        const pending = Math.max(0, Number(row.wage || 0) - paid);
+        return `
+          <div class="payment-row" data-payment-worker="${row.worker.id}" data-payment-start="${start}" data-payment-end="${end}">
+            <div>
+              <strong>${escapeHTML(row.worker.name)}</strong>
+              <p>${t("totalWages")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("pending")}: ${money(pending)}</p>
+            </div>
+            <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${paid}"></label>
+            <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${payment.paymentDate || ""}"></label>
+            <label>${t("paymentMethod")}
+              <select data-payment-field="method">
+                <option value="cash" ${payment.method === "cash" ? "selected" : ""}>${t("cash")}</option>
+                <option value="bank" ${payment.method === "bank" ? "selected" : ""}>${t("bank")}</option>
+                <option value="exchange" ${payment.method === "exchange" ? "selected" : ""}>${t("exchange")}</option>
+                <option value="other" ${payment.method === "other" ? "selected" : ""}>${t("other")}</option>
+              </select>
+            </label>
+            <label>${t("paymentNote")}<input data-payment-field="note" value="${escapeHTML(payment.note || "")}"></label>
+            <button data-save-payment>${t("savePayment")}</button>
+          </div>
+        `;
+      }).join("") || emptyState(t("noRecordsReport"))}
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Worker</th>
-            <th>Status</th>
-            <th>Present</th>
-            <th>Absent</th>
-            <th>Off</th>
-            <th>Hours</th>
-            <th>Overtime</th>
-            <th>Daily wage</th>
-            <th>Total wage</th>
+            <th>${t("worker")}</th>
+            <th>${t("statusColumn")}</th>
+            <th>${t("present")}</th>
+            <th>${t("halfday")}</th>
+            <th>${t("absent")}</th>
+            <th>${t("off")}</th>
+            <th>${t("hours")}</th>
+            <th>${t("overtime")}</th>
+            <th>${t("city")}</th>
+            <th>${t("performance")}</th>
+            <th>${t("dailyWage")}</th>
+            <th>${t("baseWage")}</th>
+            <th>${t("overtimeWage")}</th>
+            <th>${t("totalWages")}</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map((row) => `
             <tr>
               <td>${escapeHTML(row.worker.name)}</td>
-              <td>${row.worker.status}</td>
+              <td>${t(row.worker.status)}</td>
               <td>${row.present}</td>
+              <td>${row.halfday || 0}</td>
               <td>${row.absent}</td>
               <td>${row.off}</td>
               <td>${formatHours(row.hours || 0)}</td>
               <td>${formatHours(row.overtime || 0)}</td>
+              <td>${escapeHTML(row.worker.city || "-")}</td>
+              <td>${performanceLabel(row.worker.performance)}</td>
               <td>${money(row.worker.dailyWage)}</td>
+              <td>${money(row.baseWage || 0)}</td>
+              <td>${money(row.overtimeWage || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="9">No records for this report.</td></tr>`}
+          `).join("") || `<tr><td colspan="14">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -690,10 +1037,12 @@ function renderReport() {
 function summarizeRecords(records) {
   const grouped = new Map();
   records.forEach((record) => {
-    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, absent: 0, off: 0, hours: 0, overtime: 0, wage: 0 };
+    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, wage: 0 };
     item[record.status] += 1;
     item.hours += record.hours || 0;
     item.overtime += record.overtime || 0;
+    item.baseWage += record.baseWage || 0;
+    item.overtimeWage += record.overtimeWage || 0;
     item.wage += record.wage;
     grouped.set(record.worker.id, item);
   });
@@ -704,15 +1053,17 @@ function renderStorage() {
   const attendanceCount = Object.values(app.attendance).reduce((sum, day) => sum + Object.keys(day).length, 0);
   $("#storageWorkers").textContent = app.workers.length;
   $("#storageAttendance").textContent = attendanceCount;
-  $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : "Never";
+  $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
 }
 
 function openWorkerDialog(workerId = "") {
   const worker = app.workers.find((item) => item.id === workerId);
-  $("#workerDialogTitle").textContent = worker ? "Edit worker" : "Add worker";
+  $("#workerDialogTitle").textContent = worker ? t("editWorkerTitle") : t("addWorkerTitle");
   $("#workerId").value = worker?.id || "";
   $("#workerName").value = worker?.name || "";
   $("#workerRole").value = worker?.role || "";
+  $("#workerCity").value = worker?.city || "";
+  $("#workerPerformance").value = worker?.performance || "good";
   $("#workerPhone").value = worker?.phone || "";
   $("#workerEmiratesId").value = worker?.emiratesId || "";
   $("#workerDailyWage").value = worker?.dailyWage ?? "";
@@ -730,6 +1081,8 @@ function saveWorkerFromForm() {
     id,
     name: $("#workerName").value.trim(),
     role: $("#workerRole").value.trim(),
+    city: $("#workerCity").value.trim(),
+    performance: $("#workerPerformance").value,
     phone: $("#workerPhone").value.trim(),
     emiratesId: $("#workerEmiratesId").value.trim(),
     dailyWage: Number($("#workerDailyWage").value || 0),
@@ -740,7 +1093,12 @@ function saveWorkerFromForm() {
   };
 
   if (!worker.name) {
-    toast("Worker name is required");
+    toast(t("workerNameRequired"));
+    return;
+  }
+
+  if (hasDuplicateWorker(worker)) {
+    toast(t("duplicateWorker"));
     return;
   }
 
@@ -749,7 +1107,7 @@ function saveWorkerFromForm() {
 
   $("#workerDialog").close();
   saveData();
-  toast(existing ? "Worker updated" : "Worker added");
+  toast(existing ? t("workerUpdated") : t("workerAdded"));
 }
 
 function removeWorker() {
@@ -786,19 +1144,19 @@ function importBackup(file) {
       app.attendance = parsed.attendance;
       app.lastSaved = parsed.lastSaved || new Date().toISOString();
       saveData();
-      toast("Backup imported");
+      toast(t("backupImported"));
     } catch {
-      toast("Could not import this backup file");
+      toast(t("backupImportFailed"));
     }
   };
   reader.readAsText(file);
 }
 
 function exportReportCSV() {
-  const rows = [["Worker", "Status", "Present", "Absent", "Off", "Hours", "Overtime", "Daily wage", "Total wage"]];
+  const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("totalWages")]];
   $("#reportOutput tbody tr").forEach((tr) => {
     const cells = Array.from(tr.children).map((td) => td.textContent.trim());
-    if (cells.length === 9) rows.push(cells);
+    if (cells.length === 14) rows.push(cells);
   });
   downloadFile(`attendance-report-${todayISO()}.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv");
 }
@@ -830,10 +1188,37 @@ function escapeHTML(value) {
 function statusLabel(status) {
   return {
     present: t("present"),
+    halfday: t("halfday"),
     absent: t("absent"),
     off: t("off"),
     "not marked": t("notMarked"),
   }[status] || status;
+}
+
+function performanceLabel(value) {
+  return {
+    excellent: t("excellent"),
+    good: t("good"),
+    average: t("average"),
+    needs_improvement: t("needsImprovement"),
+  }[value] || t("good");
+}
+
+function normalizeCompare(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function hasDuplicateWorker(worker) {
+  const name = normalizeCompare(worker.name);
+  const phone = normalizeCompare(worker.phone);
+  const emiratesId = normalizeCompare(worker.emiratesId);
+  return app.workers.some((item) => {
+    if (item.id === worker.id) return false;
+    if (name && normalizeCompare(item.name) === name) return true;
+    if (phone && normalizeCompare(item.phone) === phone) return true;
+    if (emiratesId && normalizeCompare(item.emiratesId) === emiratesId) return true;
+    return false;
+  });
 }
 
 function emptyState(message) {
@@ -842,7 +1227,7 @@ function emptyState(message) {
 
 async function loginFromForm() {
   if (!supabaseClient) {
-    toast("Add Supabase URL and anon key first.");
+    toast(t("loginMissingConfig"));
     return;
   }
 
@@ -857,14 +1242,14 @@ async function loginFromForm() {
   app.user = data.user;
   await loadProfile();
   if (!app.profile?.active) {
-    toast("This email is not added as manager yet.");
+    toast(t("emailNoManager"));
     return;
   }
 
   $("#authDialog").close();
   await loadData();
   renderAll();
-  toast("Logged in");
+  toast(t("loggedIn"));
 }
 
 async function logout() {
@@ -873,7 +1258,7 @@ async function logout() {
   app.profile = null;
   app.storageMode = supabaseClient ? "login required" : "local";
   renderAll();
-  toast("Logged out");
+  toast(t("loggedOut"));
 }
 
 function bindEvents() {
@@ -883,7 +1268,7 @@ function bindEvents() {
       $$(".view").forEach((view) => view.classList.remove("active"));
       button.classList.add("active");
       $(`#${button.dataset.view}`).classList.add("active");
-      $("#pageTitle").textContent = button.textContent;
+      $("#pageTitle").textContent = t(button.dataset.view);
       renderAll();
     });
   });
@@ -909,6 +1294,14 @@ function bindEvents() {
   });
   $("#addWorkerBtn").addEventListener("click", () => openWorkerDialog());
   $("#workerSearch").addEventListener("input", renderWorkers);
+  $$(".worker-filter").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.workerFilter = button.dataset.workerFilter;
+      $$(".worker-filter").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      renderWorkers();
+    });
+  });
   $("#closeWorkerDialog").addEventListener("click", () => $("#workerDialog").close());
   $("#cancelWorker").addEventListener("click", () => $("#workerDialog").close());
   $("#workerForm").addEventListener("submit", (event) => {
@@ -933,11 +1326,26 @@ function bindEvents() {
       const parent = nowButton.closest(".time-grid");
       setNowTime(parent.dataset.date, parent.dataset.worker, nowButton.dataset.nowField);
     }
+
+    const paymentButton = event.target.closest("[data-save-payment]");
+    if (paymentButton) {
+      const row = paymentButton.closest(".payment-row");
+      const getField = (field) => row.querySelector(`[data-payment-field="${field}"]`)?.value || "";
+      savePayment(
+        row.dataset.paymentWorker,
+        row.dataset.paymentStart,
+        row.dataset.paymentEnd,
+        getField("paidAmount"),
+        getField("paymentDate"),
+        getField("method"),
+        getField("note"),
+      );
+    }
   });
 
   document.addEventListener("change", (event) => {
     const select = event.target.closest("[data-month-worker]");
-    if (select) setAttendance(select.dataset.monthDate, select.dataset.monthWorker, select.value);
+    if (select) setAttendance(select.dataset.monthDate, select.dataset.monthWorker, select.value, false);
 
     const timeInput = event.target.closest("[data-time-field]");
     if (timeInput) {
@@ -963,6 +1371,16 @@ function bindEvents() {
   $("#markAllOff").addEventListener("click", () => bulkSetMonth("off"));
   $("#clearMonth").addEventListener("click", () => bulkSetMonth(""));
   $("#printReport").addEventListener("click", () => window.print());
+  $("#printAllWages").addEventListener("click", () => {
+    $("#reportWorker").value = "all";
+    renderReport();
+    window.print();
+  });
+  $("#printSelectedWage").addEventListener("click", () => {
+    if ($("#reportWorker").value === "all" && app.workers[0]) $("#reportWorker").value = app.workers[0].id;
+    renderReport();
+    window.print();
+  });
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
   $("#importBackup").addEventListener("change", (event) => {
@@ -991,20 +1409,20 @@ function renderDashboard() {
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
 
-  $("#statTotalWorkers").textContent = app.workers.length;
+  $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
-  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => normalizeAttendanceRecord(record).status === "present").length;
+  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
-    .filter((row) => row.present || row.worker.status === "active")
+    .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
     .map((row) => `
       <tr>
         <td>${escapeHTML(row.worker.name)}</td>
-        <td>${row.present}</td>
+        <td>${row.present + (row.halfday * 0.5)}</td>
         <td>${formatHours(row.hours)}</td>
         <td>${formatHours(row.overtime)}</td>
         <td>${money(row.worker.dailyWage)}</td>
@@ -1012,7 +1430,7 @@ function renderDashboard() {
       </tr>
     `).join("") || `<tr><td colspan="6">${t("noWageRecords")}</td></tr>`;
 
-  $("#todayList").innerHTML = app.workers.map((worker) => {
+  $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
     const status = record.status || "not marked";
     const hours = calculateHours(record);
@@ -1036,6 +1454,6 @@ initCloud()
   .then(renderAll)
   .catch((error) => {
     console.error(error);
-    toast("Could not start cloud mode. Local mode is still available.");
+    toast(t("startupCloudFailed"));
     renderAll();
   });

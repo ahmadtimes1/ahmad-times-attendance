@@ -398,7 +398,7 @@ th {
 
 .attendance-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  grid-template-columns: repeat(4, minmax(74px, 1fr));
   gap: 6px;
 }
 
@@ -448,6 +448,12 @@ th {
   border-color: var(--green);
 }
 
+.attendance-actions button.active[data-status="halfday"] {
+  color: #fff;
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
 .attendance-actions button.active[data-status="absent"] {
   color: #fff;
   background: var(--danger);
@@ -469,13 +475,19 @@ th {
   background: #fff;
 }
 
-.mode-tab {
+.mode-tab,
+.worker-filter {
   border-color: transparent;
 }
 
-.mode-tab.active {
+.mode-tab.active,
+.worker-filter.active {
   color: #fff;
   background: var(--brand);
+}
+
+.compact-tabs {
+  margin-bottom: 0;
 }
 
 .hidden {
@@ -519,9 +531,39 @@ th {
 
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
   margin: 12px 0 18px;
+}
+
+.payment-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.payment-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(130px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.payment-row p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.payment-row label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .summary-strip div,
@@ -709,11 +751,15 @@ dialog::backdrop {
   }
 
   .attendance-actions {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .time-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .payment-row {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -725,6 +771,7 @@ dialog::backdrop {
   .sidebar,
   .topbar,
   .report-controls,
+  .payment-list,
   .toast {
     display: none;
   }
