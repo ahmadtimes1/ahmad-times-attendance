@@ -75,6 +75,10 @@
               <span data-i18n="monthlyOvertime">Monthly overtime</span>
               <strong id="statAttendanceDays">0</strong>
             </article>
+            <article class="stat-card amber">
+              <span data-i18n="unpaidWages">Unpaid wages</span>
+              <strong id="statUnpaidWages">AED 0</strong>
+            </article>
           </div>
 
           <div class="content-grid">
@@ -221,6 +225,7 @@
           <label><span data-i18n="fullName">Full name</span><input id="workerName" required data-i18n-placeholder="workerNamePlaceholder" placeholder="Worker name"></label>
           <label><span data-i18n="roleTrade">Role / trade</span><input id="workerRole" data-i18n-placeholder="rolePlaceholder" placeholder="Electrician, plumber, helper"></label>
           <label><span data-i18n="city">City</span><input id="workerCity" data-i18n-placeholder="cityPlaceholder" placeholder="Dubai, Sharjah..."></label>
+          <label><span data-i18n="nationality">Nationality</span><input id="workerNationality" data-i18n-placeholder="nationalityPlaceholder" placeholder="Afghan, Pakistani..."></label>
           <label><span data-i18n="performance">Performance</span>
             <select id="workerPerformance">
               <option value="excellent" data-i18n="excellent">Excellent</option>
@@ -229,6 +234,7 @@
               <option value="needs_improvement" data-i18n="needsImprovement">Needs improvement</option>
             </select>
           </label>
+          <label><span data-i18n="foodDeduction">Food deduction/day (AED)</span><input id="workerFoodDeduction" type="number" min="0" step="0.01" value="0"></label>
           <label><span data-i18n="phone">Phone</span><input id="workerPhone" placeholder="+971..."></label>
           <label><span data-i18n="emiratesId">Emirates ID</span><input id="workerEmiratesId" data-i18n-placeholder="optional" placeholder="Optional"></label>
           <label><span data-i18n="dailyWageAed">Daily wage (AED)</span><input id="workerDailyWage" type="number" min="0" step="0.01" required></label>

@@ -271,6 +271,13 @@ Object.assign(translations.en, {
   payments: "Payments",
   paid: "Paid",
   pending: "Pending",
+  unpaid: "Unpaid",
+  unpaidWages: "Unpaid wages",
+  nationality: "Nationality",
+  nationalityPlaceholder: "Afghan, Pakistani...",
+  foodDeduction: "Food deduction/day (AED)",
+  foodDeductionTotal: "Food deduction",
+  payableWage: "Payable wage",
   paidAmount: "Paid amount",
   paymentDate: "Payment date",
   paymentMethod: "Payment method",
@@ -305,6 +312,13 @@ Object.assign(translations.ps, {
   payments: "تادیات",
   paid: "ورکړل شوي",
   pending: "پاتې",
+  unpaid: "نه ورکړل شوي",
+  unpaidWages: "نه ورکړل شوې مزدوري",
+  nationality: "تابعیت",
+  nationalityPlaceholder: "افغان، پاکستانی...",
+  foodDeduction: "د خوراک کسر/ورځ (AED)",
+  foodDeductionTotal: "د خوراک کسر",
+  payableWage: "د ورکړې مزدوري",
   paidAmount: "ورکړل شوې اندازه",
   paymentDate: "د تادیې نېټه",
   paymentMethod: "د تادیې طریقه",
@@ -569,8 +583,15 @@ function attendanceOvertimeWage(worker, overtimeHours) {
   return overtimeHours * hourlyRate;
 }
 
+function foodDeduction(worker, status) {
+  const food = Number(worker.foodDeduction || 0);
+  if (status === "present") return food;
+  if (status === "halfday") return food / 2;
+  return 0;
+}
+
 function attendanceWage(worker, status, overtimeHours = 0) {
-  return attendanceBaseWage(worker, status) + attendanceOvertimeWage(worker, overtimeHours);
+  return Math.max(0, attendanceBaseWage(worker, status) + attendanceOvertimeWage(worker, overtimeHours) - foodDeduction(worker, status));
 }
 
 function paymentKey(workerId, start, end) {
@@ -600,6 +621,12 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
   };
   saveData();
   toast(t("paymentSaved"));
+}
+
+function printReportOnly() {
+  document.body.classList.add("print-report");
+  window.print();
+  window.setTimeout(() => document.body.classList.remove("print-report"), 500);
 }
 
 function formatHours(value) {
@@ -640,6 +667,7 @@ function recordsForRange(start, end, workerId = "all") {
         overtime: hours.overtime,
         baseWage: attendanceBaseWage(worker, status),
         overtimeWage: attendanceOvertimeWage(worker, hours.overtime),
+        foodDeduction: foodDeduction(worker, status),
         wage: attendanceWage(worker, status, hours.overtime),
       });
     });
@@ -661,6 +689,7 @@ function monthSummary(month, workerId = "all") {
       const overtime = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).overtime, 0);
       const baseWage = dates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id)), 0);
       const overtimeWage = dates.reduce((sum, date) => sum + attendanceOvertimeWage(worker, calculateHours(getAttendanceRecord(date, worker.id)).overtime), 0);
+      const food = dates.reduce((sum, date) => sum + foodDeduction(worker, getAttendance(date, worker.id)), 0);
       return {
         worker,
         present,
@@ -671,7 +700,8 @@ function monthSummary(month, workerId = "all") {
         overtime,
         baseWage,
         overtimeWage,
-        wage: baseWage + overtimeWage,
+        foodDeduction: food,
+        wage: Math.max(0, baseWage + overtimeWage - food),
       };
     });
 }
@@ -745,6 +775,8 @@ function renderDashboard() {
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
+  const monthDates = daysInMonth(month);
+  const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
 
   $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
@@ -752,6 +784,7 @@ function renderDashboard() {
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
+  $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
   $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
@@ -789,7 +822,7 @@ function renderWorkers() {
   const workers = app.workers.filter((worker) => {
     const filter = app.workerFilter || "active";
     if (filter !== "all" && worker.status !== filter) return false;
-    const haystack = [worker.name, worker.role, worker.city, worker.performance, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
+    const haystack = [worker.name, worker.role, worker.city, worker.nationality, worker.performance, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
     return haystack.includes(query);
   });
 
@@ -806,7 +839,9 @@ function renderWorkers() {
         <div><span>${t("dailyWage")}</span><strong>${money(worker.dailyWage)}</strong></div>
         <div><span>${t("joiningDate")}</span><strong>${worker.joinDate || "-"}</strong></div>
         <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
+        <div><span>${t("nationality")}</span><strong>${escapeHTML(worker.nationality || "-")}</strong></div>
         <div><span>${t("performance")}</span><strong>${performanceLabel(worker.performance)}</strong></div>
+        <div><span>${t("foodDeduction")}</span><strong>${money(worker.foodDeduction || 0)}</strong></div>
         <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
         <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
       </div>
@@ -940,9 +975,10 @@ function renderReport() {
     acc.overtime += row.overtime || 0;
     acc.baseWage += row.baseWage || 0;
     acc.overtimeWage += row.overtimeWage || 0;
+    acc.foodDeduction += row.foodDeduction || 0;
     acc.wage += row.wage;
     return acc;
-  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, wage: 0 });
+  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, wage: 0 });
   const payTotals = paymentTotals(rows, start, end);
 
   $("#reportOutput").innerHTML = `
@@ -957,9 +993,10 @@ function renderReport() {
       <div><span>${t("overtime")}</span><strong>${formatHours(totals.overtime)}</strong></div>
       <div><span>${t("baseWage")}</span><strong>${money(totals.baseWage)}</strong></div>
       <div><span>${t("overtimeWage")}</span><strong>${money(totals.overtimeWage)}</strong></div>
-      <div><span>${t("totalWages")}</span><strong>${money(totals.wage)}</strong></div>
+      <div><span>${t("foodDeductionTotal")}</span><strong>${money(totals.foodDeduction)}</strong></div>
+      <div><span>${t("payableWage")}</span><strong>${money(totals.wage)}</strong></div>
       <div><span>${t("paid")}</span><strong>${money(payTotals.paid)}</strong></div>
-      <div><span>${t("pending")}</span><strong>${money(payTotals.pending)}</strong></div>
+      <div><span>${t("unpaid")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
     <div class="payment-list">
       <h3>${t("payments")}</h3>
@@ -971,7 +1008,7 @@ function renderReport() {
           <div class="payment-row" data-payment-worker="${row.worker.id}" data-payment-start="${start}" data-payment-end="${end}">
             <div>
               <strong>${escapeHTML(row.worker.name)}</strong>
-              <p>${t("totalWages")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("pending")}: ${money(pending)}</p>
+              <p>${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${paid}"></label>
             <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${payment.paymentDate || ""}"></label>
@@ -1002,11 +1039,13 @@ function renderReport() {
             <th>${t("hours")}</th>
             <th>${t("overtime")}</th>
             <th>${t("city")}</th>
+            <th>${t("nationality")}</th>
             <th>${t("performance")}</th>
             <th>${t("dailyWage")}</th>
             <th>${t("baseWage")}</th>
             <th>${t("overtimeWage")}</th>
-            <th>${t("totalWages")}</th>
+            <th>${t("foodDeductionTotal")}</th>
+            <th>${t("payableWage")}</th>
           </tr>
         </thead>
         <tbody>
@@ -1021,13 +1060,15 @@ function renderReport() {
               <td>${formatHours(row.hours || 0)}</td>
               <td>${formatHours(row.overtime || 0)}</td>
               <td>${escapeHTML(row.worker.city || "-")}</td>
+              <td>${escapeHTML(row.worker.nationality || "-")}</td>
               <td>${performanceLabel(row.worker.performance)}</td>
               <td>${money(row.worker.dailyWage)}</td>
               <td>${money(row.baseWage || 0)}</td>
               <td>${money(row.overtimeWage || 0)}</td>
+              <td>${money(row.foodDeduction || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="14">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="16">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1037,12 +1078,13 @@ function renderReport() {
 function summarizeRecords(records) {
   const grouped = new Map();
   records.forEach((record) => {
-    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, wage: 0 };
+    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, wage: 0 };
     item[record.status] += 1;
     item.hours += record.hours || 0;
     item.overtime += record.overtime || 0;
     item.baseWage += record.baseWage || 0;
     item.overtimeWage += record.overtimeWage || 0;
+    item.foodDeduction += record.foodDeduction || 0;
     item.wage += record.wage;
     grouped.set(record.worker.id, item);
   });
@@ -1063,7 +1105,9 @@ function openWorkerDialog(workerId = "") {
   $("#workerName").value = worker?.name || "";
   $("#workerRole").value = worker?.role || "";
   $("#workerCity").value = worker?.city || "";
+  $("#workerNationality").value = worker?.nationality || "";
   $("#workerPerformance").value = worker?.performance || "good";
+  $("#workerFoodDeduction").value = worker?.foodDeduction ?? 0;
   $("#workerPhone").value = worker?.phone || "";
   $("#workerEmiratesId").value = worker?.emiratesId || "";
   $("#workerDailyWage").value = worker?.dailyWage ?? "";
@@ -1082,7 +1126,9 @@ function saveWorkerFromForm() {
     name: $("#workerName").value.trim(),
     role: $("#workerRole").value.trim(),
     city: $("#workerCity").value.trim(),
+    nationality: $("#workerNationality").value.trim(),
     performance: $("#workerPerformance").value,
+    foodDeduction: Number($("#workerFoodDeduction").value || 0),
     phone: $("#workerPhone").value.trim(),
     emiratesId: $("#workerEmiratesId").value.trim(),
     dailyWage: Number($("#workerDailyWage").value || 0),
@@ -1153,10 +1199,10 @@ function importBackup(file) {
 }
 
 function exportReportCSV() {
-  const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("totalWages")]];
+  const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("nationality"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("foodDeductionTotal"), t("payableWage")]];
   $("#reportOutput tbody tr").forEach((tr) => {
     const cells = Array.from(tr.children).map((td) => td.textContent.trim());
-    if (cells.length === 14) rows.push(cells);
+    if (cells.length === 16) rows.push(cells);
   });
   downloadFile(`attendance-report-${todayISO()}.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv");
 }
@@ -1370,16 +1416,16 @@ function bindEvents() {
   $("#markAllPresent").addEventListener("click", () => bulkSetMonth("present"));
   $("#markAllOff").addEventListener("click", () => bulkSetMonth("off"));
   $("#clearMonth").addEventListener("click", () => bulkSetMonth(""));
-  $("#printReport").addEventListener("click", () => window.print());
+  $("#printReport").addEventListener("click", printReportOnly);
   $("#printAllWages").addEventListener("click", () => {
     $("#reportWorker").value = "all";
     renderReport();
-    window.print();
+    printReportOnly();
   });
   $("#printSelectedWage").addEventListener("click", () => {
     if ($("#reportWorker").value === "all" && app.workers[0]) $("#reportWorker").value = app.workers[0].id;
     renderReport();
-    window.print();
+    printReportOnly();
   });
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
@@ -1408,6 +1454,8 @@ function renderDashboard() {
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
+  const monthDates = daysInMonth(month);
+  const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
 
   $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
@@ -1415,6 +1463,7 @@ function renderDashboard() {
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
+  $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
   $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary

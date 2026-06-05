@@ -778,10 +778,17 @@ dialog::backdrop {
 
   .app-shell,
   .main,
-  .view,
   #reports {
     display: block;
     padding: 0;
+  }
+
+  .print-report .view {
+    display: none !important;
+  }
+
+  .print-report #reports {
+    display: block !important;
   }
 
   .panel {
