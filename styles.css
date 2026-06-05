@@ -21,6 +21,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   color: var(--ink);
   background:
     linear-gradient(135deg, rgba(22, 100, 86, 0.08), transparent 34%),
@@ -290,10 +291,12 @@ textarea {
 .month-grid-wrap {
   width: 100%;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
 }
 
@@ -714,6 +717,13 @@ dialog::backdrop {
 }
 
 @media (max-width: 700px) {
+  button,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
   .main {
     padding: 18px 12px;
   }
@@ -760,6 +770,236 @@ dialog::backdrop {
 
   .payment-row {
     grid-template-columns: 1fr;
+  }
+
+  dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow: auto;
+  }
+
+  .worker-form {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar {
+    padding: 10px 10px 8px;
+  }
+
+  .brand {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .brand h1 {
+    font-size: 17px;
+  }
+
+  .brand p,
+  .eyebrow {
+    font-size: 11px;
+  }
+
+  .nav {
+    gap: 6px;
+    padding-bottom: 2px;
+  }
+
+  .nav-item {
+    min-width: 96px;
+    min-height: 38px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .main {
+    padding: 14px 10px 18px;
+  }
+
+  .topbar {
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .topbar h2 {
+    font-size: 26px;
+  }
+
+  .top-actions {
+    gap: 8px;
+  }
+
+  .cloud-chip {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .date-chip,
+  .searchbox,
+  .report-controls label,
+  .worker-form label {
+    font-size: 12px;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-card,
+  .panel,
+  .worker-card,
+  .attendance-row,
+  .today-row,
+  .report-controls {
+    box-shadow: none;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card span {
+    min-height: 30px;
+    font-size: 12px;
+  }
+
+  .stat-card strong {
+    font-size: 21px;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .panel-head {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .worker-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-pill {
+    align-self: flex-start;
+  }
+
+  .attendance-row,
+  .today-row {
+    padding: 10px;
+  }
+
+  .attendance-control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .attendance-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .attendance-actions button {
+    min-height: 42px;
+  }
+
+  .time-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .time-grid input,
+  .time-grid button {
+    min-height: 42px;
+  }
+
+  .mode-tabs,
+  .compact-tabs {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .compact-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-tab,
+  .worker-filter {
+    width: 100%;
+  }
+
+  .summary-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .summary-strip div,
+  .storage-list div {
+    padding: 10px;
+  }
+
+  .report-controls {
+    padding: 10px;
+  }
+
+  .payment-row {
+    padding: 10px;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+  }
+
+  .month-day,
+  .mini-select {
+    min-width: 40px;
+  }
+
+  dialog {
+    width: calc(100vw - 10px);
+    max-height: calc(100dvh - 10px);
+  }
+
+  .dialog-head {
+    gap: 10px;
+  }
+
+  .dialog-head h3 {
+    font-size: 20px;
+  }
+
+  .dialog-actions,
+  .dialog-actions > div {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .dialog-actions button,
+  .file-button {
+    width: 100%;
+  }
+
+  .toast {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    max-width: none;
   }
 }
 
