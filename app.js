@@ -275,10 +275,11 @@ Object.assign(translations.en, {
   unpaidWages: "Unpaid wages",
   nationality: "Nationality",
   nationalityPlaceholder: "Afghan, Pakistani...",
-  foodDeduction: "Food deduction/day (AED)",
+  foodDeduction: "Food deduction (AED)",
   foodDeductionTotal: "Food deduction",
   payableWage: "Payable wage",
   paidAmount: "Paid amount",
+  paidToday: "Paid today",
   paymentDate: "Payment date",
   paymentMethod: "Payment method",
   paymentNote: "Payment note",
@@ -288,6 +289,10 @@ Object.assign(translations.en, {
   exchange: "Exchange",
   other: "Other",
   paymentSaved: "Payment saved",
+  currentDailyWage: "Current daily wage",
+  wageEffectiveDate: "Wage effective from",
+  wageHistory: "Wage history",
+  effectiveFrom: "from",
 });
 
 Object.assign(translations.ps, {
@@ -316,10 +321,11 @@ Object.assign(translations.ps, {
   unpaidWages: "نه ورکړل شوې مزدوري",
   nationality: "تابعیت",
   nationalityPlaceholder: "افغان، پاکستانی...",
-  foodDeduction: "د خوراک کسر/ورځ (AED)",
+  foodDeduction: "د خوراک کسر (AED)",
   foodDeductionTotal: "د خوراک کسر",
   payableWage: "د ورکړې مزدوري",
   paidAmount: "ورکړل شوې اندازه",
+  paidToday: "نن ورکړل شوې",
   paymentDate: "د تادیې نېټه",
   paymentMethod: "د تادیې طریقه",
   paymentNote: "د تادیې یادښت",
@@ -329,6 +335,13 @@ Object.assign(translations.ps, {
   exchange: "صرافۍ",
   other: "نور",
   paymentSaved: "تادیه ذخیره شوه",
+});
+
+Object.assign(translations.ps, {
+  currentDailyWage: "اوسنۍ ورځنۍ مزدوري",
+  wageEffectiveDate: "مزدوري له دې نېټې نه",
+  wageHistory: "د مزدورۍ تاریخچه",
+  effectiveFrom: "له",
 });
 
 const app = {
@@ -353,6 +366,39 @@ const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
 const money = (value) => `AED ${Number(value || 0).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 const t = (key) => translations[app.language]?.[key] || translations.en[key] || key;
+
+function normalizeWageHistory(worker) {
+  const fallbackDate = worker.joinDate || (worker.createdAt ? worker.createdAt.slice(0, 10) : todayISO());
+  const entries = Array.isArray(worker.wageHistory) ? worker.wageHistory : [];
+  const map = new Map();
+  entries.forEach((entry) => {
+    if (!entry?.date) return;
+    const dailyWage = Number(entry.dailyWage ?? entry.wage ?? 0);
+    if (Number.isFinite(dailyWage)) map.set(entry.date, dailyWage);
+  });
+  if (!map.size && Number(worker.dailyWage || 0)) map.set(fallbackDate, Number(worker.dailyWage || 0));
+  return Array.from(map, ([date, dailyWage]) => ({ date, dailyWage }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function wageForDate(worker, date = todayISO()) {
+  const history = normalizeWageHistory(worker);
+  let wage = Number(worker.dailyWage || 0);
+  history.forEach((entry) => {
+    if (entry.date <= date) wage = Number(entry.dailyWage || 0);
+  });
+  return wage;
+}
+
+function currentDailyWage(worker) {
+  return wageForDate(worker, todayISO());
+}
+
+function wageHistoryText(worker) {
+  const history = normalizeWageHistory(worker);
+  if (!history.length) return "-";
+  return history.map((entry) => `${money(entry.dailyWage)} ${t("effectiveFrom")} ${entry.date}`).join(" | ");
+}
 
 function cloudConfigured() {
   const config = window.AHMAD_TIMES_SUPABASE || {};
@@ -494,6 +540,7 @@ function setDefaults() {
   $("#attendanceMonth").value = month;
   $("#reportMonth").value = month;
   $("#workerJoinDate").value = today;
+  $("#workerWageEffectiveDate").value = today;
 }
 
 function activeWorkers() {
@@ -509,12 +556,14 @@ function getAttendanceRecord(date, workerId) {
 }
 
 function normalizeAttendanceRecord(record) {
-  if (!record) return { status: "", inTime: "", outTime: "" };
-  if (typeof record === "string") return { status: record, inTime: "", outTime: "" };
+  if (!record) return { status: "", inTime: "", outTime: "", foodDeduction: 0, paidAmount: 0 };
+  if (typeof record === "string") return { status: record, inTime: "", outTime: "", foodDeduction: 0, paidAmount: 0 };
   return {
     status: record.status || "",
     inTime: record.inTime || "",
     outTime: record.outTime || "",
+    foodDeduction: Number(record.foodDeduction || 0),
+    paidAmount: Number(record.paidAmount || 0),
   };
 }
 
@@ -528,6 +577,8 @@ function setAttendance(date, workerId, status, autoTime = true) {
       status,
       inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
       outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
+      foodDeduction: ["present", "halfday"].includes(status) ? current.foodDeduction : 0,
+      paidAmount: ["present", "halfday"].includes(status) ? current.paidAmount : 0,
     };
   }
   else delete app.attendance[date][workerId];
@@ -544,6 +595,17 @@ function setAttendanceTime(date, workerId, field, value) {
     [field]: value,
   };
   if (field === "inTime" && value && !current.outTime) app.attendance[date][workerId].outTime = "";
+  saveData();
+}
+
+function setAttendanceMoney(date, workerId, field, value) {
+  app.attendance[date] ||= {};
+  const current = getAttendanceRecord(date, workerId);
+  app.attendance[date][workerId] = {
+    ...current,
+    status: current.status || "present",
+    [field]: Number(value || 0),
+  };
   saveData();
 }
 
@@ -571,27 +633,26 @@ function calculateHours(record) {
   };
 }
 
-function attendanceBaseWage(worker, status) {
-  const daily = Number(worker.dailyWage || 0);
+function attendanceBaseWage(worker, status, date = todayISO()) {
+  const daily = wageForDate(worker, date);
   if (status === "present") return daily;
   if (status === "halfday") return daily / 2;
   return 0;
 }
 
-function attendanceOvertimeWage(worker, overtimeHours) {
-  const hourlyRate = Number(worker.dailyWage || 0) / STANDARD_HOURS;
+function attendanceOvertimeWage(worker, overtimeHours, date = todayISO()) {
+  const hourlyRate = wageForDate(worker, date) / STANDARD_HOURS;
   return overtimeHours * hourlyRate;
 }
 
-function foodDeduction(worker, status) {
-  const food = Number(worker.foodDeduction || 0);
-  if (status === "present") return food;
-  if (status === "halfday") return food / 2;
-  return 0;
+function foodDeduction(record, status) {
+  if (!["present", "halfday"].includes(status)) return 0;
+  return Number(normalizeAttendanceRecord(record).foodDeduction || 0);
 }
 
-function attendanceWage(worker, status, overtimeHours = 0) {
-  return Math.max(0, attendanceBaseWage(worker, status) + attendanceOvertimeWage(worker, overtimeHours) - foodDeduction(worker, status));
+function attendanceWage(worker, record, overtimeHours = 0, date = todayISO()) {
+  const status = normalizeAttendanceRecord(record).status;
+  return Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date) - foodDeduction(record, status));
 }
 
 function paymentKey(workerId, start, end) {
@@ -604,7 +665,7 @@ function paymentRecord(workerId, start, end) {
 
 function paymentTotals(rows, start, end) {
   return rows.reduce((acc, row) => {
-    const paid = Number(paymentRecord(row.worker.id, start, end).paidAmount || 0);
+    const paid = Number(row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0);
     acc.paid += paid;
     acc.pending += Math.max(0, Number(row.wage || 0) - paid);
     return acc;
@@ -665,10 +726,12 @@ function recordsForRange(start, end, workerId = "all") {
         outTime: record.outTime,
         hours: hours.total,
         overtime: hours.overtime,
-        baseWage: attendanceBaseWage(worker, status),
-        overtimeWage: attendanceOvertimeWage(worker, hours.overtime),
-        foodDeduction: foodDeduction(worker, status),
-        wage: attendanceWage(worker, status, hours.overtime),
+        dailyWage: wageForDate(worker, date),
+        baseWage: attendanceBaseWage(worker, status, date),
+        overtimeWage: attendanceOvertimeWage(worker, hours.overtime, date),
+        foodDeduction: foodDeduction(record, status),
+        paidAmount: Number(record.paidAmount || 0),
+        wage: attendanceWage(worker, record, hours.overtime, date),
       });
     });
     current.setDate(current.getDate() + 1);
@@ -687,9 +750,10 @@ function monthSummary(month, workerId = "all") {
       const off = dates.filter((date) => getAttendance(date, worker.id) === "off").length;
       const hours = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
       const overtime = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).overtime, 0);
-      const baseWage = dates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id)), 0);
-      const overtimeWage = dates.reduce((sum, date) => sum + attendanceOvertimeWage(worker, calculateHours(getAttendanceRecord(date, worker.id)).overtime), 0);
-      const food = dates.reduce((sum, date) => sum + foodDeduction(worker, getAttendance(date, worker.id)), 0);
+      const baseWage = dates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id), date), 0);
+      const overtimeWage = dates.reduce((sum, date) => sum + attendanceOvertimeWage(worker, calculateHours(getAttendanceRecord(date, worker.id)).overtime, date), 0);
+      const food = dates.reduce((sum, date) => sum + foodDeduction(getAttendanceRecord(date, worker.id), getAttendance(date, worker.id)), 0);
+      const paidAmount = dates.reduce((sum, date) => sum + Number(getAttendanceRecord(date, worker.id).paidAmount || 0), 0);
       return {
         worker,
         present,
@@ -698,9 +762,11 @@ function monthSummary(month, workerId = "all") {
         off,
         hours,
         overtime,
+        dailyWage: wageForDate(worker, dates[dates.length - 1] || todayISO()),
         baseWage,
         overtimeWage,
         foodDeduction: food,
+        paidAmount,
         wage: Math.max(0, baseWage + overtimeWage - food),
       };
     });
@@ -795,7 +861,7 @@ function renderDashboard() {
         <td>${row.present + (row.halfday * 0.5)}</td>
         <td>${formatHours(row.hours)}</td>
         <td>${formatHours(row.overtime)}</td>
-        <td>${money(row.worker.dailyWage)}</td>
+        <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
         <td><strong>${money(row.wage)}</strong></td>
       </tr>
     `).join("") || `<tr><td colspan="6">No wage records for this month.</td></tr>`;
@@ -809,7 +875,7 @@ function renderDashboard() {
         <div>
           <strong>${escapeHTML(worker.name)}</strong>
           <p>In: ${record.inTime || "-"} · Out: ${record.outTime || "-"} · Hours: ${formatHours(hours.total)} · OT: ${formatHours(hours.overtime)}</p>
-          <p>${escapeHTML(worker.role || "Worker")} · ${money(worker.dailyWage)}</p>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
         </div>
         <span class="pill">${statusLabel(status)}</span>
       </div>
@@ -836,12 +902,12 @@ function renderWorkers() {
         <span class="status-pill ${worker.status}">${t(worker.status)}</span>
       </div>
       <div class="worker-meta">
-        <div><span>${t("dailyWage")}</span><strong>${money(worker.dailyWage)}</strong></div>
+        <div><span>${t("currentDailyWage")}</span><strong>${money(currentDailyWage(worker))}</strong></div>
+        <div><span>${t("wageHistory")}</span><strong>${escapeHTML(wageHistoryText(worker))}</strong></div>
         <div><span>${t("joiningDate")}</span><strong>${worker.joinDate || "-"}</strong></div>
         <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
         <div><span>${t("nationality")}</span><strong>${escapeHTML(worker.nationality || "-")}</strong></div>
         <div><span>${t("performance")}</span><strong>${performanceLabel(worker.performance)}</strong></div>
-        <div><span>${t("foodDeduction")}</span><strong>${money(worker.foodDeduction || 0)}</strong></div>
         <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
         <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
       </div>
@@ -858,12 +924,16 @@ function renderDayAttendance() {
 function attendanceRowWithTime(worker, date) {
   const record = getAttendanceRecord(date, worker.id);
   const hours = calculateHours(record);
+  const payable = attendanceWage(worker, record, hours.overtime, date);
+  const paid = Number(record.paidAmount || 0);
+  const unpaid = Math.max(0, payable - paid);
   return `
     <div class="attendance-row">
       <div>
         <strong>${escapeHTML(worker.name)}</strong>
-        <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(worker.dailyWage)}</p>
+        <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
         <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
+        <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
       </div>
       <div class="attendance-control">
         <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
@@ -874,6 +944,8 @@ function attendanceRowWithTime(worker, date) {
         <div class="time-grid" data-worker="${worker.id}" data-date="${date}">
           <label>${t("in")}<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
+          <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
+          <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${record.paidAmount || 0}"></label>
           <button data-now-field="inTime">${t("startNow")}</button>
           <button data-now-field="outTime">${t("outNow")}</button>
         </div>
@@ -888,7 +960,7 @@ function attendanceRow(worker, date) {
     <div class="attendance-row">
       <div>
         <strong>${escapeHTML(worker.name)}</strong>
-        <p>${escapeHTML(worker.role || "Worker")} · ${money(worker.dailyWage)}</p>
+        <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
       </div>
       <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
         ${["present", "halfday", "absent", "off"].map((status) => `
@@ -906,7 +978,7 @@ function renderMonthAttendance() {
     <tr>
       <td>
         <strong>${escapeHTML(worker.name)}</strong><br>
-        <span>${money(worker.dailyWage)}</span>
+        <span>${money(wageForDate(worker, `${month}-01`))}</span>
       </td>
       ${dates.map((date) => `
         <td class="month-day">
@@ -976,9 +1048,10 @@ function renderReport() {
     acc.baseWage += row.baseWage || 0;
     acc.overtimeWage += row.overtimeWage || 0;
     acc.foodDeduction += row.foodDeduction || 0;
+    acc.paidAmount += row.paidAmount || 0;
     acc.wage += row.wage;
     return acc;
-  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, wage: 0 });
+  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0 });
   const payTotals = paymentTotals(rows, start, end);
 
   $("#reportOutput").innerHTML = `
@@ -1002,15 +1075,16 @@ function renderReport() {
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
         const payment = paymentRecord(row.worker.id, start, end);
-        const paid = Number(payment.paidAmount || 0);
+        const attendancePaid = Number(row.paidAmount || 0);
+        const paid = attendancePaid + Number(payment.paidAmount || 0);
         const pending = Math.max(0, Number(row.wage || 0) - paid);
         return `
           <div class="payment-row" data-payment-worker="${row.worker.id}" data-payment-start="${start}" data-payment-end="${end}">
             <div>
               <strong>${escapeHTML(row.worker.name)}</strong>
-              <p>${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
+              <p>${t("payableWage")}: ${money(row.wage)} · ${t("paidToday")}: ${money(attendancePaid)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
             </div>
-            <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${paid}"></label>
+            <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${payment.paidAmount || 0}"></label>
             <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${payment.paymentDate || ""}"></label>
             <label>${t("paymentMethod")}
               <select data-payment-field="method">
@@ -1046,6 +1120,8 @@ function renderReport() {
             <th>${t("overtimeWage")}</th>
             <th>${t("foodDeductionTotal")}</th>
             <th>${t("payableWage")}</th>
+            <th>${t("paid")}</th>
+            <th>${t("unpaid")}</th>
           </tr>
         </thead>
         <tbody>
@@ -1062,13 +1138,15 @@ function renderReport() {
               <td>${escapeHTML(row.worker.city || "-")}</td>
               <td>${escapeHTML(row.worker.nationality || "-")}</td>
               <td>${performanceLabel(row.worker.performance)}</td>
-              <td>${money(row.worker.dailyWage)}</td>
+              <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
               <td>${money(row.baseWage || 0)}</td>
               <td>${money(row.overtimeWage || 0)}</td>
               <td>${money(row.foodDeduction || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
+              <td>${money((row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0))}</td>
+              <td><strong>${money(Math.max(0, Number(row.wage || 0) - ((row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0))))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="16">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="18">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1078,13 +1156,15 @@ function renderReport() {
 function summarizeRecords(records) {
   const grouped = new Map();
   records.forEach((record) => {
-    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, wage: 0 };
+    const item = grouped.get(record.worker.id) || { worker: record.worker, present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0 };
     item[record.status] += 1;
+    item.dailyWage = record.dailyWage || item.dailyWage;
     item.hours += record.hours || 0;
     item.overtime += record.overtime || 0;
     item.baseWage += record.baseWage || 0;
     item.overtimeWage += record.overtimeWage || 0;
     item.foodDeduction += record.foodDeduction || 0;
+    item.paidAmount += record.paidAmount || 0;
     item.wage += record.wage;
     grouped.set(record.worker.id, item);
   });
@@ -1107,10 +1187,10 @@ function openWorkerDialog(workerId = "") {
   $("#workerCity").value = worker?.city || "";
   $("#workerNationality").value = worker?.nationality || "";
   $("#workerPerformance").value = worker?.performance || "good";
-  $("#workerFoodDeduction").value = worker?.foodDeduction ?? 0;
   $("#workerPhone").value = worker?.phone || "";
   $("#workerEmiratesId").value = worker?.emiratesId || "";
-  $("#workerDailyWage").value = worker?.dailyWage ?? "";
+  $("#workerDailyWage").value = worker ? currentDailyWage(worker) : "";
+  $("#workerWageEffectiveDate").value = todayISO();
   $("#workerJoinDate").value = worker?.joinDate || todayISO();
   $("#workerStatus").value = worker?.status || "active";
   $("#workerNotes").value = worker?.notes || "";
@@ -1121,6 +1201,14 @@ function openWorkerDialog(workerId = "") {
 function saveWorkerFromForm() {
   const id = $("#workerId").value || makeId();
   const existing = app.workers.find((worker) => worker.id === id);
+  const dailyWage = Number($("#workerDailyWage").value || 0);
+  const joinDate = $("#workerJoinDate").value || todayISO();
+  const wageEffectiveDate = $("#workerWageEffectiveDate").value || joinDate;
+  const wageHistory = normalizeWageHistory(existing || { dailyWage, joinDate });
+  const historyMap = new Map(wageHistory.map((entry) => [entry.date, entry.dailyWage]));
+  historyMap.set(wageEffectiveDate, dailyWage);
+  const updatedWageHistory = Array.from(historyMap, ([date, dailyWage]) => ({ date, dailyWage }))
+    .sort((a, b) => a.date.localeCompare(b.date));
   const worker = {
     id,
     name: $("#workerName").value.trim(),
@@ -1128,11 +1216,11 @@ function saveWorkerFromForm() {
     city: $("#workerCity").value.trim(),
     nationality: $("#workerNationality").value.trim(),
     performance: $("#workerPerformance").value,
-    foodDeduction: Number($("#workerFoodDeduction").value || 0),
     phone: $("#workerPhone").value.trim(),
     emiratesId: $("#workerEmiratesId").value.trim(),
-    dailyWage: Number($("#workerDailyWage").value || 0),
-    joinDate: $("#workerJoinDate").value,
+    dailyWage,
+    wageHistory: updatedWageHistory,
+    joinDate,
     status: $("#workerStatus").value,
     notes: $("#workerNotes").value.trim(),
     createdAt: existing?.createdAt || new Date().toISOString(),
@@ -1188,6 +1276,7 @@ function importBackup(file) {
       if (!Array.isArray(parsed.workers) || typeof parsed.attendance !== "object") throw new Error("Invalid file");
       app.workers = parsed.workers;
       app.attendance = parsed.attendance;
+      app.payments = parsed.payments || {};
       app.lastSaved = parsed.lastSaved || new Date().toISOString();
       saveData();
       toast(t("backupImported"));
@@ -1199,10 +1288,10 @@ function importBackup(file) {
 }
 
 function exportReportCSV() {
-  const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("nationality"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("foodDeductionTotal"), t("payableWage")]];
+  const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("nationality"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("foodDeductionTotal"), t("payableWage"), t("paid"), t("unpaid")]];
   $("#reportOutput tbody tr").forEach((tr) => {
     const cells = Array.from(tr.children).map((td) => td.textContent.trim());
-    if (cells.length === 16) rows.push(cells);
+    if (cells.length === 18) rows.push(cells);
   });
   downloadFile(`attendance-report-${todayISO()}.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv");
 }
@@ -1398,6 +1487,12 @@ function bindEvents() {
       const parent = timeInput.closest(".time-grid");
       setAttendanceTime(parent.dataset.date, parent.dataset.worker, timeInput.dataset.timeField, timeInput.value);
     }
+
+    const moneyInput = event.target.closest("[data-money-field]");
+    if (moneyInput) {
+      const parent = moneyInput.closest(".time-grid");
+      setAttendanceMoney(parent.dataset.date, parent.dataset.worker, moneyInput.dataset.moneyField, moneyInput.value);
+    }
   });
 
   ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "reportType", "reportDate", "reportMonth", "reportWorker"].forEach((id) => {
@@ -1474,7 +1569,7 @@ function renderDashboard() {
         <td>${row.present + (row.halfday * 0.5)}</td>
         <td>${formatHours(row.hours)}</td>
         <td>${formatHours(row.overtime)}</td>
-        <td>${money(row.worker.dailyWage)}</td>
+        <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
         <td><strong>${money(row.wage)}</strong></td>
       </tr>
     `).join("") || `<tr><td colspan="6">${t("noWageRecords")}</td></tr>`;
@@ -1488,7 +1583,7 @@ function renderDashboard() {
         <div>
           <strong>${escapeHTML(worker.name)}</strong>
           <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
-          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(worker.dailyWage)}</p>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
         </div>
         <span class="pill">${statusLabel(status)}</span>
       </div>
