@@ -1,7 +1,9 @@
 ﻿const STORAGE_KEY = "ahmad-times-attendance-v1";
 const LANG_KEY = "ahmad-times-language";
 const SIMPLE_LOGIN_KEY = "ahmad-times-simple-user";
+const LAST_ACTIVITY_KEY = "ahmad-times-last-activity";
 const STANDARD_HOURS = 8;
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 const SIMPLE_USERS = [
   { username: "admin", password: "Dubai@#123", role: "admin", name: "Admin" },
@@ -133,6 +135,7 @@ const translations = {
     emailNoManager: "This email is not added as manager yet.",
     loggedIn: "Logged in",
     loggedOut: "Logged out",
+    sessionExpired: "Session expired. Login again.",
     cloudSaveFailed: "Cloud save failed",
     startupCloudFailed: "Could not start cloud mode. Local mode is still available.",
     invalidLogin: "Wrong username or password.",
@@ -279,6 +282,7 @@ const translations = {
     emailNoManager: "دا ایمیل لا د مدیر په توګه نه دی اضافه شوی.",
     loggedIn: "ننوتل وشول",
     loggedOut: "وتل وشول",
+    sessionExpired: "ناسته ختمه شوه. بیا ننوزئ.",
     cloudSaveFailed: "کلاوډ ذخیره ناکامه شوه",
     startupCloudFailed: "کلاوډ حالت پیل نه شو. محلي حالت لا هم کار کوي.",
     invalidLogin: "کارن نوم یا پاسورډ غلط دی.",
@@ -593,13 +597,60 @@ function simpleUserProfile(user) {
   return user ? { email: user.username, role: user.role, active: true } : null;
 }
 
+function readLastActivity() {
+  try {
+    return Number(localStorage.getItem(LAST_ACTIVITY_KEY) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function markActivity() {
+  if (!app.user) return;
+  try {
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  } catch {
+    // Ignore unavailable storage.
+  }
+  scheduleSessionTimeout();
+}
+
+function sessionExpired() {
+  const last = readLastActivity();
+  return !last || Date.now() - last > SESSION_TIMEOUT_MS;
+}
+
+let sessionTimer = null;
+
+function scheduleSessionTimeout() {
+  window.clearTimeout(sessionTimer);
+  if (!app.user) return;
+  const remaining = Math.max(0, SESSION_TIMEOUT_MS - (Date.now() - readLastActivity()));
+  sessionTimer = window.setTimeout(() => {
+    toast(t("sessionExpired"));
+    logout();
+  }, remaining || 1);
+}
+
+function renderLoginGate() {
+  document.body.classList.toggle("login-locked", !app.user);
+  const error = $("#loginScreenError");
+  if (error && app.user) error.textContent = "";
+}
+
 function restoreSimpleLogin() {
   try {
     const username = localStorage.getItem(SIMPLE_LOGIN_KEY);
+    if (sessionExpired()) {
+      localStorage.removeItem(SIMPLE_LOGIN_KEY);
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+      return false;
+    }
     const user = SIMPLE_USERS.find((item) => item.username.toLowerCase() === String(username || "").toLowerCase());
     if (!user) return false;
     app.user = { id: null, email: user.username, username: user.username };
     app.profile = simpleUserProfile(user);
+    scheduleSessionTimeout();
     return true;
   } catch {
     return false;
@@ -1063,6 +1114,7 @@ function monthSummary(month, workerId = "all") {
 
 function renderAll() {
   applyLanguage();
+  renderLoginGate();
   renderAuthStatus();
   renderDashboard();
   renderWorkers();
@@ -1773,11 +1825,10 @@ function emptyState(message) {
   return `<div class="today-row"><p>${message}</p></div>`;
 }
 
-async function loginFromForm() {
-  const username = $("#authEmail").value.trim();
-  const password = $("#authPassword").value;
+async function loginWithCredentials(username, password, errorTarget = null) {
   const user = SIMPLE_USERS.find((item) => item.username.toLowerCase() === username.toLowerCase() && item.password === password);
   if (!user) {
+    if (errorTarget) errorTarget.textContent = t("invalidLogin");
     toast(t("invalidLogin"));
     return;
   }
@@ -1786,24 +1837,38 @@ async function loginFromForm() {
   app.profile = simpleUserProfile(user);
   try {
     localStorage.setItem(SIMPLE_LOGIN_KEY, user.username);
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
   } catch {
     // Login still works for the current browser session.
   }
+  scheduleSessionTimeout();
 
-  $("#authDialog").close();
+  $("#authDialog")?.close();
   $("#authPassword").value = "";
+  $("#loginPassword").value = "";
+  if (errorTarget) errorTarget.textContent = "";
   await loadData();
   renderAll();
   toast(t("loggedIn"));
+}
+
+async function loginFromForm() {
+  await loginWithCredentials($("#authEmail").value.trim(), $("#authPassword").value);
+}
+
+async function loginFromScreen() {
+  await loginWithCredentials($("#loginUsername").value.trim(), $("#loginPassword").value, $("#loginScreenError"));
 }
 
 async function logout() {
   if (supabaseClient) await supabaseClient.auth.signOut();
   try {
     localStorage.removeItem(SIMPLE_LOGIN_KEY);
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
   } catch {
     // Ignore unavailable storage.
   }
+  window.clearTimeout(sessionTimer);
   app.user = null;
   app.profile = null;
   app.storageMode = supabaseClient ? "login required" : "local";
@@ -1830,11 +1895,19 @@ function bindEvents() {
     renderAll();
   });
   $("#authButton").addEventListener("click", async () => {
-    if (supabaseClient && app.user) {
+    if (app.user) {
       await logout();
     } else {
-      $("#authDialog").showModal();
+      document.body.classList.add("login-locked");
+      $("#loginUsername")?.focus();
     }
+  });
+  $("#loginScreenForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    loginFromScreen();
+  });
+  ["click", "keydown", "input", "mousemove", "touchstart"].forEach((eventName) => {
+    document.addEventListener(eventName, markActivity, { passive: true });
   });
   $("#closeAuthDialog").addEventListener("click", () => $("#authDialog").close());
   $("#cancelAuth").addEventListener("click", () => $("#authDialog").close());
@@ -2085,6 +2158,8 @@ initCloud()
     toast(t("startupCloudFailed"));
     renderAll();
   });
+
+
 
 
 
