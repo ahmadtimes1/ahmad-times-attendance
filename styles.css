@@ -2,19 +2,19 @@
   color-scheme: light;
   --ink: #172033;
   --muted: #667085;
-  --line: #d7e0ea;
-  --soft: #f3f7fb;
-  --panel: #ffffff;
-  --brand: #16a9e0;
-  --brand-2: #0b7faf;
-  --nav: #102033;
-  --green: #12805c;
-  --amber: #b25e09;
-  --blue: #175cd3;
-  --danger: #b42318;
-  --shadow: 0 16px 42px rgba(16, 32, 51, 0.09);
-  --shadow-soft: 0 8px 22px rgba(16, 32, 51, 0.07);
-  --focus: 0 0 0 4px rgba(22, 169, 224, 0.18);
+  --line: rgba(166, 183, 204, 0.42);
+  --soft: rgba(255, 255, 255, 0.55);
+  --panel: rgba(255, 255, 255, 0.74);
+  --brand: #19a9dc;
+  --brand-2: #087fae;
+  --green: #1f8a70;
+  --amber: #a86b18;
+  --blue: #2563a8;
+  --danger: #a6423a;
+  --shadow: 0 18px 55px rgba(31, 45, 61, 0.12);
+  --shadow-soft: 0 10px 28px rgba(31, 45, 61, 0.1);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.62);
+  --focus: 0 0 0 4px rgba(25, 169, 220, 0.16);
 }
 
 * {
@@ -31,8 +31,9 @@ body {
   overflow-x: hidden;
   color: var(--ink);
   background:
-    radial-gradient(circle at 12% 10%, rgba(22, 169, 224, 0.13), transparent 28%),
-    linear-gradient(180deg, #fbfcfe 0%, #eef4f8 100%);
+    radial-gradient(circle at 18% 12%, rgba(25, 169, 220, 0.18), transparent 26%),
+    radial-gradient(circle at 92% 6%, rgba(255, 255, 255, 0.9), transparent 24%),
+    linear-gradient(135deg, #f8fcff 0%, #e9f3f8 48%, #f6f9fc 100%);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -48,14 +49,16 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   box-shadow: 0 1px 0 rgba(16, 32, 51, 0.03);
+  backdrop-filter: blur(14px);
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
 }
 
 button:hover {
-  border-color: #a7b2c3;
+  border-color: rgba(25, 169, 220, 0.32);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow-soft);
   transform: translateY(-1px);
 }
@@ -83,12 +86,13 @@ textarea:focus-visible {
   min-width: 0;
   padding: 24px;
   overflow: hidden;
-  color: #e6eef7;
+  color: var(--ink);
   background:
-    linear-gradient(180deg, rgba(22, 169, 224, 0.13), transparent 28%),
-    var(--nav);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.58)),
+    rgba(255, 255, 255, 0.62);
+  border-right: var(--glass-border);
+  box-shadow: 10px 0 35px rgba(31, 45, 61, 0.06);
+  backdrop-filter: blur(22px);
 }
 
 .brand {
@@ -104,7 +108,7 @@ textarea:focus-visible {
   object-fit: contain;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 12px 26px rgba(25, 169, 220, 0.18);
 }
 
 .brand-logo-fallback {
@@ -114,9 +118,9 @@ textarea:focus-visible {
   height: 60px;
   border-radius: 50%;
   color: #fff;
-  background: var(--brand);
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
   font-weight: 900;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 12px 26px rgba(25, 169, 220, 0.18);
 }
 
 .brand h1,
@@ -128,13 +132,13 @@ textarea:focus-visible {
 }
 
 .brand h1 {
-  color: #fff;
+  color: var(--ink);
   font-size: 21px;
   line-height: 1.15;
 }
 
 .brand p {
-  color: rgba(230, 238, 247, 0.76);
+  color: var(--muted);
 }
 
 .eyebrow,
@@ -154,23 +158,23 @@ textarea:focus-visible {
   padding: 12px 14px;
   text-align: left;
   border-color: transparent;
-  color: rgba(230, 238, 247, 0.82);
-  background: transparent;
+  color: #344054;
+  background: rgba(255, 255, 255, 0.38);
   box-shadow: none;
 }
 
 .nav-item:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
+  color: var(--brand-2);
+  border-color: rgba(25, 169, 220, 0.24);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: var(--shadow-soft);
 }
 
 .nav-item.active {
-  color: #082032;
-  background: #ffffff;
-  border-color: #ffffff;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  color: var(--brand-2);
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(25, 169, 220, 0.28);
+  box-shadow: 0 12px 28px rgba(25, 169, 220, 0.14);
 }
 
 .main {
@@ -232,8 +236,9 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--ink);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.74);
   box-shadow: inset 0 1px 0 rgba(16, 32, 51, 0.02);
+  backdrop-filter: blur(12px);
 }
 
 textarea {
@@ -245,12 +250,13 @@ textarea {
   background: linear-gradient(180deg, var(--brand), var(--brand-2));
   border-color: var(--brand-2);
   font-weight: 800;
+  box-shadow: 0 12px 24px rgba(25, 169, 220, 0.18);
 }
 
 .whatsapp-button {
   color: #fff;
-  background: #128c7e;
-  border-color: #128c7e;
+  background: linear-gradient(180deg, #20a389, #16816e);
+  border-color: #16816e;
   font-weight: 800;
 }
 
@@ -281,10 +287,11 @@ textarea {
 .stat-card,
 .panel,
 .worker-card {
-  border: 1px solid var(--line);
+  border: var(--glass-border);
   border-radius: 8px;
   background: var(--panel);
   box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
 }
 
 .stat-card {
@@ -297,31 +304,31 @@ textarea {
 .stat-card::before {
   position: absolute;
   inset: 0 0 auto;
-  height: 4px;
-  background: var(--brand);
+  height: 3px;
+  background: rgba(25, 169, 220, 0.46);
   content: "";
 }
 
 .stat-card.green::before {
-  background: var(--green);
+  background: rgba(25, 169, 220, 0.46);
 }
 
 .stat-card.amber::before {
-  background: var(--amber);
+  background: rgba(25, 169, 220, 0.46);
 }
 
 .stat-card.blue::before {
-  background: var(--blue);
+  background: rgba(25, 169, 220, 0.46);
 }
 
 .stat-card.muted::before {
-  background: #64748b;
+  background: rgba(25, 169, 220, 0.46);
 }
 
 .stat-card:hover,
 .worker-card:hover {
-  border-color: rgba(22, 169, 224, 0.34);
-  box-shadow: 0 20px 48px rgba(16, 32, 51, 0.12);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 58px rgba(31, 45, 61, 0.14);
   transform: translateY(-2px);
 }
 
@@ -341,19 +348,19 @@ textarea {
 }
 
 .stat-card.green strong {
-  color: var(--green);
+  color: var(--ink);
 }
 
 .stat-card.amber strong {
-  color: var(--amber);
+  color: var(--ink);
 }
 
 .stat-card.blue strong {
-  color: var(--blue);
+  color: var(--ink);
 }
 
 .stat-card.muted strong {
-  color: #64748b;
+  color: var(--ink);
 }
 
 .content-grid {
@@ -410,7 +417,7 @@ th {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.58);
 }
 
 tbody tr {
@@ -418,7 +425,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-  background: #f8fbfd;
+  background: rgba(255, 255, 255, 0.56);
 }
 
 .pill,
@@ -429,20 +436,22 @@ tbody tr:hover {
   align-items: center;
   padding: 4px 9px;
   border-radius: 999px;
-  color: var(--brand-2);
-  background: rgba(22, 169, 224, 0.1);
+  color: #246781;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(25, 169, 220, 0.18);
   font-size: 12px;
   font-weight: 800;
+  backdrop-filter: blur(12px);
 }
 
 .cloud-chip.online {
-  color: #175cd3;
-  background: rgba(23, 92, 211, 0.1);
+  color: #246781;
+  background: rgba(255, 255, 255, 0.56);
 }
 
 .cloud-chip.warning {
-  color: var(--amber);
-  background: rgba(178, 94, 9, 0.1);
+  color: #8a651f;
+  background: rgba(255, 255, 255, 0.56);
 }
 
 .status-pill.inactive {
@@ -463,7 +472,7 @@ tbody tr:hover {
 
 .worker-card {
   padding: 16px;
-  border-top: 4px solid rgba(22, 169, 224, 0.42);
+  border-top: 1px solid rgba(255, 255, 255, 0.72);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -498,7 +507,8 @@ tbody tr:hover {
 .worker-meta div {
   padding: 9px 10px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.52);
 }
 
 .worker-meta span {
@@ -513,10 +523,11 @@ tbody tr:hover {
 .attendance-row,
 .today-row {
   padding: 12px;
-  border: 1px solid var(--line);
+  border: var(--glass-border);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.62);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
 }
 
 .attendance-actions {
@@ -568,14 +579,14 @@ tbody tr:hover {
 
 .attendance-actions button.active[data-status="present"] {
   color: #fff;
-  background: var(--green);
-  border-color: var(--green);
+  background: #1f8a70;
+  border-color: #1f8a70;
 }
 
 .attendance-actions button.active[data-status="halfday"] {
   color: #fff;
-  background: var(--amber);
-  border-color: var(--amber);
+  background: #a86b18;
+  border-color: #a86b18;
 }
 
 .attendance-actions button.active[data-status="absent"] {
@@ -594,9 +605,10 @@ tbody tr:hover {
   display: inline-flex;
   padding: 4px;
   margin-bottom: 14px;
-  border: 1px solid var(--line);
+  border: var(--glass-border);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(16px);
 }
 
 .mode-tab,
@@ -624,7 +636,7 @@ tbody tr:hover {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .month-day {
@@ -641,9 +653,11 @@ tbody tr:hover {
 .report-controls {
   margin-bottom: 14px;
   padding: 14px;
-  border: 1px solid var(--line);
+  border: var(--glass-border);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
 }
 
 .report-controls label {
@@ -660,9 +674,10 @@ tbody tr:hover {
   align-items: center;
   padding: 12px;
   margin-bottom: 12px;
-  border: 1px solid rgba(22, 169, 224, 0.24);
+  border: var(--glass-border);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(22, 169, 224, 0.1), #fff 56%);
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(18px);
 }
 
 .report-brand img {
@@ -670,7 +685,7 @@ tbody tr:hover {
   height: 64px;
   object-fit: contain;
   border-radius: 50%;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .report-logo-fallback {
@@ -681,7 +696,7 @@ tbody tr:hover {
   height: 64px;
   border-radius: 50%;
   color: #fff;
-  background: var(--brand);
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
   font-weight: 900;
 }
 
@@ -725,9 +740,10 @@ tbody tr:hover {
   gap: 8px;
   align-items: end;
   padding: 12px;
-  border: 1px solid var(--line);
+  border: var(--glass-border);
   border-radius: 8px;
-  background: var(--soft);
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(16px);
 }
 
 .payment-row p {
@@ -746,8 +762,10 @@ tbody tr:hover {
 .summary-strip div,
 .storage-list div {
   padding: 12px;
+  border: var(--glass-border);
   border-radius: 8px;
-  background: var(--soft);
+  background: rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(14px);
 }
 
 .summary-strip span,
@@ -777,9 +795,10 @@ tbody tr:hover {
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   font-weight: 800;
+  backdrop-filter: blur(14px);
 }
 
 .file-button input {
@@ -788,14 +807,17 @@ tbody tr:hover {
 
 dialog {
   width: min(760px, calc(100vw - 24px));
-  border: 0;
+  border: var(--glass-border);
   border-radius: 8px;
   padding: 0;
-  box-shadow: 0 28px 90px rgba(16, 24, 40, 0.28);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 28px 90px rgba(31, 45, 61, 0.22);
+  backdrop-filter: blur(22px);
 }
 
 dialog::backdrop {
-  background: rgba(15, 23, 42, 0.42);
+  background: rgba(60, 72, 88, 0.28);
+  backdrop-filter: blur(4px);
 }
 
 .worker-form {
