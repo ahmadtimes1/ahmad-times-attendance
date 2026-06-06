@@ -177,6 +177,28 @@ to authenticated
 using (public.can_manage())
 with check (public.can_manage());
 
+-- Simple username login mode used by this app.
+-- The app keeps access limited with the three fixed usernames/passwords in app.js.
+-- Run this if you want those simple logins to read and save the shared online data.
+drop policy if exists "app data anon select simple login" on public.app_data;
+create policy "app data anon select simple login"
+on public.app_data for select
+to anon
+using (id = 'main');
+
+drop policy if exists "app data anon insert simple login" on public.app_data;
+create policy "app data anon insert simple login"
+on public.app_data for insert
+to anon
+with check (id = 'main');
+
+drop policy if exists "app data anon update simple login" on public.app_data;
+create policy "app data anon update simple login"
+on public.app_data for update
+to anon
+using (id = 'main')
+with check (id = 'main');
+
 insert into public.app_data (id, data)
 values ('main', '{"workers":[],"attendance":{},"lastSaved":null}'::jsonb)
 on conflict (id) do nothing;

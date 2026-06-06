@@ -1,6 +1,13 @@
 ﻿const STORAGE_KEY = "ahmad-times-attendance-v1";
 const LANG_KEY = "ahmad-times-language";
+const SIMPLE_LOGIN_KEY = "ahmad-times-simple-user";
 const STANDARD_HOURS = 8;
+
+const SIMPLE_USERS = [
+  { username: "admin", password: "Dubai@#123", role: "admin", name: "Admin" },
+  { username: "Ahmadadmin", password: "Ahmad@dxb", role: "admin", name: "Ahmad Admin" },
+  { username: "Najib", password: "Najib@dxb", role: "manager", name: "Najib" },
+];
 
 const translations = {
   en: {
@@ -64,8 +71,8 @@ const translations = {
     monthly: "Monthly",
     date: "Date",
     month: "Month",
-    print: "Print",
-    pdfReport: "PDF report",
+    print: "Download report",
+    pdfReport: "PDF / print file",
     reportLanguage: "Report language",
     exportCsv: "Export CSV",
     dataBackup: "Data Backup",
@@ -97,9 +104,10 @@ const translations = {
     cancel: "Cancel",
     saveWorker: "Save worker",
     managerLogin: "Manager Login",
+    username: "Username",
     email: "Email",
     password: "Password",
-    authHelp: "Use the manager email created in Supabase.",
+    authHelp: "Use one of the company usernames and passwords.",
     companyWideReport: "Company-wide report",
     wageAttendanceReport: "wage and attendance report.",
     dailyReport: "Daily report",
@@ -126,6 +134,8 @@ const translations = {
     loggedOut: "Logged out",
     cloudSaveFailed: "Cloud save failed",
     startupCloudFailed: "Could not start cloud mode. Local mode is still available.",
+    invalidLogin: "Wrong username or password.",
+    reportDownloaded: "Report file downloaded. Open it to print or save as PDF.",
   },
   ps: {
     language: "ژبه",
@@ -188,8 +198,8 @@ const translations = {
     monthly: "میاشتنی",
     date: "نېټه",
     month: "میاشت",
-    print: "چاپ",
-    pdfReport: "PDF راپور",
+    print: "راپور ښکته کړئ",
+    pdfReport: "PDF / چاپ فایل",
     reportLanguage: "د راپور ژبه",
     exportCsv: "CSV وباسئ",
     dataBackup: "د معلوماتو بیک اپ",
@@ -221,9 +231,10 @@ const translations = {
     cancel: "لغوه",
     saveWorker: "کارکوونکی ذخیره کړئ",
     managerLogin: "د مدیر ننوتل",
+    username: "کارن نوم",
     email: "ایمیل",
     password: "پاسورډ",
-    authHelp: "هغه مدیر ایمیل وکاروئ چې په Supabase کې جوړ شوی.",
+    authHelp: "د شرکت کارن نوم او پاسورډ وکاروئ.",
     companyWideReport: "د ټول شرکت راپور",
     wageAttendanceReport: "د مزدورۍ او حاضري راپور.",
     dailyReport: "ورځنی راپور",
@@ -250,6 +261,8 @@ const translations = {
     loggedOut: "وتل وشول",
     cloudSaveFailed: "کلاوډ ذخیره ناکامه شوه",
     startupCloudFailed: "کلاوډ حالت پیل نه شو. محلي حالت لا هم کار کوي.",
+    invalidLogin: "کارن نوم یا پاسورډ غلط دی.",
+    reportDownloaded: "د راپور فایل ښکته شو. د چاپ یا PDF لپاره یې خلاص کړئ.",
   },
 };
 
@@ -512,6 +525,23 @@ function cloudConfigured() {
   return Boolean(config.url && config.anonKey && window.supabase);
 }
 
+function simpleUserProfile(user) {
+  return user ? { email: user.username, role: user.role, active: true } : null;
+}
+
+function restoreSimpleLogin() {
+  try {
+    const username = localStorage.getItem(SIMPLE_LOGIN_KEY);
+    const user = SIMPLE_USERS.find((item) => item.username.toLowerCase() === String(username || "").toLowerCase());
+    if (!user) return false;
+    app.user = { id: null, email: user.username, username: user.username };
+    app.profile = simpleUserProfile(user);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function initCloud() {
   if (!cloudConfigured()) {
     app.storageMode = "local";
@@ -520,9 +550,11 @@ async function initCloud() {
 
   const config = window.AHMAD_TIMES_SUPABASE;
   supabaseClient = window.supabase.createClient(config.url, config.anonKey);
-  const { data } = await supabaseClient.auth.getSession();
-  app.user = data.session?.user || null;
-  if (app.user) await loadProfile();
+  if (!restoreSimpleLogin()) {
+    const { data } = await supabaseClient.auth.getSession();
+    app.user = data.session?.user || null;
+    if (app.user) await loadProfile();
+  }
   app.storageMode = app.user ? "cloud" : "login required";
 }
 
@@ -548,8 +580,7 @@ async function loadData() {
       Object.assign(app, data.data);
       app.payments ||= {};
       app.storageMode = "cloud";
-      app.user = (await supabaseClient.auth.getUser()).data.user;
-      await loadProfile();
+      restoreSimpleLogin();
       return;
     }
     if (error) toast(error.message);
@@ -585,7 +616,7 @@ async function saveData(show = true) {
     };
     const { error } = await supabaseClient
       .from("app_data")
-      .upsert({ id: "main", data: payload, updated_by: app.user.id, updated_at: new Date().toISOString() });
+      .upsert({ id: "main", data: payload, updated_by: app.user.id || null, updated_at: new Date().toISOString() });
     if (error) {
       toast(`${t("cloudSaveFailed")}: ${error.message}`);
     } else {
@@ -814,14 +845,13 @@ function openPrintableReport() {
   renderReport();
   const language = reportLanguage();
   const dir = language === "ps" ? "rtl" : "ltr";
-  const report = $("#reportOutput").innerHTML;
+  const logoUrl = new URL("ahmad-times-logo.png", window.location.href).href;
+  const report = $("#reportOutput").innerHTML.replaceAll('src="ahmad-times-logo.png"', `src="${logoUrl}"`);
   if (!report.trim()) {
     toast(t("emptyReport"));
     return;
   }
-  const win = window.open("", "_blank", "noopener");
-  if (!win) return;
-  win.document.write(`<!doctype html>
+  const html = `<!doctype html>
     <html lang="${language}" dir="${dir}">
       <head>
         <meta charset="utf-8">
@@ -830,6 +860,8 @@ function openPrintableReport() {
         <style>
           body { margin: 0; padding: 24px; color: #1d2433; font-family: Arial, sans-serif; background: #fff; }
           .report-page { max-width: 1100px; margin: 0 auto; }
+          .print-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 0 auto 16px; max-width: 1100px; }
+          .print-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid #bce7f7; border-radius: 8px; color: #087fae; background: #f4fbfe; font-weight: 700; cursor: pointer; }
           .report-brand { display: flex; gap: 12px; align-items: center; padding: 12px; margin-bottom: 12px; border: 1px solid #bce7f7; border-radius: 8px; background: #f4fbfe; }
           .report-brand img { width: 72px; height: 72px; object-fit: contain; border-radius: 50%; background: #fff; }
           .report-logo-fallback { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; color: #fff; background: #16a9e0; font-weight: 900; }
@@ -846,15 +878,18 @@ function openPrintableReport() {
           table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
           th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
-          @media print { body { padding: 0; } .report-page { max-width: none; } }
+          @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; } }
         </style>
       </head>
       <body>
+        <div class="print-actions">
+          <button onclick="window.print()">Print / Save PDF</button>
+        </div>
         <main class="report-page">${report}</main>
-        <script>window.addEventListener("load", () => setTimeout(() => window.print(), 250));<\/script>
       </body>
-    </html>`);
-  win.document.close();
+    </html>`;
+  downloadFile(`ahmad-times-report-${todayISO()}.html`, html, "text/html");
+  toast(t("reportDownloaded"));
 }
 
 function printReportOnly() {
@@ -956,7 +991,6 @@ function renderAll() {
   renderMonthAttendance();
   renderReport();
   renderStorage();
-  renderAiChat();
 }
 
 function applyLanguage() {
@@ -1555,27 +1589,24 @@ function emptyState(message) {
 }
 
 async function loginFromForm() {
-  if (!supabaseClient) {
-    toast(t("loginMissingConfig"));
-    return;
-  }
-
-  const email = $("#authEmail").value.trim();
+  const username = $("#authEmail").value.trim();
   const password = $("#authPassword").value;
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) {
-    toast(error.message);
+  const user = SIMPLE_USERS.find((item) => item.username.toLowerCase() === username.toLowerCase() && item.password === password);
+  if (!user) {
+    toast(t("invalidLogin"));
     return;
   }
 
-  app.user = data.user;
-  await loadProfile();
-  if (!app.profile?.active) {
-    toast(t("emailNoManager"));
-    return;
+  app.user = { id: null, email: user.username, username: user.username };
+  app.profile = simpleUserProfile(user);
+  try {
+    localStorage.setItem(SIMPLE_LOGIN_KEY, user.username);
+  } catch {
+    // Login still works for the current browser session.
   }
 
   $("#authDialog").close();
+  $("#authPassword").value = "";
   await loadData();
   renderAll();
   toast(t("loggedIn"));
@@ -1583,6 +1614,11 @@ async function loginFromForm() {
 
 async function logout() {
   if (supabaseClient) await supabaseClient.auth.signOut();
+  try {
+    localStorage.removeItem(SIMPLE_LOGIN_KEY);
+  } catch {
+    // Ignore unavailable storage.
+  }
   app.user = null;
   app.profile = null;
   app.storageMode = supabaseClient ? "login required" : "local";
@@ -1812,4 +1848,6 @@ initCloud()
     toast(t("startupCloudFailed"));
     renderAll();
   });
+
+
 
