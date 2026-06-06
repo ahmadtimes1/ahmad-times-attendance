@@ -485,9 +485,94 @@ tbody tr:hover {
   align-items: center;
 }
 
+.worker-title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.worker-avatar,
+.worker-photo-preview {
+  display: grid;
+  flex: 0 0 58px;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(25, 169, 220, 0.18);
+  border-radius: 50%;
+  color: var(--brand-2);
+  background: rgba(255, 255, 255, 0.74);
+  object-fit: cover;
+  font-size: 13px;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.worker-avatar-fallback {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(230, 246, 252, 0.78));
+}
+
 .worker-card h3 {
   margin: 0 0 4px;
   font-size: 18px;
+}
+
+.worker-number {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid rgba(25, 169, 220, 0.18);
+  border-radius: 999px;
+  color: var(--brand-2);
+  background: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+}
+
+.worker-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.worker-card-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.photo-editor {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 14px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.worker-photo-preview {
+  width: 84px;
+  height: 84px;
+  flex-basis: 84px;
+  background-size: cover;
+  background-position: center;
+}
+
+.photo-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.worker-camera {
+  grid-column: 1 / -1;
+  width: min(100%, 420px);
+  border-radius: 8px;
+  background: #111827;
 }
 
 .worker-card p,
@@ -1089,6 +1174,14 @@ dialog::backdrop {
   .worker-card-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .photo-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-photo-preview {
+    justify-self: start;
   }
 
   .status-pill {

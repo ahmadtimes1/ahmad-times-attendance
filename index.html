@@ -22,6 +22,7 @@
           <button class="nav-item" data-view="workers" data-i18n="workers">Workers</button>
           <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
           <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
+          <button class="nav-item" data-view="logs" data-i18n="logs">Logs</button>
           <button class="nav-item" data-view="backup" data-i18n="backup">Backup</button>
         </nav>
       </aside>
@@ -220,6 +221,31 @@
             </section>
           </div>
         </section>
+
+        <section id="logs" class="view">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3 data-i18n="activityLogs">Activity Logs</h3>
+                <p class="help-text" data-i18n="activityLogsHelp">See which admin changed workers, attendance, payments, and reports.</p>
+              </div>
+              <button id="clearLogs" class="danger ghost" data-i18n="clearLogs">Clear logs</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="dateTime">Date / Time</th>
+                    <th data-i18n="user">User</th>
+                    <th data-i18n="action">Action</th>
+                    <th data-i18n="details">Details</th>
+                  </tr>
+                </thead>
+                <tbody id="logsList"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
       </main>
     </div>
 
@@ -230,6 +256,21 @@
           <button type="button" class="icon-button" id="closeWorkerDialog" aria-label="Close" data-i18n-aria-label="close">x</button>
         </div>
         <input type="hidden" id="workerId">
+        <input type="hidden" id="workerPhoto">
+        <div class="photo-editor">
+          <div class="worker-photo-preview" id="workerPhotoPreview">Photo</div>
+          <div class="photo-controls">
+            <label class="file-button">
+              <span data-i18n="uploadPhoto">Upload photo</span>
+              <input id="workerPhotoUpload" type="file" accept="image/*">
+            </label>
+            <button type="button" id="startCamera" data-i18n="takePhoto">Take photo</button>
+            <button type="button" id="capturePhoto" class="primary hidden" data-i18n="capturePhoto">Capture</button>
+            <button type="button" id="removePhoto" class="ghost" data-i18n="removePhoto">Remove photo</button>
+          </div>
+          <video id="workerCamera" class="worker-camera hidden" autoplay playsinline></video>
+          <canvas id="workerPhotoCanvas" class="hidden"></canvas>
+        </div>
         <div class="form-grid">
           <label><span data-i18n="fullName">Full name</span><input id="workerName" required data-i18n-placeholder="workerNamePlaceholder" placeholder="Worker name"></label>
           <label><span data-i18n="roleTrade">Role / trade</span><input id="workerRole" data-i18n-placeholder="rolePlaceholder" placeholder="Electrician, plumber, helper"></label>

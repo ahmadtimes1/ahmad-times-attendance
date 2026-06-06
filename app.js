@@ -56,6 +56,7 @@ const translations = {
     workers: "Workers",
     attendance: "Attendance",
     reports: "Reports",
+    logs: "Logs",
     backup: "Backup",
     appSubtitle: "Automatic attendance and daily wage system",
     buildingMaintenance: "Building Maintenance",
@@ -136,6 +137,24 @@ const translations = {
     startupCloudFailed: "Could not start cloud mode. Local mode is still available.",
     invalidLogin: "Wrong username or password.",
     reportDownloaded: "Report file downloaded. Open it to print or save as PDF.",
+    activityLogs: "Activity Logs",
+    activityLogsHelp: "See which admin changed workers, attendance, payments, and reports.",
+    clearLogs: "Clear logs",
+    dateTime: "Date / Time",
+    user: "User",
+    action: "Action",
+    details: "Details",
+    noLogs: "No logs yet.",
+    logsCleared: "Logs cleared",
+    workerNumber: "Worker No.",
+    moveUp: "Move up",
+    moveDown: "Move down",
+    uploadPhoto: "Upload photo",
+    takePhoto: "Take photo",
+    capturePhoto: "Capture",
+    removePhoto: "Remove photo",
+    photo: "Photo",
+    cameraFailed: "Camera could not start. Use upload photo instead.",
   },
   ps: {
     language: "ژبه",
@@ -183,6 +202,7 @@ const translations = {
     workers: "کارکوونکي",
     attendance: "حاضري",
     reports: "راپورونه",
+    logs: "لاګونه",
     backup: "بیک اپ",
     appSubtitle: "اتومات حاضري او ورځنۍ مزدوري سیستم",
     buildingMaintenance: "بلډنګ مینټیننس",
@@ -263,6 +283,24 @@ const translations = {
     startupCloudFailed: "کلاوډ حالت پیل نه شو. محلي حالت لا هم کار کوي.",
     invalidLogin: "کارن نوم یا پاسورډ غلط دی.",
     reportDownloaded: "د راپور فایل ښکته شو. د چاپ یا PDF لپاره یې خلاص کړئ.",
+    activityLogs: "د کارونو لاګونه",
+    activityLogsHelp: "وګورئ کوم مدیر کارکوونکي، حاضري، تادیات او راپورونه بدل کړي.",
+    clearLogs: "لاګونه پاک کړئ",
+    dateTime: "نېټه / وخت",
+    user: "کارن",
+    action: "عمل",
+    details: "تفصیل",
+    noLogs: "لاګ نشته.",
+    logsCleared: "لاګونه پاک شول",
+    workerNumber: "د کارکوونکي نمبر",
+    moveUp: "پورته",
+    moveDown: "ښکته",
+    uploadPhoto: "عکس پورته کړئ",
+    takePhoto: "عکس واخلئ",
+    capturePhoto: "ثبت کړئ",
+    removePhoto: "عکس لرې کړئ",
+    photo: "عکس",
+    cameraFailed: "کمره پیل نه شوه. عکس پورته کړئ.",
   },
 };
 
@@ -374,6 +412,7 @@ const app = {
   workers: [],
   attendance: {},
   payments: {},
+  logs: [],
   lastSaved: null,
   storageMode: "local",
   user: null,
@@ -393,6 +432,31 @@ const money = (value) => `AED ${Number(value || 0).toLocaleString("en-AE", { min
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 const t = (key) => translations[app.language]?.[key] || translations.en[key] || key;
 const reportLanguage = () => $("#reportLanguage")?.value || app.language || "en";
+
+function workerInitials(worker) {
+  return String(worker?.name || "?")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "?";
+}
+
+function currentUserLabel() {
+  return app.user?.username || app.user?.email || app.profile?.email || "local";
+}
+
+function addLog(action, details = "") {
+  app.logs ||= [];
+  app.logs.unshift({
+    id: makeId(),
+    at: new Date().toISOString(),
+    user: currentUserLabel(),
+    action,
+    details,
+  });
+  app.logs = app.logs.slice(0, 500);
+}
 
 function withLanguage(language, callback) {
   const previous = app.language;
@@ -579,6 +643,7 @@ async function loadData() {
     if (!error && data?.data) {
       Object.assign(app, data.data);
       app.payments ||= {};
+      app.logs ||= [];
       app.storageMode = "cloud";
       restoreSimpleLogin();
       return;
@@ -591,6 +656,7 @@ async function loadData() {
     try {
       Object.assign(app, JSON.parse(saved));
       app.payments ||= {};
+      app.logs ||= [];
       app.storageMode = supabaseClient ? "login required" : "local";
       return;
     } catch {
@@ -600,6 +666,7 @@ async function loadData() {
 
   app.workers = [];
   app.payments = {};
+  app.logs = [];
   saveData(false);
 }
 
@@ -612,6 +679,7 @@ async function saveData(show = true) {
       workers: app.workers,
       attendance: app.attendance,
       payments: app.payments,
+      logs: app.logs,
       lastSaved: app.lastSaved,
     };
     const { error } = await supabaseClient
@@ -644,6 +712,7 @@ function setBrowserBackup() {
       workers: app.workers,
       attendance: app.attendance,
       payments: app.payments,
+      logs: app.logs,
       lastSaved: app.lastSaved,
     }));
   } catch {
@@ -712,6 +781,7 @@ function normalizeAttendanceRecord(record) {
 function setAttendance(date, workerId, status, autoTime = true) {
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
+  const worker = app.workers.find((item) => item.id === workerId);
   if (status) {
     const now = autoTime ? currentTime() : "";
     app.attendance[date][workerId] = {
@@ -726,6 +796,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
   }
   else delete app.attendance[date][workerId];
   if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
+  addLog("Attendance changed", `${worker?.name || workerId} · ${date} · ${status || "cleared"}`);
   saveData();
 }
 
@@ -738,6 +809,8 @@ function setAttendanceTime(date, workerId, field, value) {
     [field]: value,
   };
   if (field === "inTime" && value && !current.outTime) app.attendance[date][workerId].outTime = "";
+  const worker = app.workers.find((item) => item.id === workerId);
+  addLog("Attendance time changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || "-"}`);
   saveData();
 }
 
@@ -749,6 +822,8 @@ function setAttendanceMoney(date, workerId, field, value) {
     status: current.status || "present",
     [field]: Number(value || 0),
   };
+  const worker = app.workers.find((item) => item.id === workerId);
+  addLog("Attendance money changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || 0}`);
   saveData();
 }
 
@@ -760,6 +835,8 @@ function setAttendanceNumber(date, workerId, field, value) {
     status: current.status || "present",
     [field]: value === "" ? "" : Number(value || 0),
   };
+  const worker = app.workers.find((item) => item.id === workerId);
+  addLog("Attendance number changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || "-"}`);
   saveData();
 }
 
@@ -830,6 +907,7 @@ function paymentTotals(rows, start, end) {
 }
 
 function savePayment(workerId, start, end, paidAmount, paymentDate, method, note) {
+  const worker = app.workers.find((item) => item.id === workerId);
   app.payments[paymentKey(workerId, start, end)] = {
     paidAmount: Number(paidAmount || 0),
     paymentDate,
@@ -837,6 +915,7 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
     note,
     updatedAt: new Date().toISOString(),
   };
+  addLog("Payment saved", `${worker?.name || workerId} · ${start} to ${end} · ${money(paidAmount)}`);
   saveData();
   toast(t("paymentSaved"));
 }
@@ -991,6 +1070,7 @@ function renderAll() {
   renderMonthAttendance();
   renderReport();
   renderStorage();
+  renderLogs();
 }
 
 function applyLanguage() {
@@ -1102,16 +1182,22 @@ function renderWorkers() {
     return haystack.includes(query);
   });
 
-  $("#workersList").innerHTML = workers.map((worker) => `
+  $("#workersList").innerHTML = workers.map((worker) => {
+    const workerIndex = app.workers.findIndex((item) => item.id === worker.id);
+    return `
     <article class="worker-card">
       <div class="worker-card-head">
-        <div>
-          <h3>${escapeHTML(worker.name)}</h3>
-          <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
+        <div class="worker-title">
+          ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(worker.name)}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          <div>
+            <h3><span class="worker-number">#${workerIndex + 1}</span> ${escapeHTML(worker.name)}</h3>
+            <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
+          </div>
         </div>
         <span class="status-pill ${worker.status}">${t(worker.status)}</span>
       </div>
       <div class="worker-meta">
+        <div><span>${t("workerNumber")}</span><strong>#${workerIndex + 1}</strong></div>
         <div><span>${t("currentDailyWage")}</span><strong>${money(currentDailyWage(worker))}</strong></div>
         <div><span>${t("wageHistory")}</span><strong>${escapeHTML(wageHistoryText(worker))}</strong></div>
         <div><span>${t("joiningDate")}</span><strong>${worker.joinDate || "-"}</strong></div>
@@ -1121,9 +1207,14 @@ function renderWorkers() {
         <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
         <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
       </div>
-      <button data-edit-worker="${worker.id}">${t("editWorkerTitle")}</button>
+      <div class="worker-card-actions">
+        <button data-move-worker="${worker.id}" data-move-direction="up" ${workerIndex <= 0 ? "disabled" : ""}>${t("moveUp")}</button>
+        <button data-move-worker="${worker.id}" data-move-direction="down" ${workerIndex >= app.workers.length - 1 ? "disabled" : ""}>${t("moveDown")}</button>
+        <button data-edit-worker="${worker.id}">${t("editWorkerTitle")}</button>
+      </div>
     </article>
-  `).join("") || emptyState(t("noWorkerSearch"));
+  `;
+  }).join("") || emptyState(t("noWorkerSearch"));
 }
 
 function renderDayAttendance() {
@@ -1248,11 +1339,15 @@ function renderReport() {
     title = `${t("monthlyReport")} · ${month}`;
   }
 
+  const reportWorkers = app.workers.filter((worker) => worker.status === "active");
+  const selectedWorkerId = workerId === "all" || reportWorkers.some((worker) => worker.id === workerId) ? workerId : "all";
+  if (selectedWorkerId !== workerId) $("#reportWorker").value = "all";
   const workerOptions = [`<option value="all">${t("companyWideReport")}</option>`]
-    .concat(app.workers.map((worker) => `<option value="${worker.id}" ${worker.id === workerId ? "selected" : ""}>${escapeHTML(worker.name)}</option>`));
+    .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${worker.id === selectedWorkerId ? "selected" : ""}>${escapeHTML(worker.name)}</option>`));
   $("#reportWorker").innerHTML = workerOptions.join("");
 
-  const rows = type === "monthly" ? monthSummary(month, workerId) : summarizeRecords(recordsForRange(start, end, workerId));
+  const reportRows = type === "monthly" ? monthSummary(month, selectedWorkerId) : summarizeRecords(recordsForRange(start, end, selectedWorkerId));
+  const rows = selectedWorkerId === "all" ? reportRows.filter((row) => row.worker.status === "active") : reportRows;
   const totals = rows.reduce((acc, row) => {
     acc.present += row.present;
     acc.halfday += row.halfday || 0;
@@ -1279,7 +1374,7 @@ function renderReport() {
       </div>
     </div>
     <h3>${title}</h3>
-    <p class="help-text">${workerId === "all" ? t("companyWideReport") : escapeHTML(app.workers.find((worker) => worker.id === workerId)?.name || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
+    <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(app.workers.find((worker) => worker.id === selectedWorkerId)?.name || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
     <div class="summary-strip">
       <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
       <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>
@@ -1404,10 +1499,66 @@ function renderStorage() {
   $("#storageAttendance").textContent = attendanceCount;
   $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
 }
+
+function renderLogs() {
+  const list = $("#logsList");
+  if (!list) return;
+  const logs = app.logs || [];
+  list.innerHTML = logs.length ? logs.map((entry) => `
+    <tr>
+      <td>${new Date(entry.at).toLocaleString()}</td>
+      <td>${escapeHTML(entry.user || "-")}</td>
+      <td>${escapeHTML(entry.action || "-")}</td>
+      <td>${escapeHTML(entry.details || "-")}</td>
+    </tr>
+  `).join("") : `<tr><td colspan="4">${t("noLogs")}</td></tr>`;
+}
+
+function updatePhotoPreview(photo = "") {
+  const preview = $("#workerPhotoPreview");
+  if (!preview) return;
+  preview.style.backgroundImage = photo ? `url("${photo}")` : "";
+  preview.textContent = photo ? "" : t("photo");
+}
+
+function stopWorkerCamera() {
+  const video = $("#workerCamera");
+  if (video?.srcObject) {
+    video.srcObject.getTracks().forEach((track) => track.stop());
+    video.srcObject = null;
+  }
+  video?.classList.add("hidden");
+  $("#capturePhoto")?.classList.add("hidden");
+}
+
+function setWorkerPhoto(photo = "") {
+  $("#workerPhoto").value = photo;
+  updatePhotoPreview(photo);
+}
+
+function resizePhotoDataUrl(dataUrl, maxSize = 520) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+      const canvas = $("#workerPhotoCanvas") || document.createElement("canvas");
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    image.onerror = () => resolve(dataUrl);
+    image.src = dataUrl;
+  });
+}
 function openWorkerDialog(workerId = "") {
   const worker = app.workers.find((item) => item.id === workerId);
+  stopWorkerCamera();
   $("#workerDialogTitle").textContent = worker ? t("editWorkerTitle") : t("addWorkerTitle");
   $("#workerId").value = worker?.id || "";
+  $("#workerPhotoUpload").value = "";
+  setWorkerPhoto(worker?.photo || "");
   $("#workerName").value = worker?.name || "";
   $("#workerRole").value = worker?.role || "";
   $("#workerCity").value = worker?.city || "";
@@ -1444,6 +1595,7 @@ function saveWorkerFromForm() {
     performance: $("#workerPerformance").value,
     phone: $("#workerPhone").value.trim(),
     emiratesId: $("#workerEmiratesId").value.trim(),
+    photo: $("#workerPhoto").value || "",
     dailyWage,
     wageHistory: updatedWageHistory,
     joinDate,
@@ -1462,10 +1614,16 @@ function saveWorkerFromForm() {
     return;
   }
 
-  if (existing) Object.assign(existing, worker);
-  else app.workers.push(worker);
+  if (existing) {
+    Object.assign(existing, worker);
+    addLog("Worker updated", `${worker.name} · #${app.workers.findIndex((item) => item.id === worker.id) + 1}${worker.photo ? " · photo saved" : ""}`);
+  } else {
+    app.workers.push(worker);
+    addLog("Worker added", `${worker.name} · #${app.workers.length}${worker.photo ? " · photo saved" : ""}`);
+  }
 
   $("#workerDialog").close();
+  stopWorkerCamera();
   saveData();
   toast(existing ? t("workerUpdated") : t("workerAdded"));
 }
@@ -1483,14 +1641,29 @@ function removeWorker() {
 
   if (hasRecords) {
     worker.status = "inactive";
+    addLog("Worker marked inactive", worker.name);
   } else {
     app.workers = app.workers.filter((item) => item.id !== id);
+    addLog("Worker removed", worker.name);
   }
   $("#workerDialog").close();
   saveData();
 }
 
+function moveWorker(workerId, direction) {
+  const index = app.workers.findIndex((worker) => worker.id === workerId);
+  if (index < 0) return;
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (target < 0 || target >= app.workers.length) return;
+  const [worker] = app.workers.splice(index, 1);
+  app.workers.splice(target, 0, worker);
+  addLog("Worker moved", `${worker.name} · #${index + 1} to #${target + 1}`);
+  saveData();
+}
+
 function exportBackup() {
+  addLog("Backup exported", `${app.workers.length} workers`);
+  saveData(false);
   downloadFile(`ahmad-times-backup-${todayISO()}.json`, JSON.stringify(app, null, 2), "application/json");
 }
 
@@ -1503,7 +1676,9 @@ function importBackup(file) {
       app.workers = parsed.workers;
       app.attendance = parsed.attendance;
       app.payments = parsed.payments || {};
+      app.logs = parsed.logs || app.logs || [];
       app.lastSaved = parsed.lastSaved || new Date().toISOString();
+      addLog("Backup imported", `${app.workers.length} workers`);
       saveData();
       toast(t("backupImported"));
     } catch {
@@ -1515,12 +1690,20 @@ function importBackup(file) {
 
 function exportReportCSV() {
   return withLanguage(reportLanguage(), () => {
-  const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("nationality"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("foodDeductionTotal"), t("payableWage"), t("paid"), t("unpaid")]];
-  $("#reportOutput tbody tr").forEach((tr) => {
-    const cells = Array.from(tr.children).map((td) => td.textContent.trim());
-    if (cells.length === 18) rows.push(cells);
+  renderReport();
+  const table = $("#reportOutput table");
+  if (!table) {
+    toast(t("emptyReport"));
+    return;
+  }
+  const rows = [];
+  table.querySelectorAll("tr").forEach((tr) => {
+    const cells = Array.from(tr.children).map((cell) => cell.textContent.trim());
+    if (cells.length) rows.push(cells);
   });
-  downloadFile(`attendance-report-${todayISO()}.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv");
+  addLog("CSV exported", `${rows.length ? rows.length - 1 : 0} report rows`);
+  saveData(false);
+  downloadFile(`attendance-report-${todayISO()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
   });
 }
 
@@ -1530,8 +1713,10 @@ function downloadFile(name, content, type) {
   const link = document.createElement("a");
   link.href = url;
   link.download = name;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function csvCell(value) {
@@ -1667,8 +1852,50 @@ function bindEvents() {
       renderWorkers();
     });
   });
-  $("#closeWorkerDialog").addEventListener("click", () => $("#workerDialog").close());
-  $("#cancelWorker").addEventListener("click", () => $("#workerDialog").close());
+  $("#closeWorkerDialog").addEventListener("click", () => {
+    stopWorkerCamera();
+    $("#workerDialog").close();
+  });
+  $("#cancelWorker").addEventListener("click", () => {
+    stopWorkerCamera();
+    $("#workerDialog").close();
+  });
+  $("#workerPhotoUpload").addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      setWorkerPhoto(await resizePhotoDataUrl(reader.result));
+      stopWorkerCamera();
+    };
+    reader.readAsDataURL(file);
+  });
+  $("#startCamera").addEventListener("click", async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      const video = $("#workerCamera");
+      video.srcObject = stream;
+      video.classList.remove("hidden");
+      $("#capturePhoto").classList.remove("hidden");
+    } catch {
+      toast(t("cameraFailed"));
+    }
+  });
+  $("#capturePhoto").addEventListener("click", async () => {
+    const video = $("#workerCamera");
+    if (!video?.videoWidth) return;
+    const canvas = $("#workerPhotoCanvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    setWorkerPhoto(await resizePhotoDataUrl(canvas.toDataURL("image/jpeg", 0.9)));
+    stopWorkerCamera();
+  });
+  $("#removePhoto").addEventListener("click", () => {
+    setWorkerPhoto("");
+    $("#workerPhotoUpload").value = "";
+    stopWorkerCamera();
+  });
   $("#workerForm").addEventListener("submit", (event) => {
     event.preventDefault();
     saveWorkerFromForm();
@@ -1678,6 +1905,9 @@ function bindEvents() {
   document.addEventListener("click", (event) => {
     const editButton = event.target.closest("[data-edit-worker]");
     if (editButton) openWorkerDialog(editButton.dataset.editWorker);
+
+    const moveButton = event.target.closest("[data-move-worker]");
+    if (moveButton) moveWorker(moveButton.dataset.moveWorker, moveButton.dataset.moveDirection);
 
     const statusButton = event.target.closest(".attendance-actions button");
     if (statusButton) {
@@ -1773,6 +2003,13 @@ function bindEvents() {
   $("#exportBackup").addEventListener("click", exportBackup);
   $("#importBackup").addEventListener("change", (event) => {
     if (event.target.files[0]) importBackup(event.target.files[0]);
+  });
+  $("#clearLogs").addEventListener("click", () => {
+    if (!confirm(t("clearLogs"))) return;
+    app.logs = [];
+    addLog("Logs cleared", "");
+    saveData();
+    toast(t("logsCleared"));
   });
 }
 
