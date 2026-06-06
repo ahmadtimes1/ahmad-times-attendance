@@ -684,6 +684,66 @@ th {
   gap: 10px;
 }
 
+.ai-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+}
+
+.ai-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.ai-chat-log {
+  display: grid;
+  gap: 10px;
+  min-height: 280px;
+  max-height: 52vh;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.ai-message,
+.ai-actions-preview,
+.ai-empty {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ai-message.user {
+  border-color: rgba(22, 169, 224, 0.28);
+  background: rgba(22, 169, 224, 0.08);
+}
+
+.ai-message p,
+.ai-actions-preview ul {
+  margin: 6px 0 0;
+}
+
+.ai-actions-preview {
+  border-color: rgba(18, 128, 92, 0.26);
+  background: rgba(18, 128, 92, 0.08);
+}
+
+.ai-composer {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-suggestions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ai-suggestions button {
+  text-align: left;
+}
+
 .file-button {
   display: inline-grid;
   min-height: 42px;
@@ -857,6 +917,10 @@ dialog::backdrop {
   }
 
   .payment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-layout {
     grid-template-columns: 1fr;
   }
 
