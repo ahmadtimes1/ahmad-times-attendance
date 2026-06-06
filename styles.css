@@ -96,6 +96,18 @@ textarea:focus-visible {
   box-shadow: 0 8px 22px rgba(22, 169, 224, 0.18);
 }
 
+.brand-logo-fallback {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--brand);
+  font-weight: 900;
+  box-shadow: 0 8px 22px rgba(22, 169, 224, 0.18);
+}
+
 .brand h1,
 .brand p,
 .topbar h2,
@@ -325,6 +337,11 @@ td {
   border-bottom: 1px solid var(--line);
   text-align: left;
   white-space: nowrap;
+}
+
+[dir="rtl"] th,
+[dir="rtl"] td {
+  text-align: right;
 }
 
 th {
@@ -568,6 +585,23 @@ th {
   object-fit: contain;
   border-radius: 50%;
   background: #fff;
+}
+
+.report-logo-fallback {
+  display: grid;
+  flex: 0 0 64px;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--brand);
+  font-weight: 900;
+}
+
+.report-brand img:not([src]),
+.report-brand img[src=""] {
+  display: none;
 }
 
 .report-brand strong,
@@ -1020,6 +1054,12 @@ dialog::backdrop {
   }
 
   .report-brand img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .report-logo-fallback {
+    flex-basis: 52px;
     width: 52px;
     height: 52px;
   }

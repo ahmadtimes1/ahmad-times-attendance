@@ -65,6 +65,8 @@ const translations = {
     date: "Date",
     month: "Month",
     print: "Print",
+    pdfReport: "PDF report",
+    reportLanguage: "Report language",
     exportCsv: "Export CSV",
     dataBackup: "Data Backup",
     backupHelp: "Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.",
@@ -187,6 +189,8 @@ const translations = {
     date: "نېټه",
     month: "میاشت",
     print: "چاپ",
+    pdfReport: "PDF راپور",
+    reportLanguage: "د راپور ژبه",
     exportCsv: "CSV وباسئ",
     dataBackup: "د معلوماتو بیک اپ",
     backupHelp: "ټول کارکوونکي، حاضري او مزدوري ریکارډونه د JSON بیک اپ فایل په توګه وباسئ. وروسته یې د سیستم د بحالولو لپاره داخل کړئ.",
@@ -376,6 +380,17 @@ const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
 const money = (value) => `AED ${Number(value || 0).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 const t = (key) => translations[app.language]?.[key] || translations.en[key] || key;
+const reportLanguage = () => $("#reportLanguage")?.value || app.language || "en";
+
+function withLanguage(language, callback) {
+  const previous = app.language;
+  app.language = language || previous;
+  try {
+    return callback();
+  } finally {
+    app.language = previous;
+  }
+}
 
 function normalizeWageHistory(worker) {
   const fallbackDate = worker.joinDate || (worker.createdAt ? worker.createdAt.slice(0, 10) : todayISO());
@@ -475,6 +490,7 @@ function buildWhatsAppMessage(row, start, end, title) {
 }
 
 function openWhatsAppReport(workerId, start, end, title) {
+  return withLanguage(reportLanguage(), () => {
   const type = $("#reportType").value;
   const month = $("#reportMonth").value || monthISO();
   const rows = type === "monthly" ? monthSummary(month, workerId) : summarizeRecords(recordsForRange(start, end, workerId));
@@ -489,6 +505,7 @@ function openWhatsAppReport(workerId, start, end, title) {
     ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     : `https://wa.me/?text=${encodeURIComponent(message)}`;
   window.open(url, "_blank", "noopener");
+  });
 }
 
 function cloudConfigured() {
@@ -798,6 +815,47 @@ function printReportOnly() {
   document.body.classList.add("print-report");
   window.print();
   window.setTimeout(() => document.body.classList.remove("print-report"), 500);
+}
+
+function openPdfReport() {
+  renderReport();
+  const language = reportLanguage();
+  const dir = language === "ps" ? "rtl" : "ltr";
+  const report = $("#reportOutput").innerHTML;
+  const win = window.open("", "_blank", "noopener");
+  if (!win) return;
+  win.document.write(`<!doctype html>
+    <html lang="${language}" dir="${dir}">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Ahmad Times Wage Report</title>
+        <style>
+          body { margin: 0; padding: 24px; color: #1d2433; font-family: Arial, sans-serif; background: #fff; }
+          .report-page { max-width: 1100px; margin: 0 auto; }
+          .report-brand { display: flex; gap: 12px; align-items: center; padding: 12px; margin-bottom: 12px; border: 1px solid #bce7f7; border-radius: 8px; background: #f4fbfe; }
+          .report-brand img { width: 72px; height: 72px; object-fit: contain; border-radius: 50%; background: #fff; }
+          .report-logo-fallback { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; color: #fff; background: #16a9e0; font-weight: 900; }
+          .report-brand strong, .report-brand span { display: block; }
+          .report-brand strong { font-size: 20px; }
+          .report-brand span, .help-text { color: #667085; }
+          .summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+          .summary-strip div { padding: 10px; border-radius: 8px; background: #f4f7fb; }
+          .summary-strip span { display: block; color: #667085; font-size: 12px; font-weight: 700; }
+          .summary-strip strong { display: block; margin-top: 3px; font-size: 16px; }
+          .payment-list, .report-controls { display: none; }
+          table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
+          th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
+          th { color: #667085; text-transform: uppercase; font-size: 11px; }
+          @media print { body { padding: 0; } .report-page { max-width: none; } }
+        </style>
+      </head>
+      <body>
+        <main class="report-page">${report}</main>
+        <script>window.addEventListener("load", () => setTimeout(() => window.print(), 250));<\/script>
+      </body>
+    </html>`);
+  win.document.close();
 }
 
 function formatHours(value) {
@@ -1119,6 +1177,10 @@ function renderMonthAttendance() {
 }
 
 function renderReport() {
+  const language = reportLanguage();
+  return withLanguage(language, () => {
+  $("#reportOutput").setAttribute("lang", language);
+  $("#reportOutput").setAttribute("dir", language === "ps" ? "rtl" : "ltr");
   const type = $("#reportType").value;
   const workerId = $("#reportWorker").value || "all";
   const month = $("#reportMonth").value || monthISO();
@@ -1167,7 +1229,8 @@ function renderReport() {
 
   $("#reportOutput").innerHTML = `
     <div class="report-brand">
-      <img src="ahmad-times-logo.png" alt="Ahmad Times logo">
+      <img src="ahmad-times-logo.png" alt="Ahmad Times logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+      <div class="report-logo-fallback" hidden>ATBM</div>
       <div>
         <strong>Ahmad Times For Building Maintenance L.L.C</strong>
         <span>${t("wageAttendanceReport")}</span>
@@ -1272,6 +1335,7 @@ function renderReport() {
       </table>
     </div>
   `;
+  });
 }
 
 function summarizeRecords(records) {
@@ -1409,12 +1473,14 @@ function importBackup(file) {
 }
 
 function exportReportCSV() {
+  return withLanguage(reportLanguage(), () => {
   const rows = [[t("worker"), t("statusColumn"), t("present"), t("halfday"), t("absent"), t("off"), t("hours"), t("overtime"), t("city"), t("nationality"), t("performance"), t("dailyWage"), t("baseWage"), t("overtimeWage"), t("foodDeductionTotal"), t("payableWage"), t("paid"), t("unpaid")]];
   $("#reportOutput tbody tr").forEach((tr) => {
     const cells = Array.from(tr.children).map((td) => td.textContent.trim());
     if (cells.length === 18) rows.push(cells);
   });
   downloadFile(`attendance-report-${todayISO()}.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv");
+  });
 }
 
 function downloadFile(name, content, type) {
@@ -1632,7 +1698,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "reportType", "reportDate", "reportMonth", "reportWorker"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
 
@@ -1649,6 +1715,7 @@ function bindEvents() {
   $("#markAllOff").addEventListener("click", () => bulkSetMonth("off"));
   $("#clearMonth").addEventListener("click", () => bulkSetMonth(""));
   $("#printReport").addEventListener("click", printReportOnly);
+  $("#pdfReport").addEventListener("click", openPdfReport);
   $("#printAllWages").addEventListener("click", () => {
     $("#reportWorker").value = "all";
     renderReport();

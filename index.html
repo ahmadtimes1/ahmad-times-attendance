@@ -10,7 +10,8 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">AT</div>
+          <img class="brand-logo" src="ahmad-times-logo.png" alt="Ahmad Times logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+          <div class="brand-logo-fallback" hidden>ATBM</div>
           <div>
             <h1>Ahmad Times</h1>
             <p data-i18n="buildingMaintenance">Building Maintenance</p>
@@ -21,6 +22,7 @@
           <button class="nav-item" data-view="workers" data-i18n="workers">Workers</button>
           <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
           <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
+          <button class="nav-item" data-view="aiAssistant" data-i18n="aiAssistant">AI Assistant</button>
           <button class="nav-item" data-view="backup" data-i18n="backup">Backup</button>
         </nav>
       </aside>
@@ -180,12 +182,53 @@
               <span data-i18n="worker">Worker</span>
               <select id="reportWorker"></select>
             </label>
+            <label>
+              <span data-i18n="reportLanguage">Report language</span>
+              <select id="reportLanguage">
+                <option value="en">English</option>
+                <option value="ps">پښتو</option>
+              </select>
+            </label>
             <button id="printReport" data-i18n="print">Print</button>
+            <button id="pdfReport" data-i18n="pdfReport">PDF report</button>
             <button id="printAllWages" data-i18n="printAllWages">Print all wages</button>
             <button id="printSelectedWage" data-i18n="printSelectedWage">Print selected wage</button>
             <button id="exportReport" data-i18n="exportCsv">Export CSV</button>
           </div>
           <section class="panel report-panel" id="reportOutput"></section>
+        </section>
+
+        <section id="aiAssistant" class="view">
+          <div class="content-grid ai-layout">
+            <section class="panel ai-panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="companyAi">Company AI Assistant</h3>
+                  <p class="help-text" data-i18n="aiIntro">Ask about workers, attendance, wages, unpaid amounts, reports, or tell AI to prepare safe changes.</p>
+                </div>
+              </div>
+              <div id="aiChatLog" class="ai-chat-log"></div>
+              <div class="ai-composer">
+                <label class="full">
+                  <span data-i18n="askAi">Ask AI</span>
+                  <textarea id="aiPrompt" rows="4" data-i18n-placeholder="aiPlaceholder" placeholder="Example: Add worker Ahmad, phone 050..., daily wage 100, city Dubai"></textarea>
+                </label>
+                <div class="button-row">
+                  <button class="primary" id="sendAiPrompt" data-i18n="sendAi">Send</button>
+                  <button id="applyAiActions" class="whatsapp-button hidden" data-i18n="applyAiActions">Apply AI actions</button>
+                </div>
+              </div>
+            </section>
+            <section class="panel">
+              <h3 data-i18n="aiCanDo">AI can help with</h3>
+              <div class="ai-suggestions">
+                <button data-ai-example="Show unpaid workers for this month">Show unpaid workers for this month</button>
+                <button data-ai-example="Add worker named Ahmad, helper, daily wage 100, city Dubai">Add a worker</button>
+                <button data-ai-example="Mark Samiullah present today, in 8:00, out 17:00, overtime 1 hour">Mark attendance</button>
+                <button data-ai-example="Make a monthly wage summary in Pashto">Monthly summary in Pashto</button>
+              </div>
+            </section>
+          </div>
         </section>
 
         <section id="backup" class="view">
