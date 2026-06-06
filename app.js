@@ -1,4 +1,4 @@
-const STORAGE_KEY = "ahmad-times-attendance-v1";
+﻿const STORAGE_KEY = "ahmad-times-attendance-v1";
 const LANG_KEY = "ahmad-times-language";
 const STANDARD_HOURS = 8;
 
@@ -265,7 +265,7 @@ Object.assign(translations.en, {
   good: "Good",
   average: "Average",
   needsImprovement: "Needs improvement",
-  duplicateWorker: "Another worker already has the same name, Emirates ID, or phone number.",
+  duplicateWorker: "Another worker already has the same name, Emirates ID, and phone number.",
   halfday: "Half day",
   halfDays: "Half days",
   printAllWages: "Print all wages",
@@ -302,20 +302,6 @@ Object.assign(translations.en, {
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
   effectiveFrom: "from",
-  aiAssistant: "AI Assistant",
-  companyAi: "Company AI Assistant",
-  aiIntro: "Ask about workers, attendance, wages, unpaid amounts, reports, or tell AI to prepare safe changes.",
-  askAi: "Ask AI",
-  aiPlaceholder: "Example: Add worker Ahmad, phone 050..., daily wage 100, city Dubai",
-  sendAi: "Send",
-  applyAiActions: "Apply AI actions",
-  aiCanDo: "AI can help with",
-  aiThinking: "AI is checking company data...",
-  aiNeedLogin: "Login as admin or manager before using AI.",
-  aiFailed: "AI is not ready. Check the OpenAI API key in Vercel.",
-  aiApplied: "AI actions applied",
-  aiNoActions: "No safe actions to apply.",
-  pendingActions: "Pending actions",
 });
 
 Object.assign(translations.ps, {
@@ -330,7 +316,7 @@ Object.assign(translations.ps, {
   good: "ښه",
   average: "منځنی",
   needsImprovement: "ښه والي ته اړتیا",
-  duplicateWorker: "بل کارکوونکی همدا نوم، امارات ID یا تلیفون لري.",
+  duplicateWorker: "بل کارکوونکی همدا نوم، امارات ID او تلیفون لري.",
   halfday: "نیمه ورځ",
   halfDays: "نیمې ورځې",
   printAllWages: "د ټولو مزدوري چاپ",
@@ -371,24 +357,6 @@ Object.assign(translations.ps, {
   wageHistory: "د مزدورۍ تاریخچه",
   effectiveFrom: "له",
 });
-
-Object.assign(translations.ps, {
-  aiAssistant: "AI مرستیال",
-  companyAi: "د شرکت AI مرستیال",
-  aiIntro: "د کارکوونکو، حاضري، مزدورۍ، نه ورکړل شوو پیسو او راپورونو په اړه پوښتنه وکړئ.",
-  askAi: "له AI وپوښتئ",
-  aiPlaceholder: "مثال: احمد کارکوونکی اضافه کړه، مزدوري 100، ښار دوبۍ",
-  sendAi: "واستوئ",
-  applyAiActions: "د AI کارونه عملي کړئ",
-  aiCanDo: "AI مرسته کولی شي",
-  aiThinking: "AI د شرکت معلومات ګوري...",
-  aiNeedLogin: "د AI لپاره د مدیر په توګه ننوتل وکړئ.",
-  aiFailed: "AI چمتو نه دی. په Vercel کې د OpenAI API key وګورئ.",
-  aiApplied: "د AI کارونه عملي شول",
-  aiNoActions: "د عملي کولو لپاره خوندي کار نشته.",
-  pendingActions: "انتظاري کارونه",
-});
-
 const app = {
   workers: [],
   attendance: {},
@@ -402,8 +370,6 @@ const app = {
 };
 
 let supabaseClient = null;
-let aiMessages = [];
-let pendingAiActions = [];
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -844,17 +810,15 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
   toast(t("paymentSaved"));
 }
 
-function printReportOnly() {
-  document.body.classList.add("print-report");
-  window.print();
-  window.setTimeout(() => document.body.classList.remove("print-report"), 500);
-}
-
-function openPdfReport() {
+function openPrintableReport() {
   renderReport();
   const language = reportLanguage();
   const dir = language === "ps" ? "rtl" : "ltr";
   const report = $("#reportOutput").innerHTML;
+  if (!report.trim()) {
+    toast(t("emptyReport"));
+    return;
+  }
   const win = window.open("", "_blank", "noopener");
   if (!win) return;
   win.document.write(`<!doctype html>
@@ -876,7 +840,9 @@ function openPdfReport() {
           .summary-strip div { padding: 10px; border-radius: 8px; background: #f4f7fb; }
           .summary-strip span { display: block; color: #667085; font-size: 12px; font-weight: 700; }
           .summary-strip strong { display: block; margin-top: 3px; font-size: 16px; }
+          .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
           .payment-list, .report-controls { display: none; }
+          .table-wrap { overflow: visible; }
           table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
           th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
@@ -889,6 +855,14 @@ function openPdfReport() {
       </body>
     </html>`);
   win.document.close();
+}
+
+function printReportOnly() {
+  openPrintableReport();
+}
+
+function openPdfReport() {
+  openPrintableReport();
 }
 
 function formatHours(value) {
@@ -1396,200 +1370,6 @@ function renderStorage() {
   $("#storageAttendance").textContent = attendanceCount;
   $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
 }
-
-function aiContext() {
-  const month = monthISO();
-  const today = todayISO();
-  const monthDates = daysInMonth(month);
-  const summary = monthSummary(month);
-  return {
-    company: "Ahmad Times For Building Maintenance L.L.C",
-    today,
-    currentMonth: month,
-    workers: app.workers,
-    attendance: app.attendance,
-    payments: app.payments,
-    dashboard: {
-      activeWorkers: app.workers.filter((worker) => worker.status === "active").length,
-      inactiveWorkers: app.workers.filter((worker) => worker.status === "inactive").length,
-      monthlyWages: summary.reduce((sum, row) => sum + row.wage, 0),
-      monthlyUnpaid: paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]).pending,
-    },
-  };
-}
-
-function renderAiChat() {
-  const log = $("#aiChatLog");
-  if (!log) return;
-  log.innerHTML = aiMessages.map((message) => `
-    <div class="ai-message ${message.role}">
-      <strong>${message.role === "user" ? "You" : "AI"}</strong>
-      <p>${escapeHTML(message.text).replaceAll("\n", "<br>")}</p>
-    </div>
-  `).join("") || `<div class="ai-empty">${t("aiIntro")}</div>`;
-
-  if (pendingAiActions.length) {
-    log.innerHTML += `
-      <div class="ai-actions-preview">
-        <strong>${t("pendingActions")}</strong>
-        <ul>${pendingAiActions.map((action) => `<li>${escapeHTML(aiActionLabel(action))}</li>`).join("")}</ul>
-      </div>
-    `;
-  }
-  $("#applyAiActions")?.classList.toggle("hidden", pendingAiActions.length === 0);
-}
-
-function aiActionLabel(action) {
-  if (action.type === "add_worker") return `${t("addWorker")}: ${action.worker?.name || "-"}`;
-  if (action.type === "update_worker") return `${t("editWorkerTitle")}: ${action.workerName || action.workerId || "-"}`;
-  if (action.type === "set_attendance") return `${t("attendance")}: ${action.workerName || action.workerId || "-"} ${action.date || todayISO()} ${action.status || ""}`;
-  if (action.type === "add_payment") return `${t("payments")}: ${action.workerName || action.workerId || "-"} ${money(action.paidAmount || 0)}`;
-  return action.type || "Action";
-}
-
-function findWorkerForAi(action) {
-  const wantedId = action.workerId || action.id;
-  if (wantedId) {
-    const byId = app.workers.find((worker) => worker.id === wantedId);
-    if (byId) return byId;
-  }
-  const wantedName = normalizeCompare(action.workerName || action.name);
-  if (!wantedName) return null;
-  return app.workers.find((worker) => normalizeCompare(worker.name) === wantedName)
-    || app.workers.find((worker) => normalizeCompare(worker.name).includes(wantedName));
-}
-
-function normalizeAiWorker(worker = {}) {
-  const dailyWage = Number(worker.dailyWage || worker.daily_wage || 0);
-  const joinDate = worker.joinDate || worker.join_date || todayISO();
-  return {
-    id: worker.id || makeId(),
-    name: String(worker.name || "").trim(),
-    role: String(worker.role || "").trim(),
-    city: String(worker.city || "").trim(),
-    nationality: String(worker.nationality || "").trim(),
-    performance: worker.performance || "good",
-    phone: String(worker.phone || "").trim(),
-    emiratesId: String(worker.emiratesId || worker.emirates_id || "").trim(),
-    dailyWage,
-    wageHistory: [{ date: joinDate, dailyWage }],
-    joinDate,
-    status: worker.status || "active",
-    notes: String(worker.notes || "").trim(),
-    createdAt: new Date().toISOString(),
-  };
-}
-
-function applyAiAction(action) {
-  if (action.type === "add_worker") {
-    const worker = normalizeAiWorker(action.worker || action);
-    if (!worker.name || hasDuplicateWorker(worker)) return false;
-    app.workers.push(worker);
-    return true;
-  }
-
-  if (action.type === "update_worker") {
-    const worker = findWorkerForAi(action);
-    if (!worker) return false;
-    const updates = action.updates || action.worker || {};
-    ["name", "role", "city", "nationality", "performance", "phone", "emiratesId", "status", "notes"].forEach((field) => {
-      if (updates[field] !== undefined) worker[field] = updates[field];
-    });
-    if (updates.dailyWage !== undefined) {
-      const dailyWage = Number(updates.dailyWage || 0);
-      const effectiveDate = updates.wageEffectiveDate || action.wageEffectiveDate || todayISO();
-      const history = normalizeWageHistory(worker);
-      const map = new Map(history.map((entry) => [entry.date, entry.dailyWage]));
-      map.set(effectiveDate, dailyWage);
-      worker.dailyWage = dailyWage;
-      worker.wageHistory = Array.from(map, ([date, dailyWage]) => ({ date, dailyWage })).sort((a, b) => a.date.localeCompare(b.date));
-    }
-    return true;
-  }
-
-  if (action.type === "set_attendance") {
-    const worker = findWorkerForAi(action);
-    if (!worker) return false;
-    const date = action.date || todayISO();
-    const status = action.status || "present";
-    app.attendance[date] ||= {};
-    const current = getAttendanceRecord(date, worker.id);
-    app.attendance[date][worker.id] = {
-      ...current,
-      status,
-      inTime: action.inTime ?? current.inTime,
-      outTime: action.outTime ?? current.outTime,
-      overtimeHours: action.overtimeHours ?? current.overtimeHours,
-      foodDeduction: action.foodDeduction ?? current.foodDeduction,
-      paidAmount: action.paidAmount ?? current.paidAmount,
-    };
-    return true;
-  }
-
-  if (action.type === "add_payment") {
-    const worker = findWorkerForAi(action);
-    if (!worker) return false;
-    const start = action.start || action.date || todayISO();
-    const end = action.end || start;
-    const existing = paymentRecord(worker.id, start, end);
-    app.payments[paymentKey(worker.id, start, end)] = {
-      ...existing,
-      paidAmount: Number(action.paidAmount || 0),
-      paymentDate: action.paymentDate || todayISO(),
-      method: action.method || existing.method || "cash",
-      note: action.note || existing.note || "",
-      updatedAt: new Date().toISOString(),
-    };
-    return true;
-  }
-
-  return false;
-}
-
-async function sendAiPrompt() {
-  const prompt = $("#aiPrompt").value.trim();
-  if (!prompt) return;
-  if (!app.profile?.active || !["admin", "manager"].includes(app.profile.role)) {
-    toast(t("aiNeedLogin"));
-    return;
-  }
-
-  aiMessages.push({ role: "user", text: prompt });
-  aiMessages.push({ role: "assistant", text: t("aiThinking") });
-  pendingAiActions = [];
-  renderAiChat();
-  $("#aiPrompt").value = "";
-
-  try {
-    const response = await fetch("/api/company-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: prompt, language: app.language, appData: aiContext() }),
-    });
-    if (!response.ok) throw new Error(await response.text());
-    const result = await response.json();
-    aiMessages[aiMessages.length - 1] = { role: "assistant", text: result.reply || "" };
-    pendingAiActions = Array.isArray(result.actions) ? result.actions : [];
-  } catch (error) {
-    console.error(error);
-    aiMessages[aiMessages.length - 1] = { role: "assistant", text: t("aiFailed") };
-    pendingAiActions = [];
-  }
-  renderAiChat();
-}
-
-async function applyAiActions() {
-  if (!pendingAiActions.length) {
-    toast(t("aiNoActions"));
-    return;
-  }
-  const applied = pendingAiActions.reduce((count, action) => count + (applyAiAction(action) ? 1 : 0), 0);
-  pendingAiActions = [];
-  await saveData();
-  aiMessages.push({ role: "assistant", text: `${t("aiApplied")}: ${applied}` });
-  renderAiChat();
-}
-
 function openWorkerDialog(workerId = "") {
   const worker = app.workers.find((item) => item.id === workerId);
   $("#workerDialogTitle").textContent = worker ? t("editWorkerTitle") : t("addWorkerTitle");
@@ -1761,12 +1541,12 @@ function hasDuplicateWorker(worker) {
   const name = normalizeCompare(worker.name);
   const phone = normalizeCompare(worker.phone);
   const emiratesId = normalizeCompare(worker.emiratesId);
+  if (!name || !phone || !emiratesId) return false;
   return app.workers.some((item) => {
     if (item.id === worker.id) return false;
-    if (name && normalizeCompare(item.name) === name) return true;
-    if (phone && normalizeCompare(item.phone) === phone) return true;
-    if (emiratesId && normalizeCompare(item.emiratesId) === emiratesId) return true;
-    return false;
+    return normalizeCompare(item.name) === name
+      && normalizeCompare(item.phone) === phone
+      && normalizeCompare(item.emiratesId) === emiratesId;
   });
 }
 
@@ -1958,17 +1738,6 @@ function bindEvents() {
   $("#importBackup").addEventListener("change", (event) => {
     if (event.target.files[0]) importBackup(event.target.files[0]);
   });
-  $("#sendAiPrompt").addEventListener("click", sendAiPrompt);
-  $("#aiPrompt").addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) sendAiPrompt();
-  });
-  $("#applyAiActions").addEventListener("click", applyAiActions);
-  $$("[data-ai-example]").forEach((button) => {
-    button.addEventListener("click", () => {
-      $("#aiPrompt").value = button.dataset.aiExample;
-      $("#aiPrompt").focus();
-    });
-  });
 }
 
 function bulkSetMonth(status) {
@@ -2043,3 +1812,4 @@ initCloud()
     toast(t("startupCloudFailed"));
     renderAll();
   });
+
