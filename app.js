@@ -280,6 +280,7 @@ Object.assign(translations.en, {
   payableWage: "Payable wage",
   paidAmount: "Paid amount",
   paidToday: "Paid today",
+  manualOvertime: "Manual overtime (hours)",
   paymentDate: "Payment date",
   paymentMethod: "Payment method",
   paymentNote: "Payment note",
@@ -326,6 +327,7 @@ Object.assign(translations.ps, {
   payableWage: "د ورکړې مزدوري",
   paidAmount: "ورکړل شوې اندازه",
   paidToday: "نن ورکړل شوې",
+  manualOvertime: "لاسي اضافي وخت (ساعتونه)",
   paymentDate: "د تادیې نېټه",
   paymentMethod: "د تادیې طریقه",
   paymentNote: "د تادیې یادښت",
@@ -556,12 +558,16 @@ function getAttendanceRecord(date, workerId) {
 }
 
 function normalizeAttendanceRecord(record) {
-  if (!record) return { status: "", inTime: "", outTime: "", foodDeduction: 0, paidAmount: 0 };
-  if (typeof record === "string") return { status: record, inTime: "", outTime: "", foodDeduction: 0, paidAmount: 0 };
+  if (!record) return { status: "", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (typeof record === "string") return { status: record, inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  const overtimeHours = record.overtimeHours === "" || record.overtimeHours === null || record.overtimeHours === undefined
+    ? ""
+    : Number(record.overtimeHours || 0);
   return {
     status: record.status || "",
     inTime: record.inTime || "",
     outTime: record.outTime || "",
+    overtimeHours,
     foodDeduction: Number(record.foodDeduction || 0),
     paidAmount: Number(record.paidAmount || 0),
   };
@@ -577,6 +583,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
       status,
       inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
       outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
+      overtimeHours: ["present", "halfday"].includes(status) ? current.overtimeHours : "",
       foodDeduction: ["present", "halfday"].includes(status) ? current.foodDeduction : 0,
       paidAmount: ["present", "halfday"].includes(status) ? current.paidAmount : 0,
     };
@@ -609,6 +616,17 @@ function setAttendanceMoney(date, workerId, field, value) {
   saveData();
 }
 
+function setAttendanceNumber(date, workerId, field, value) {
+  app.attendance[date] ||= {};
+  const current = getAttendanceRecord(date, workerId);
+  app.attendance[date][workerId] = {
+    ...current,
+    status: current.status || "present",
+    [field]: value === "" ? "" : Number(value || 0),
+  };
+  saveData();
+}
+
 function setNowTime(date, workerId, field) {
   setAttendanceTime(date, workerId, field, currentTime());
 }
@@ -620,16 +638,19 @@ function currentTime() {
 
 function calculateHours(record) {
   const item = normalizeAttendanceRecord(record);
-  if (!item.inTime || !item.outTime) return { total: 0, overtime: 0 };
+  const manualOvertime = item.overtimeHours === "" ? null : Math.max(0, Number(item.overtimeHours || 0));
+  if (!item.inTime || !item.outTime) return { total: 0, overtime: manualOvertime ?? 0, autoOvertime: 0 };
   const [inHour, inMinute] = item.inTime.split(":").map(Number);
   const [outHour, outMinute] = item.outTime.split(":").map(Number);
   let start = inHour * 60 + inMinute;
   let end = outHour * 60 + outMinute;
   if (end < start) end += 24 * 60;
   const total = Math.max(0, (end - start) / 60);
+  const autoOvertime = Math.max(0, total - STANDARD_HOURS);
   return {
     total,
-    overtime: Math.max(0, total - STANDARD_HOURS),
+    overtime: manualOvertime ?? autoOvertime,
+    autoOvertime,
   };
 }
 
@@ -944,6 +965,7 @@ function attendanceRowWithTime(worker, date) {
         <div class="time-grid" data-worker="${worker.id}" data-date="${date}">
           <label>${t("in")}<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
+          <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
           <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${record.paidAmount || 0}"></label>
           <button data-now-field="inTime">${t("startNow")}</button>
@@ -1492,6 +1514,12 @@ function bindEvents() {
     if (moneyInput) {
       const parent = moneyInput.closest(".time-grid");
       setAttendanceMoney(parent.dataset.date, parent.dataset.worker, moneyInput.dataset.moneyField, moneyInput.value);
+    }
+
+    const numberInput = event.target.closest("[data-number-field]");
+    if (numberInput) {
+      const parent = numberInput.closest(".time-grid");
+      setAttendanceNumber(parent.dataset.date, parent.dataset.worker, numberInput.dataset.numberField, numberInput.value);
     }
   });
 
