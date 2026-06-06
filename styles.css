@@ -5,13 +5,14 @@
   --line: #d9e0ea;
   --soft: #f4f7fb;
   --panel: #ffffff;
-  --brand: #166456;
-  --brand-2: #0f766e;
+  --brand: #16a9e0;
+  --brand-2: #0d7fb8;
   --green: #12805c;
   --amber: #b25e09;
   --blue: #175cd3;
   --danger: #b42318;
   --shadow: 0 14px 40px rgba(31, 42, 68, 0.1);
+  --focus: 0 0 0 4px rgba(22, 169, 224, 0.18);
 }
 
 * {
@@ -43,12 +44,25 @@ button {
   color: var(--ink);
   background: #fff;
   cursor: pointer;
-  transition: 0.18s ease;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
 
 button:hover {
   border-color: #a7b2c3;
   transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: var(--focus);
 }
 
 .app-shell {
@@ -73,15 +87,13 @@ button:hover {
   margin-bottom: 28px;
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  color: #fff;
-  background: var(--brand);
-  font-weight: 800;
+.brand-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(22, 169, 224, 0.18);
 }
 
 .brand h1,
@@ -122,7 +134,7 @@ button:hover {
   color: #fff;
   background: var(--brand);
   border-color: var(--brand);
-  box-shadow: 0 10px 24px rgba(22, 100, 86, 0.22);
+  box-shadow: 0 10px 24px rgba(22, 169, 224, 0.22);
 }
 
 .main {
@@ -194,6 +206,13 @@ textarea {
   color: #fff;
   background: var(--brand);
   border-color: var(--brand);
+  font-weight: 800;
+}
+
+.whatsapp-button {
+  color: #fff;
+  background: #128c7e;
+  border-color: #128c7e;
   font-weight: 800;
 }
 
@@ -532,6 +551,41 @@ th {
   margin-top: 0;
 }
 
+.report-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(22, 169, 224, 0.24);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(22, 169, 224, 0.1), #fff 56%);
+}
+
+.report-brand img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.report-brand strong,
+.report-brand span {
+  display: block;
+}
+
+.report-brand strong {
+  font-size: 18px;
+}
+
+.report-brand span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .summary-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -547,7 +601,7 @@ th {
 
 .payment-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(130px, 1fr)) auto;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(130px, 1fr)) auto auto;
   gap: 8px;
   align-items: end;
   padding: 12px;
@@ -793,7 +847,7 @@ dialog::backdrop {
     margin-bottom: 10px;
   }
 
-  .brand-mark {
+  .brand-logo {
     width: 40px;
     height: 40px;
   }
@@ -958,6 +1012,20 @@ dialog::backdrop {
 
   .payment-row {
     padding: 10px;
+  }
+
+  .report-brand {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .report-brand img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .report-brand strong {
+    font-size: 15px;
   }
 
   th,

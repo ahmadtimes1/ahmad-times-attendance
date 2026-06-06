@@ -281,6 +281,10 @@ Object.assign(translations.en, {
   paidAmount: "Paid amount",
   paidToday: "Paid today",
   manualOvertime: "Manual overtime (hours)",
+  whatsapp: "WhatsApp",
+  sendWhatsapp: "Send WhatsApp",
+  wageSlip: "Wage slip",
+  serialNo: "Serial no.",
   paymentDate: "Payment date",
   paymentMethod: "Payment method",
   paymentNote: "Payment note",
@@ -328,6 +332,10 @@ Object.assign(translations.ps, {
   paidAmount: "ورکړل شوې اندازه",
   paidToday: "نن ورکړل شوې",
   manualOvertime: "لاسي اضافي وخت (ساعتونه)",
+  whatsapp: "واټساپ",
+  sendWhatsapp: "واټساپ ته واستوئ",
+  wageSlip: "د مزدورۍ رسید",
+  serialNo: "سیریل نمبر",
   paymentDate: "د تادیې نېټه",
   paymentMethod: "د تادیې طریقه",
   paymentNote: "د تادیې یادښت",
@@ -400,6 +408,87 @@ function wageHistoryText(worker) {
   const history = normalizeWageHistory(worker);
   if (!history.length) return "-";
   return history.map((entry) => `${money(entry.dailyWage)} ${t("effectiveFrom")} ${entry.date}`).join(" | ");
+}
+
+function reportSerial(worker, start, end) {
+  const base = `${worker.id || worker.name}-${start}-${end}`;
+  let hash = 0;
+  for (let index = 0; index < base.length; index += 1) {
+    hash = ((hash << 5) - hash) + base.charCodeAt(index);
+    hash |= 0;
+  }
+  return `ATBM-${start.replaceAll("-", "")}-${String(Math.abs(hash)).slice(0, 5).padStart(5, "0")}`;
+}
+
+function rowPaidAmount(row, start, end) {
+  return Number(row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0);
+}
+
+function rowUnpaidAmount(row, start, end) {
+  return Math.max(0, Number(row.wage || 0) - rowPaidAmount(row, start, end));
+}
+
+function whatsappNumber(worker) {
+  const phone = String(worker.phone || "").replace(/\D/g, "");
+  if (!phone) return "";
+  if (phone.startsWith("00")) return phone.slice(2);
+  if (phone.startsWith("0") && phone.length === 10) return `971${phone.slice(1)}`;
+  return phone;
+}
+
+function reportPeriodLabel(start, end) {
+  return start === end ? start : `${start} ${t("to")} ${end}`;
+}
+
+function buildWhatsAppMessage(row, start, end, title) {
+  const paid = rowPaidAmount(row, start, end);
+  const unpaid = rowUnpaidAmount(row, start, end);
+  return [
+    "Ahmad Times For Building Maintenance L.L.C",
+    t("buildingMaintenance"),
+    "",
+    `${t("wageSlip")} | ${t("serialNo")}: ${reportSerial(row.worker, start, end)}`,
+    `${title}`,
+    `${t("date")}: ${reportPeriodLabel(start, end)}`,
+    "",
+    `${t("worker")}: ${row.worker.name}`,
+    `${t("phone")}: ${row.worker.phone || "-"}`,
+    `${t("city")}: ${row.worker.city || "-"}`,
+    "",
+    `${t("present")}: ${row.present || 0}`,
+    `${t("halfday")}: ${row.halfday || 0}`,
+    `${t("absent")}: ${row.absent || 0}`,
+    `${t("off")}: ${row.off || 0}`,
+    `${t("hours")}: ${formatHours(row.hours || 0)}`,
+    `${t("overtime")}: ${formatHours(row.overtime || 0)}`,
+    "",
+    `${t("dailyWage")}: ${money(row.dailyWage || currentDailyWage(row.worker))}`,
+    `${t("baseWage")}: ${money(row.baseWage || 0)}`,
+    `${t("overtimeWage")}: ${money(row.overtimeWage || 0)}`,
+    `${t("foodDeductionTotal")}: ${money(row.foodDeduction || 0)}`,
+    `${t("payableWage")}: ${money(row.wage || 0)}`,
+    `${t("paid")}: ${money(paid)}`,
+    `${t("unpaid")}: ${money(unpaid)}`,
+    "",
+    "Thank you.",
+  ].join("\n");
+}
+
+function openWhatsAppReport(workerId, start, end, title) {
+  const type = $("#reportType").value;
+  const month = $("#reportMonth").value || monthISO();
+  const rows = type === "monthly" ? monthSummary(month, workerId) : summarizeRecords(recordsForRange(start, end, workerId));
+  const row = rows.find((item) => item.worker.id === workerId);
+  if (!row) {
+    toast(t("noRecordsReport"));
+    return;
+  }
+  const message = buildWhatsAppMessage(row, start, end, title);
+  const phone = whatsappNumber(row.worker);
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank", "noopener");
 }
 
 function cloudConfigured() {
@@ -1077,6 +1166,13 @@ function renderReport() {
   const payTotals = paymentTotals(rows, start, end);
 
   $("#reportOutput").innerHTML = `
+    <div class="report-brand">
+      <img src="ahmad-times-logo.png" alt="Ahmad Times logo">
+      <div>
+        <strong>Ahmad Times For Building Maintenance L.L.C</strong>
+        <span>${t("wageAttendanceReport")}</span>
+      </div>
+    </div>
     <h3>${title}</h3>
     <p class="help-text">${workerId === "all" ? t("companyWideReport") : escapeHTML(app.workers.find((worker) => worker.id === workerId)?.name || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
     <div class="summary-strip">
@@ -1100,10 +1196,12 @@ function renderReport() {
         const attendancePaid = Number(row.paidAmount || 0);
         const paid = attendancePaid + Number(payment.paidAmount || 0);
         const pending = Math.max(0, Number(row.wage || 0) - paid);
+        const serial = reportSerial(row.worker, start, end);
         return `
           <div class="payment-row" data-payment-worker="${row.worker.id}" data-payment-start="${start}" data-payment-end="${end}">
             <div>
               <strong>${escapeHTML(row.worker.name)}</strong>
+              <p>${t("serialNo")}: ${serial}</p>
               <p>${t("payableWage")}: ${money(row.wage)} · ${t("paidToday")}: ${money(attendancePaid)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${payment.paidAmount || 0}"></label>
@@ -1118,6 +1216,7 @@ function renderReport() {
             </label>
             <label>${t("paymentNote")}<input data-payment-field="note" value="${escapeHTML(payment.note || "")}"></label>
             <button data-save-payment>${t("savePayment")}</button>
+            <button class="whatsapp-button" data-whatsapp-worker="${row.worker.id}" data-whatsapp-start="${start}" data-whatsapp-end="${end}" data-whatsapp-title="${escapeHTML(title)}">${t("sendWhatsapp")}</button>
           </div>
         `;
       }).join("") || emptyState(t("noRecordsReport"))}
@@ -1496,6 +1595,16 @@ function bindEvents() {
         getField("paymentDate"),
         getField("method"),
         getField("note"),
+      );
+    }
+
+    const whatsappButton = event.target.closest("[data-whatsapp-worker]");
+    if (whatsappButton) {
+      openWhatsAppReport(
+        whatsappButton.dataset.whatsappWorker,
+        whatsappButton.dataset.whatsappStart,
+        whatsappButton.dataset.whatsappEnd,
+        whatsappButton.dataset.whatsappTitle,
       );
     }
   });
