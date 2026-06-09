@@ -608,6 +608,67 @@ tbody tr:hover {
   grid-template-columns: 1fr;
 }
 
+.worker-summary-wrap {
+  display: block;
+}
+
+.worker-summary-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.worker-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.worker-summary-head h3 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.mini-attendance-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.56);
+  backdrop-filter: blur(16px);
+}
+
+.mini-attendance-card h3 {
+  margin: 0;
+}
+
+.mini-attendance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.mini-attendance-grid div {
+  padding: 10px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.mini-attendance-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.mini-attendance-grid strong {
+  display: block;
+  margin-top: 3px;
+}
+
 .worker-card {
   position: relative;
   padding: 16px;
@@ -1778,6 +1839,14 @@ dialog::backdrop {
   .worker-card-head {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .worker-summary-head {
+    flex-direction: column;
+  }
+
+  .worker-summary-head button {
+    width: 100%;
   }
 
   .photo-editor {

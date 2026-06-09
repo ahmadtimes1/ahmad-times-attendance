@@ -61,6 +61,11 @@ const translations = {
     redoDone: "Redo complete",
     nothingToUndo: "Nothing to undo",
     nothingToRedo: "Nothing to redo",
+    back: "Back",
+    workerSummary: "Worker summary",
+    monthlySummary: "Monthly summary",
+    recentAttendance: "Recent attendance",
+    todaysAttendance: "Today attendance",
     dashboard: "Dashboard",
     workers: "Workers",
     attendance: "Attendance",
@@ -214,6 +219,11 @@ const translations = {
     redoDone: "بیا مخکې شو",
     nothingToUndo: "د بېرته کولو څه نشته",
     nothingToRedo: "د بیا کولو څه نشته",
+    back: "بېرته",
+    workerSummary: "د کارکوونکي لنډیز",
+    monthlySummary: "میاشتنی لنډیز",
+    recentAttendance: "وروستۍ حاضري",
+    todaysAttendance: "د نن حاضري",
     dashboard: "ډشبورډ",
     workers: "کارکوونکي",
     attendance: "حاضري",
@@ -504,6 +514,7 @@ const app = {
   language: localStorage.getItem(LANG_KEY) || "en",
   workerFilter: "active",
   workerView: localStorage.getItem(WORKER_VIEW_KEY) || "large",
+  selectedWorkerSummaryId: "",
 };
 
 let supabaseClient = null;
@@ -1419,16 +1430,22 @@ function renderDashboard() {
 
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
-    .map((row) => `
-      <tr>
-        <td>${escapeHTML(displayWorkerName(row.worker))}</td>
-        <td>${row.present + (row.halfday * 0.5)}</td>
-        <td>${formatHours(row.hours)}</td>
-        <td>${formatHours(row.overtime)}</td>
-        <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
-        <td><strong>${money(row.wage)}</strong></td>
-      </tr>
-    `).join("") || `<tr><td colspan="6">No wage records for this month.</td></tr>`;
+    .map((row) => {
+      const paid = rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
+      const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
+      return `
+        <tr>
+          <td>${escapeHTML(displayWorkerName(row.worker))}</td>
+          <td>${row.present + (row.halfday * 0.5)}</td>
+          <td>${formatHours(row.hours)}</td>
+          <td>${formatHours(row.overtime)}</td>
+          <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
+          <td>${money(paid)}</td>
+          <td><strong>${money(unpaid)}</strong></td>
+          <td><strong>${money(row.wage)}</strong></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="8">No wage records for this month.</td></tr>`;
 
   $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
@@ -1447,10 +1464,142 @@ function renderDashboard() {
   }).join("") || emptyState("No workers added yet.");
 }
 
+function openWorkerSummary(workerId) {
+  app.selectedWorkerSummaryId = workerId;
+  renderWorkers();
+}
+
+function closeWorkerSummary() {
+  app.selectedWorkerSummaryId = "";
+  renderWorkers();
+}
+
+function workerSummaryPanel(worker) {
+  const month = $("#dashboardMonth")?.value || monthISO();
+  const dates = daysInMonth(month);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const row = monthSummary(month, worker.id)[0] || {
+    worker,
+    present: 0,
+    halfday: 0,
+    absent: 0,
+    off: 0,
+    hours: 0,
+    overtime: 0,
+    dailyWage: currentDailyWage(worker),
+    baseWage: 0,
+    overtimeWage: 0,
+    foodDeduction: 0,
+    paidAmount: 0,
+    wage: 0,
+  };
+  const paid = rowPaidAmount(row, start, end);
+  const unpaid = rowUnpaidAmount(row, start, end);
+  const today = $("#todayInput")?.value || todayISO();
+  const todayRecord = getAttendanceRecord(today, worker.id);
+  const todayHours = calculateHours(todayRecord);
+  const todayPayable = attendanceWage(worker, todayRecord, todayHours.overtime, today);
+  const recentRows = dates
+    .filter((date) => date <= today && getAttendance(date, worker.id))
+    .slice(-10)
+    .reverse()
+    .map((date) => {
+      const record = getAttendanceRecord(date, worker.id);
+      const hours = calculateHours(record);
+      const payable = attendanceWage(worker, record, hours.overtime, date);
+      return `
+        <tr>
+          <td>${date}</td>
+          <td>${statusLabel(record.status)}</td>
+          <td>${record.inTime || "-"}</td>
+          <td>${record.outTime || "-"}</td>
+          <td>${formatHours(hours.total)}</td>
+          <td>${formatHours(hours.overtime)}</td>
+          <td>${money(payable)}</td>
+          <td>${money(record.paidAmount || 0)}</td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="8">${t("noRecordsReport")}</td></tr>`;
+
+  return `
+    <section class="worker-summary-panel panel">
+      <div class="worker-summary-head">
+        <div class="worker-title">
+          ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          <div>
+            <p class="eyebrow">${t("workerSummary")}</p>
+            <h3>${escapeHTML(displayWorkerName(worker))}</h3>
+            <p class="help-text">${escapeHTML(worker.role || t("roleWorker"))} · ${t(worker.status || "active")}</p>
+          </div>
+        </div>
+        <button class="ghost" data-back-workers>${t("back")}</button>
+      </div>
+
+      <div class="summary-strip">
+        <div><span>${t("monthlySummary")}</span><strong>${month}</strong></div>
+        <div><span>${t("present")} ${t("days")}</span><strong>${row.present + (row.halfday * 0.5)}</strong></div>
+        <div><span>${t("hours")}</span><strong>${formatHours(row.hours)}</strong></div>
+        <div><span>${t("overtime")}</span><strong>${formatHours(row.overtime)}</strong></div>
+        <div><span>${t("dailyWage")}</span><strong>${money(row.dailyWage || currentDailyWage(worker))}</strong></div>
+        <div><span>${t("payableWage")}</span><strong>${money(row.wage)}</strong></div>
+        <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
+        <div><span>${t("unpaid")}</span><strong>${money(unpaid)}</strong></div>
+      </div>
+
+      <section class="mini-attendance-card">
+        <div>
+          <h3>${t("todaysAttendance")}</h3>
+          <p class="help-text">${today}</p>
+        </div>
+        <div class="mini-attendance-grid">
+          <div><span>${t("statusColumn")}</span><strong>${statusLabel(todayRecord.status || "not marked")}</strong></div>
+          <div><span>${t("in")}</span><strong>${todayRecord.inTime || "-"}</strong></div>
+          <div><span>${t("out")}</span><strong>${todayRecord.outTime || "-"}</strong></div>
+          <div><span>${t("hours")}</span><strong>${formatHours(todayHours.total)}</strong></div>
+          <div><span>${t("overtime")}</span><strong>${formatHours(todayHours.overtime)}</strong></div>
+          <div><span>${t("payableWage")}</span><strong>${money(todayPayable)}</strong></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="panel-head">
+          <h3>${t("recentAttendance")}</h3>
+          <span class="pill">${month}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>${t("date")}</th>
+                <th>${t("statusColumn")}</th>
+                <th>${t("in")}</th>
+                <th>${t("out")}</th>
+                <th>${t("hours")}</th>
+                <th>${t("overtime")}</th>
+                <th>${t("payableWage")}</th>
+                <th>${t("paid")}</th>
+              </tr>
+            </thead>
+            <tbody>${recentRows}</tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  `;
+}
+
 function renderWorkers() {
   const query = ($("#workerSearch").value || "").trim().toLowerCase();
   const list = $("#workersList");
   const view = app.workerView || "large";
+  const selectedWorker = app.selectedWorkerSummaryId ? app.workers.find((worker) => worker.id === app.selectedWorkerSummaryId) : null;
+  if (selectedWorker && list) {
+    list.className = "worker-summary-wrap";
+    list.innerHTML = workerSummaryPanel(selectedWorker);
+    return;
+  }
+  if (app.selectedWorkerSummaryId && !selectedWorker) app.selectedWorkerSummaryId = "";
   if (list) {
     list.className = `worker-cards worker-view-${view}`;
   }
@@ -1501,6 +1650,7 @@ function renderWorkers() {
       <div class="worker-card-actions">
         <button data-move-worker="${worker.id}" data-move-direction="up" ${workerIndex <= 0 ? "disabled" : ""}>${t("moveUp")}</button>
         <button data-move-worker="${worker.id}" data-move-direction="down" ${workerIndex >= app.workers.length - 1 ? "disabled" : ""}>${t("moveDown")}</button>
+        <button data-open-worker-details="${worker.id}">${t("workerSummary")}</button>
         <button data-edit-worker="${worker.id}">${t("editWorkerTitle")}</button>
       </div>
     </article>
@@ -2402,8 +2552,11 @@ function bindEvents() {
     const moveButton = event.target.closest("[data-move-worker]");
     if (moveButton) moveWorker(moveButton.dataset.moveWorker, moveButton.dataset.moveDirection);
 
+    const backWorkersButton = event.target.closest("[data-back-workers]");
+    if (backWorkersButton) closeWorkerSummary();
+
     const detailsCard = event.target.closest("[data-open-worker-details]");
-    if (detailsCard) openWorkerDialog(detailsCard.dataset.openWorkerDetails);
+    if (detailsCard) openWorkerSummary(detailsCard.dataset.openWorkerDetails);
 
     const removeExpenseButton = event.target.closest("[data-remove-expense]");
     if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
@@ -2454,7 +2607,7 @@ function bindEvents() {
     const detailsCard = event.target.closest?.("[data-open-worker-details]");
     if (!detailsCard || !["Enter", " "].includes(event.key)) return;
     event.preventDefault();
-    openWorkerDialog(detailsCard.dataset.openWorkerDetails);
+    openWorkerSummary(detailsCard.dataset.openWorkerDetails);
   });
 
   document.addEventListener("change", (event) => {
@@ -2575,16 +2728,22 @@ function renderDashboard() {
 
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
-    .map((row) => `
-      <tr>
-        <td>${escapeHTML(displayWorkerName(row.worker))}</td>
-        <td>${row.present + (row.halfday * 0.5)}</td>
-        <td>${formatHours(row.hours)}</td>
-        <td>${formatHours(row.overtime)}</td>
-        <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
-        <td><strong>${money(row.wage)}</strong></td>
-      </tr>
-    `).join("") || `<tr><td colspan="6">${t("noWageRecords")}</td></tr>`;
+    .map((row) => {
+      const paid = rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
+      const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
+      return `
+        <tr>
+          <td>${escapeHTML(displayWorkerName(row.worker))}</td>
+          <td>${row.present + (row.halfday * 0.5)}</td>
+          <td>${formatHours(row.hours)}</td>
+          <td>${formatHours(row.overtime)}</td>
+          <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
+          <td>${money(paid)}</td>
+          <td><strong>${money(unpaid)}</strong></td>
+          <td><strong>${money(row.wage)}</strong></td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="8">${t("noWageRecords")}</td></tr>`;
 
   $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
