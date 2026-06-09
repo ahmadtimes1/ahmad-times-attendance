@@ -2,6 +2,7 @@
 const LANG_KEY = "ahmad-times-language";
 const SIMPLE_LOGIN_KEY = "ahmad-times-simple-user";
 const LAST_ACTIVITY_KEY = "ahmad-times-last-activity";
+const WORKER_VIEW_KEY = "ahmad-times-worker-view";
 const STANDARD_HOURS = 9;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -312,7 +313,10 @@ Object.assign(translations.en, {
   totalActiveLabour: "Total active labour",
   activeLabour: "Active labour",
   inactiveLabour: "Inactive labour",
-  allLabour: "All labour",
+    allLabour: "All labour",
+    largeIcons: "Large icons",
+    mediumIcons: "Medium icons",
+    listView: "List",
   city: "City",
   cityPlaceholder: "Dubai, Sharjah...",
   performance: "Performance",
@@ -381,7 +385,10 @@ Object.assign(translations.ps, {
   totalActiveLabour: "ټول فعال مزدوران",
   activeLabour: "فعال مزدوران",
   inactiveLabour: "غیر فعال مزدوران",
-  allLabour: "ټول مزدوران",
+    allLabour: "ټول مزدوران",
+    largeIcons: "لوی عکسونه",
+    mediumIcons: "منځني عکسونه",
+    listView: "لست",
   city: "ښار",
   cityPlaceholder: "دوبۍ، شارجه...",
   performance: "کارکردګي",
@@ -460,6 +467,7 @@ const app = {
   profile: null,
   language: localStorage.getItem(LANG_KEY) || "en",
   workerFilter: "active",
+  workerView: localStorage.getItem(WORKER_VIEW_KEY) || "large",
 };
 
 let supabaseClient = null;
@@ -1024,7 +1032,11 @@ function openPrintableReport() {
   const language = reportLanguage();
   const dir = language === "ps" ? "rtl" : "ltr";
   const logoUrl = new URL("ahmad-times-logo.png", window.location.href).href;
-  const report = $("#reportOutput").innerHTML.replaceAll('src="ahmad-times-logo.png"', `src="${logoUrl}"`);
+  const stampUrl = new URL("ahmad-times-stamp.png", window.location.href).href;
+  const report = $("#reportOutput").innerHTML
+    .replace(/<div class="report-logo-fallback"[^>]*>.*?<\/div>/g, "")
+    .replaceAll('src="ahmad-times-logo.png"', `src="${logoUrl}"`)
+    .replaceAll('src="ahmad-times-stamp.png"', `src="${stampUrl}"`);
   if (!report.trim()) {
     toast(t("emptyReport"));
     return;
@@ -1037,12 +1049,14 @@ function openPrintableReport() {
         <title>Ahmad Times Wage Report</title>
         <style>
           body { margin: 0; padding: 24px; color: #1d2433; font-family: Arial, sans-serif; background: #fff; }
-          .report-page { max-width: 1100px; margin: 0 auto; }
+          .report-page { position: relative; max-width: 1100px; margin: 0 auto; overflow: hidden; }
+          .report-stamp { position: absolute !important; right: 28px; top: 190px; width: 150px !important; max-width: 150px !important; height: auto !important; opacity: 0.10; pointer-events: none; z-index: 0; }
+          [dir="rtl"] .report-stamp { right: auto; left: 28px; }
           .print-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 0 auto 16px; max-width: 1100px; }
           .print-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid #bce7f7; border-radius: 8px; color: #087fae; background: #f4fbfe; font-weight: 700; cursor: pointer; }
           .report-brand { display: flex; gap: 12px; align-items: center; padding: 12px; margin-bottom: 12px; border: 1px solid #bce7f7; border-radius: 8px; background: #f4fbfe; }
           .report-brand img { width: 72px; height: 72px; object-fit: contain; border-radius: 50%; background: #fff; }
-          .report-logo-fallback { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; color: #fff; background: #16a9e0; font-weight: 900; }
+          .report-logo-fallback { display: none !important; }
           .report-brand strong, .report-brand span { display: block; }
           .report-brand strong { font-size: 20px; }
           .report-brand span, .help-text { color: #667085; }
@@ -1279,6 +1293,14 @@ function renderDashboard() {
 
 function renderWorkers() {
   const query = ($("#workerSearch").value || "").trim().toLowerCase();
+  const list = $("#workersList");
+  const view = app.workerView || "large";
+  if (list) {
+    list.className = `worker-cards worker-view-${view}`;
+  }
+  $$(".worker-view").forEach((button) => {
+    button.classList.toggle("active", button.dataset.workerView === view);
+  });
   const workers = app.workers.filter((worker) => {
     const filter = app.workerFilter || "active";
     if (filter !== "all" && worker.status !== filter) return false;
@@ -1286,7 +1308,7 @@ function renderWorkers() {
     return haystack.includes(query);
   });
 
-  $("#workersList").innerHTML = workers.map((worker) => {
+  list.innerHTML = workers.map((worker) => {
     const workerIndex = app.workers.findIndex((item) => item.id === worker.id);
     return `
     <article class="worker-card">
@@ -1483,9 +1505,9 @@ function renderReport() {
   const payTotals = paymentTotals(rows, start, end);
 
   $("#reportOutput").innerHTML = `
+    <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="150" height="150">
     <div class="report-brand">
-      <img src="ahmad-times-logo.png" alt="Ahmad Times logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-      <div class="report-logo-fallback" hidden>ATBM</div>
+      <img src="ahmad-times-logo.png" alt="Ahmad Times logo">
       <div>
         <strong>Ahmad Times For Building Maintenance L.L.C</strong>
         <span>${t("wageAttendanceReport")}</span>
@@ -2044,6 +2066,13 @@ function bindEvents() {
       app.workerFilter = button.dataset.workerFilter;
       $$(".worker-filter").forEach((item) => item.classList.remove("active"));
       button.classList.add("active");
+      renderWorkers();
+    });
+  });
+  $$(".worker-view").forEach((button) => {
+    button.addEventListener("click", () => {
+      app.workerView = button.dataset.workerView || "large";
+      localStorage.setItem(WORKER_VIEW_KEY, app.workerView);
       renderWorkers();
     });
   });

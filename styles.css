@@ -573,10 +573,83 @@ tbody tr:hover {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
+.worker-cards.worker-view-large {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.worker-cards.worker-view-medium {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.worker-cards.worker-view-list {
+  grid-template-columns: 1fr;
+}
+
 .worker-card {
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.72);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.worker-view-medium .worker-card {
+  padding: 12px;
+}
+
+.worker-view-medium .worker-meta {
+  grid-template-columns: 1fr;
+}
+
+.worker-view-medium .worker-card-actions {
+  display: none;
+}
+
+.worker-view-medium .worker-avatar {
+  flex-basis: 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.worker-view-medium .worker-card h3 {
+  font-size: 16px;
+}
+
+.worker-view-list .worker-card {
+  padding: 12px;
+}
+
+.worker-view-list .worker-card-head {
+  align-items: center;
+}
+
+.worker-view-list .worker-meta {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+}
+
+.worker-view-list .worker-card-actions {
+  justify-content: flex-end;
+}
+
+.view-picker {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.view-picker button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-color: transparent;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.view-picker button.active {
+  color: #fff;
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
+  border-color: var(--brand-2);
 }
 
 .worker-card-head,
@@ -742,6 +815,15 @@ tbody tr:hover {
   font-size: 13px;
   font-weight: 900;
   object-fit: cover;
+}
+
+.attendance-avatar {
+  flex-basis: 64px;
+  width: 64px;
+  height: 64px;
+  border-width: 3px;
+  box-shadow: 0 10px 24px rgba(31, 45, 61, 0.12);
+  font-size: 15px;
 }
 
 .month-worker-photo {
@@ -929,6 +1011,37 @@ tbody tr:hover {
   margin-top: 0;
 }
 
+.report-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.report-stamp {
+  position: absolute;
+  top: 160px;
+  right: 26px;
+  width: 150px;
+  max-width: 150px;
+  height: auto;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[dir="rtl"] .report-stamp {
+  right: auto;
+  left: 26px;
+}
+
+.report-panel > :not(.report-stamp) {
+  position: relative;
+  z-index: 1;
+}
+
+.report-logo-fallback {
+  display: none !important;
+}
+
 .report-brand {
   display: flex;
   gap: 12px;
@@ -947,18 +1060,6 @@ tbody tr:hover {
   object-fit: contain;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
-}
-
-.report-logo-fallback {
-  display: grid;
-  flex: 0 0 64px;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  color: #fff;
-  background: linear-gradient(180deg, var(--brand), var(--brand-2));
-  font-weight: 900;
 }
 
 .report-brand img:not([src]),
@@ -1213,6 +1314,14 @@ dialog::backdrop {
     max-width: none;
   }
 
+  .view-picker {
+    width: 100%;
+  }
+
+  .view-picker button {
+    flex: 1;
+  }
+
   .stat-grid,
   .summary-strip,
   .form-grid,
@@ -1221,6 +1330,10 @@ dialog::backdrop {
   }
 
   .worker-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-view-list .worker-meta {
     grid-template-columns: 1fr;
   }
 
@@ -1352,6 +1465,12 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 
+  .worker-cards.worker-view-large,
+  .worker-cards.worker-view-medium,
+  .worker-cards.worker-view-list {
+    grid-template-columns: 1fr;
+  }
+
   .worker-card-head {
     align-items: flex-start;
     flex-direction: column;
@@ -1372,6 +1491,16 @@ dialog::backdrop {
   .attendance-row,
   .today-row {
     padding: 10px;
+  }
+
+  .attendance-person {
+    align-items: flex-start;
+  }
+
+  .attendance-avatar {
+    flex-basis: 54px;
+    width: 54px;
+    height: 54px;
   }
 
   .attendance-control {
@@ -1409,6 +1538,11 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 
+  .view-picker {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .mode-tab,
   .worker-filter {
     width: 100%;
@@ -1442,10 +1576,10 @@ dialog::backdrop {
     height: 52px;
   }
 
-  .report-logo-fallback {
-    flex-basis: 52px;
-    width: 52px;
-    height: 52px;
+  .report-stamp {
+    top: 150px;
+    width: 120px;
+    opacity: 0.1;
   }
 
   .report-brand strong {
