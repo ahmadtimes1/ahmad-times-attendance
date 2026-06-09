@@ -1181,15 +1181,6 @@ tbody tr:hover {
   margin-bottom: 10px;
 }
 
-.worker-report-id img,
-.worker-report-id .worker-avatar {
-  width: 64px;
-  height: 64px;
-  flex-basis: 64px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
 .worker-report-id h4 {
   margin: 0 0 3px;
   font-size: 18px;
@@ -1236,6 +1227,16 @@ tbody tr:hover {
   object-fit: contain;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
+}
+
+.report-brand .report-stamp {
+  width: 118px !important;
+  max-width: 118px !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  object-fit: contain !important;
+  opacity: 0.9;
 }
 
 .report-brand img:not([src]),
@@ -1761,7 +1762,7 @@ dialog::backdrop {
     height: 52px;
   }
 
-  .report-stamp {
+  .report-brand .report-stamp {
     width: 86px;
     max-width: 86px;
   }
