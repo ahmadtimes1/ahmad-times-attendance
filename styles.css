@@ -1136,18 +1136,12 @@ tbody tr:hover {
 }
 
 .report-stamp {
-  margin-left: auto;
-  width: 118px;
-  max-width: 118px;
+  width: 136px;
+  max-width: 136px;
   height: auto;
-  opacity: 0.82;
+  opacity: 0.9;
   pointer-events: none;
   mix-blend-mode: multiply;
-}
-
-[dir="rtl"] .report-stamp {
-  margin-right: auto;
-  margin-left: 0;
 }
 
 .report-logo-fallback {
@@ -1238,16 +1232,6 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.9);
 }
 
-.report-brand .report-stamp {
-  width: 118px !important;
-  max-width: 118px !important;
-  height: auto !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  object-fit: contain !important;
-  opacity: 0.9;
-}
-
 .report-brand img:not([src]),
 .report-brand img[src=""] {
   display: none;
@@ -1269,11 +1253,57 @@ tbody tr:hover {
   font-weight: 700;
 }
 
+.report-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+
 .summary-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
   margin: 12px 0 18px;
+}
+
+.report-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.report-signature {
+  min-width: 220px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.report-signature-line {
+  height: 34px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #98a2b3;
+}
+
+.report-stamp-box {
+  margin-left: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[dir="rtl"] .report-stamp-box {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 .payment-list {
@@ -1771,13 +1801,27 @@ dialog::backdrop {
     height: 52px;
   }
 
-  .report-brand .report-stamp {
-    width: 86px;
-    max-width: 86px;
-  }
-
   .report-brand strong {
     font-size: 15px;
+  }
+
+  .report-meta,
+  .report-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .report-stamp-box {
+    margin-left: 0;
+  }
+
+  [dir="rtl"] .report-stamp-box {
+    margin-right: 0;
+  }
+
+  .report-stamp {
+    width: 104px;
+    max-width: 104px;
   }
 
   .worker-report-grid {

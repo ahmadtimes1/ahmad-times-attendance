@@ -1050,17 +1050,16 @@ function openPrintableReport() {
         <style>
           body { margin: 0; padding: 24px; color: #1d2433; font-family: Arial, sans-serif; background: #fff; }
           .report-page { position: relative; max-width: 1100px; margin: 0 auto; overflow: hidden; }
-          .report-stamp { margin-left: auto; width: 118px !important; max-width: 118px !important; height: auto !important; opacity: 0.82; pointer-events: none; mix-blend-mode: multiply; }
-          [dir="rtl"] .report-stamp { margin-right: auto; margin-left: 0; }
+          .report-stamp { width: 136px !important; max-width: 136px !important; height: auto !important; opacity: 0.9; pointer-events: none; mix-blend-mode: multiply; }
           .print-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 0 auto 16px; max-width: 1100px; }
           .print-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid #bce7f7; border-radius: 8px; color: #087fae; background: #f4fbfe; font-weight: 700; cursor: pointer; }
           .report-brand { display: flex; gap: 12px; align-items: center; padding: 12px; margin-bottom: 12px; border: 1px solid #bce7f7; border-radius: 8px; background: #f4fbfe; }
           .report-brand img { width: 72px; height: 72px; object-fit: contain; border-radius: 50%; background: #fff; }
-          .report-brand .report-stamp { width: 118px !important; max-width: 118px !important; height: auto !important; border-radius: 0 !important; background: transparent !important; object-fit: contain !important; opacity: 0.9; }
           .report-logo-fallback { display: none !important; }
           .report-brand strong, .report-brand span { display: block; }
           .report-brand strong { font-size: 20px; }
           .report-brand span, .help-text { color: #667085; }
+          .report-meta { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; color: #667085; font-size: 12px; border-bottom: 1px solid #e6edf5; }
           .worker-report-details { padding: 12px; margin: 12px 0; border: 1px solid #d9eaf1; border-radius: 8px; background: #fbfdff; }
           .worker-report-id { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
           .worker-report-id img, .worker-report-id .worker-avatar { width: 64px; height: 64px; flex-basis: 64px; border-radius: 50%; object-fit: cover; }
@@ -1075,14 +1074,19 @@ function openPrintableReport() {
           .summary-strip div { padding: 10px; border-radius: 8px; background: #f4f7fb; }
           .summary-strip span { display: block; color: #667085; font-size: 12px; font-weight: 700; }
           .summary-strip strong { display: block; margin-top: 3px; font-size: 16px; }
+          .report-footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-top: 28px; padding-top: 18px; border-top: 1px solid #d9e0ea; break-inside: avoid; }
+          .report-signature { min-width: 220px; color: #667085; font-size: 12px; }
+          .report-signature-line { height: 34px; margin-bottom: 6px; border-bottom: 1px solid #98a2b3; }
+          .report-stamp-box { margin-left: auto; text-align: center; color: #667085; font-size: 12px; }
+          [dir="rtl"] .report-stamp-box { margin-right: auto; margin-left: 0; }
           .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
           .payment-list, .report-controls { display: none; }
           .table-wrap { overflow: visible; }
           table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
           th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
-          @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .report-brand .report-stamp { width: 86px !important; max-width: 86px !important; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } }
-          @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .report-stamp { margin-left: 0; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
+          @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } .report-footer { align-items: flex-start; flex-direction: column; } }
+          @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
           @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; } }
         </style>
       </head>
@@ -1564,7 +1568,10 @@ function renderReport() {
         <strong>Ahmad Times For Building Maintenance L.L.C</strong>
         <span>${t("wageAttendanceReport")}</span>
       </div>
-      <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="118" height="118">
+    </div>
+    <div class="report-meta">
+      <span>${title}</span>
+      <span>${t("serialNo")}: ATBM-${start.replaceAll("-", "")}-${end.replaceAll("-", "")}</span>
     </div>
     <h3>${title}</h3>
     <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(displayWorkerName(selectedWorker) || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
@@ -1626,9 +1633,6 @@ function renderReport() {
             <th>${t("off")}</th>
             <th>${t("hours")}</th>
             <th>${t("overtime")}</th>
-            <th>${t("city")}</th>
-            <th>${t("nationality")}</th>
-            <th>${t("performance")}</th>
             <th>${t("dailyWage")}</th>
             <th>${t("baseWage")}</th>
             <th>${t("overtimeWage")}</th>
@@ -1649,9 +1653,6 @@ function renderReport() {
               <td>${row.off}</td>
               <td>${formatHours(row.hours || 0)}</td>
               <td>${formatHours(row.overtime || 0)}</td>
-              <td>${escapeHTML(row.worker.city || "-")}</td>
-              <td>${escapeHTML(row.worker.nationality || "-")}</td>
-              <td>${performanceLabel(row.worker.performance)}</td>
               <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
               <td>${money(row.baseWage || 0)}</td>
               <td>${money(row.overtimeWage || 0)}</td>
@@ -1660,10 +1661,21 @@ function renderReport() {
               <td>${money((row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0))}</td>
               <td><strong>${money(Math.max(0, Number(row.wage || 0) - ((row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0))))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="18">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="15">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
+    <footer class="report-footer">
+      <div class="report-signature">
+        <div class="report-signature-line"></div>
+        <strong>Authorized signature</strong>
+        <p class="help-text">Generated: ${new Date().toLocaleString()}</p>
+      </div>
+      <div class="report-stamp-box">
+        <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136">
+        <div>Ahmad Times stamp</div>
+      </div>
+    </footer>
   `;
   });
 }
