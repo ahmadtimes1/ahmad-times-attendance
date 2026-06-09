@@ -2,7 +2,7 @@
 const LANG_KEY = "ahmad-times-language";
 const SIMPLE_LOGIN_KEY = "ahmad-times-simple-user";
 const LAST_ACTIVITY_KEY = "ahmad-times-last-activity";
-const STANDARD_HOURS = 8;
+const STANDARD_HOURS = 9;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 const SIMPLE_USERS = [
@@ -357,6 +357,24 @@ Object.assign(translations.en, {
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
   effectiveFrom: "from",
+  expenses: "Expenses",
+  companyExpenses: "Company expenses",
+  companyExpensesHelp: "Store daily company expenses such as worker food, car oil, fuel, tools, or site costs.",
+  expenseDate: "Expense date",
+  expenseCategory: "Category",
+  expenseCategoryPlaceholder: "Food, car oil, tools...",
+  expenseDescription: "Description",
+  expenseDescriptionPlaceholder: "Optional note",
+  expenseAmount: "Amount (AED)",
+  addExpense: "Add expense",
+  noExpenses: "No company expenses yet.",
+  expenseSaved: "Expense saved",
+  expenseRemoved: "Expense removed",
+  monthlyExpenses: "Company monthly expenses",
+  grandTotal: "Grand total",
+  pashtoName: "Pashto name",
+  pashtoNamePlaceholder: "Worker name in Pashto",
+  remove: "Remove",
 });
 
 Object.assign(translations.ps, {
@@ -411,11 +429,30 @@ Object.assign(translations.ps, {
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
   effectiveFrom: "له",
+  expenses: "مصارف",
+  companyExpenses: "د شرکت مصارف",
+  companyExpensesHelp: "د شرکت ورځني مصارف لکه د مزدور خوراک، د موټر تېل، سامان، یا د سایټ مصرفونه ذخیره کړئ.",
+  expenseDate: "د مصرف نېټه",
+  expenseCategory: "قسم",
+  expenseCategoryPlaceholder: "خوراک، د موټر تېل، سامان...",
+  expenseDescription: "تفصیل",
+  expenseDescriptionPlaceholder: "اختیاري یادښت",
+  expenseAmount: "اندازه (AED)",
+  addExpense: "مصرف اضافه کړئ",
+  noExpenses: "د شرکت مصرف نشته.",
+  expenseSaved: "مصرف ذخیره شو",
+  expenseRemoved: "مصرف لرې شو",
+  monthlyExpenses: "د شرکت میاشتني مصارف",
+  grandTotal: "ټول مجموعه",
+  pashtoName: "پښتو نوم",
+  pashtoNamePlaceholder: "د کارکوونکي پښتو نوم",
+  remove: "لرې کړئ",
 });
 const app = {
   workers: [],
   attendance: {},
   payments: {},
+  expenses: [],
   logs: [],
   lastSaved: null,
   storageMode: "local",
@@ -444,6 +481,10 @@ function workerInitials(worker) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("") || "?";
+}
+
+function displayWorkerName(worker, language = app.language) {
+  return language === "ps" && worker?.namePs ? worker.namePs : (worker?.name || "");
 }
 
 function currentUserLabel() {
@@ -546,7 +587,7 @@ function buildWhatsAppMessage(row, start, end, title) {
     `${title}`,
     `${t("date")}: ${reportPeriodLabel(start, end)}`,
     "",
-    `${t("worker")}: ${row.worker.name}`,
+    `${t("worker")}: ${displayWorkerName(row.worker)}`,
     `${t("phone")}: ${row.worker.phone || "-"}`,
     `${t("city")}: ${row.worker.city || "-"}`,
     "",
@@ -694,6 +735,7 @@ async function loadData() {
     if (!error && data?.data) {
       Object.assign(app, data.data);
       app.payments ||= {};
+      app.expenses ||= [];
       app.logs ||= [];
       app.storageMode = "cloud";
       restoreSimpleLogin();
@@ -707,6 +749,7 @@ async function loadData() {
     try {
       Object.assign(app, JSON.parse(saved));
       app.payments ||= {};
+      app.expenses ||= [];
       app.logs ||= [];
       app.storageMode = supabaseClient ? "login required" : "local";
       return;
@@ -717,6 +760,7 @@ async function loadData() {
 
   app.workers = [];
   app.payments = {};
+  app.expenses = [];
   app.logs = [];
   saveData(false);
 }
@@ -730,6 +774,7 @@ async function saveData(show = true) {
       workers: app.workers,
       attendance: app.attendance,
       payments: app.payments,
+      expenses: app.expenses,
       logs: app.logs,
       lastSaved: app.lastSaved,
     };
@@ -763,6 +808,7 @@ function setBrowserBackup() {
       workers: app.workers,
       attendance: app.attendance,
       payments: app.payments,
+      expenses: app.expenses,
       logs: app.logs,
       lastSaved: app.lastSaved,
     }));
@@ -793,9 +839,11 @@ function setDefaults() {
   $("#languageSelect").value = app.language;
   $("#todayInput").value = today;
   $("#attendanceDate").value = today;
+  $("#expenseDate").value = today;
   $("#reportDate").value = today;
   $("#dashboardMonth").value = month;
   $("#attendanceMonth").value = month;
+  $("#expenseMonth").value = month;
   $("#reportMonth").value = month;
   $("#workerJoinDate").value = today;
   $("#workerWageEffectiveDate").value = today;
@@ -1120,6 +1168,7 @@ function renderAll() {
   renderWorkers();
   renderDayAttendance();
   renderMonthAttendance();
+  renderExpenses();
   renderReport();
   renderStorage();
   renderLogs();
@@ -1182,6 +1231,7 @@ function renderDashboard() {
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
+  const monthExpensesTotal = companyExpenseTotal(month);
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
@@ -1191,6 +1241,8 @@ function renderDashboard() {
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
+  $("#statMonthExpenses").textContent = money(monthExpensesTotal);
+  $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
   $("#dashboardDateLabel").textContent = date;
@@ -1199,7 +1251,7 @@ function renderDashboard() {
     .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
     .map((row) => `
       <tr>
-        <td>${escapeHTML(row.worker.name)}</td>
+        <td>${escapeHTML(displayWorkerName(row.worker))}</td>
         <td>${row.present + (row.halfday * 0.5)}</td>
         <td>${formatHours(row.hours)}</td>
         <td>${formatHours(row.overtime)}</td>
@@ -1215,8 +1267,8 @@ function renderDashboard() {
     return `
       <div class="today-row">
         <div>
-          <strong>${escapeHTML(worker.name)}</strong>
-          <p>In: ${record.inTime || "-"} · Out: ${record.outTime || "-"} · Hours: ${formatHours(hours.total)} · OT: ${formatHours(hours.overtime)}</p>
+          <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+          <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
         </div>
         <span class="pill">${statusLabel(status)}</span>
@@ -1230,7 +1282,7 @@ function renderWorkers() {
   const workers = app.workers.filter((worker) => {
     const filter = app.workerFilter || "active";
     if (filter !== "all" && worker.status !== filter) return false;
-    const haystack = [worker.name, worker.role, worker.city, worker.nationality, worker.performance, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
+    const haystack = [worker.name, worker.namePs, worker.role, worker.city, worker.nationality, worker.performance, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
     return haystack.includes(query);
   });
 
@@ -1240,9 +1292,9 @@ function renderWorkers() {
     <article class="worker-card">
       <div class="worker-card-head">
         <div class="worker-title">
-          ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(worker.name)}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
           <div>
-            <h3><span class="worker-number">#${workerIndex + 1}</span> ${escapeHTML(worker.name)}</h3>
+            <h3><span class="worker-number">#${workerIndex + 1}</span> ${escapeHTML(displayWorkerName(worker))}</h3>
             <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
           </div>
         </div>
@@ -1282,11 +1334,14 @@ function attendanceRowWithTime(worker, date) {
   const unpaid = Math.max(0, payable - paid);
   return `
     <div class="attendance-row">
-      <div>
-        <strong>${escapeHTML(worker.name)}</strong>
-        <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
-        <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
-        <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
+      <div class="attendance-person">
+        ${worker.photo ? `<img class="attendance-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="attendance-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+        <div>
+          <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
+          <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
+          <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
+        </div>
       </div>
       <div class="attendance-control">
         <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
@@ -1312,9 +1367,12 @@ function attendanceRow(worker, date) {
   const current = getAttendance(date, worker.id);
   return `
     <div class="attendance-row">
-      <div>
-        <strong>${escapeHTML(worker.name)}</strong>
-        <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
+      <div class="attendance-person">
+        ${worker.photo ? `<img class="attendance-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="attendance-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+        <div>
+          <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
+        </div>
       </div>
       <div class="attendance-actions" data-worker="${worker.id}" data-date="${date}">
         ${["present", "halfday", "absent", "off"].map((status) => `
@@ -1331,20 +1389,28 @@ function renderMonthAttendance() {
   const rows = activeWorkers().map((worker) => `
     <tr>
       <td>
-        <strong>${escapeHTML(worker.name)}</strong><br>
+        <div class="month-worker-cell">
+          ${worker.photo ? `<img class="month-worker-photo" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="month-worker-photo worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          <div>
+        <strong>${escapeHTML(displayWorkerName(worker))}</strong><br>
         <span>${money(wageForDate(worker, `${month}-01`))}</span>
+          </div>
+        </div>
       </td>
-      ${dates.map((date) => `
+      ${dates.map((date) => {
+        const status = getAttendance(date, worker.id);
+        return `
         <td class="month-day">
-          <select class="mini-select" data-month-worker="${worker.id}" data-month-date="${date}" aria-label="${escapeHTML(worker.name)} ${date}">
-            <option value="" ${getAttendance(date, worker.id) === "" ? "selected" : ""}>-</option>
-            <option value="present" ${getAttendance(date, worker.id) === "present" ? "selected" : ""}>P</option>
-            <option value="halfday" ${getAttendance(date, worker.id) === "halfday" ? "selected" : ""}>H</option>
-            <option value="absent" ${getAttendance(date, worker.id) === "absent" ? "selected" : ""}>A</option>
-            <option value="off" ${getAttendance(date, worker.id) === "off" ? "selected" : ""}>O</option>
+          <select class="mini-select status-${status || "empty"}" data-month-worker="${worker.id}" data-month-date="${date}" aria-label="${escapeHTML(displayWorkerName(worker))} ${date}">
+            <option value="" ${status === "" ? "selected" : ""}>-</option>
+            <option value="present" ${status === "present" ? "selected" : ""}>P</option>
+            <option value="halfday" ${status === "halfday" ? "selected" : ""}>H</option>
+            <option value="absent" ${status === "absent" ? "selected" : ""}>A</option>
+            <option value="off" ${status === "off" ? "selected" : ""}>O</option>
           </select>
         </td>
-      `).join("")}
+      `;
+      }).join("")}
     </tr>
   `).join("");
 
@@ -1395,7 +1461,7 @@ function renderReport() {
   const selectedWorkerId = workerId === "all" || reportWorkers.some((worker) => worker.id === workerId) ? workerId : "all";
   if (selectedWorkerId !== workerId) $("#reportWorker").value = "all";
   const workerOptions = [`<option value="all">${t("companyWideReport")}</option>`]
-    .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${worker.id === selectedWorkerId ? "selected" : ""}>${escapeHTML(worker.name)}</option>`));
+    .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${worker.id === selectedWorkerId ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>`));
   $("#reportWorker").innerHTML = workerOptions.join("");
 
   const reportRows = type === "monthly" ? monthSummary(month, selectedWorkerId) : summarizeRecords(recordsForRange(start, end, selectedWorkerId));
@@ -1426,7 +1492,7 @@ function renderReport() {
       </div>
     </div>
     <h3>${title}</h3>
-    <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(app.workers.find((worker) => worker.id === selectedWorkerId)?.name || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
+    <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(displayWorkerName(app.workers.find((worker) => worker.id === selectedWorkerId)) || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
     <div class="summary-strip">
       <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
       <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>
@@ -1452,7 +1518,7 @@ function renderReport() {
         return `
           <div class="payment-row" data-payment-worker="${row.worker.id}" data-payment-start="${start}" data-payment-end="${end}">
             <div>
-              <strong>${escapeHTML(row.worker.name)}</strong>
+              <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
               <p>${t("payableWage")}: ${money(row.wage)} · ${t("paidToday")}: ${money(attendancePaid)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
             </div>
@@ -1500,7 +1566,7 @@ function renderReport() {
         <tbody>
           ${rows.map((row) => `
             <tr>
-              <td>${escapeHTML(row.worker.name)}</td>
+              <td>${escapeHTML(displayWorkerName(row.worker))}</td>
               <td>${t(row.worker.status)}</td>
               <td>${row.present}</td>
               <td>${row.halfday || 0}</td>
@@ -1543,6 +1609,31 @@ function summarizeRecords(records) {
     grouped.set(record.worker.id, item);
   });
   return Array.from(grouped.values());
+}
+
+function monthExpenses(month = monthISO()) {
+  app.expenses ||= [];
+  return app.expenses.filter((expense) => String(expense.date || "").startsWith(month));
+}
+
+function companyExpenseTotal(month = monthISO()) {
+  return monthExpenses(month).reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+}
+
+function renderExpenses() {
+  const list = $("#expensesList");
+  if (!list) return;
+  const month = $("#expenseMonth").value || monthISO();
+  const rows = monthExpenses(month).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  list.innerHTML = rows.length ? rows.map((expense) => `
+    <tr>
+      <td>${escapeHTML(expense.date || "-")}</td>
+      <td>${escapeHTML(expense.category || "-")}</td>
+      <td>${escapeHTML(expense.description || "-")}</td>
+      <td><strong>${money(expense.amount)}</strong></td>
+      <td><button class="danger ghost" data-remove-expense="${expense.id}">${t("remove")}</button></td>
+    </tr>
+  `).join("") : `<tr><td colspan="5">${t("noExpenses")}</td></tr>`;
 }
 
 function renderStorage() {
@@ -1612,6 +1703,7 @@ function openWorkerDialog(workerId = "") {
   $("#workerPhotoUpload").value = "";
   setWorkerPhoto(worker?.photo || "");
   $("#workerName").value = worker?.name || "";
+  $("#workerNamePs").value = worker?.namePs || "";
   $("#workerRole").value = worker?.role || "";
   $("#workerCity").value = worker?.city || "";
   $("#workerNationality").value = worker?.nationality || "";
@@ -1641,6 +1733,7 @@ function saveWorkerFromForm() {
   const worker = {
     id,
     name: $("#workerName").value.trim(),
+    namePs: $("#workerNamePs").value.trim(),
     role: $("#workerRole").value.trim(),
     city: $("#workerCity").value.trim(),
     nationality: $("#workerNationality").value.trim(),
@@ -1713,6 +1806,34 @@ function moveWorker(workerId, direction) {
   saveData();
 }
 
+function addExpenseFromForm() {
+  app.expenses ||= [];
+  const expense = {
+    id: makeId(),
+    date: $("#expenseDate").value || todayISO(),
+    category: $("#expenseCategory").value.trim(),
+    description: $("#expenseDescription").value.trim(),
+    amount: Number($("#expenseAmount").value || 0),
+    createdAt: new Date().toISOString(),
+  };
+  if (!expense.category || expense.amount <= 0) return;
+  app.expenses.unshift(expense);
+  addLog("Company expense added", `${expense.date} · ${expense.category} · ${money(expense.amount)}`);
+  $("#expenseCategory").value = "";
+  $("#expenseDescription").value = "";
+  $("#expenseAmount").value = "";
+  saveData();
+  toast(t("expenseSaved"));
+}
+
+function removeExpense(expenseId) {
+  const expense = (app.expenses || []).find((item) => item.id === expenseId);
+  app.expenses = (app.expenses || []).filter((item) => item.id !== expenseId);
+  addLog("Company expense removed", expense ? `${expense.date} · ${expense.category} · ${money(expense.amount)}` : expenseId);
+  saveData();
+  toast(t("expenseRemoved"));
+}
+
 function exportBackup() {
   addLog("Backup exported", `${app.workers.length} workers`);
   saveData(false);
@@ -1728,6 +1849,7 @@ function importBackup(file) {
       app.workers = parsed.workers;
       app.attendance = parsed.attendance;
       app.payments = parsed.payments || {};
+      app.expenses = parsed.expenses || [];
       app.logs = parsed.logs || app.logs || [];
       app.lastSaved = parsed.lastSaved || new Date().toISOString();
       addLog("Backup imported", `${app.workers.length} workers`);
@@ -1982,6 +2104,9 @@ function bindEvents() {
     const moveButton = event.target.closest("[data-move-worker]");
     if (moveButton) moveWorker(moveButton.dataset.moveWorker, moveButton.dataset.moveDirection);
 
+    const removeExpenseButton = event.target.closest("[data-remove-expense]");
+    if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
+
     const statusButton = event.target.closest(".attendance-actions button");
     if (statusButton) {
       const parent = statusButton.closest(".attendance-actions");
@@ -2044,8 +2169,13 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "expenseMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
+  });
+
+  $("#expenseForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    addExpenseFromForm();
   });
 
   $$(".mode-tab").forEach((tab) => {
@@ -2105,6 +2235,7 @@ function renderDashboard() {
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
+  const monthExpensesTotal = companyExpenseTotal(month);
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
@@ -2114,6 +2245,8 @@ function renderDashboard() {
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
+  $("#statMonthExpenses").textContent = money(monthExpensesTotal);
+  $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
   $("#dashboardDateLabel").textContent = date;
@@ -2122,7 +2255,7 @@ function renderDashboard() {
     .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
     .map((row) => `
       <tr>
-        <td>${escapeHTML(row.worker.name)}</td>
+        <td>${escapeHTML(displayWorkerName(row.worker))}</td>
         <td>${row.present + (row.halfday * 0.5)}</td>
         <td>${formatHours(row.hours)}</td>
         <td>${formatHours(row.overtime)}</td>
@@ -2137,10 +2270,13 @@ function renderDashboard() {
     const hours = calculateHours(record);
     return `
       <div class="today-row">
-        <div>
-          <strong>${escapeHTML(worker.name)}</strong>
+        <div class="attendance-person">
+          ${worker.photo ? `<img class="attendance-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="attendance-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          <div>
+          <strong>${escapeHTML(displayWorkerName(worker))}</strong>
           <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
+          </div>
         </div>
         <span class="pill">${statusLabel(status)}</span>
       </div>

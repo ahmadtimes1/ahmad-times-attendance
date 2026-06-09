@@ -36,7 +36,7 @@ create table if not exists public.attendance (
 
 create table if not exists public.app_data (
   id text primary key default 'main',
-  data jsonb not null default '{"workers":[],"attendance":{},"lastSaved":null}'::jsonb,
+  data jsonb not null default '{"workers":[],"attendance":{},"payments":{},"expenses":[],"logs":[],"lastSaved":null}'::jsonb,
   updated_by uuid references auth.users(id),
   updated_at timestamptz not null default now(),
   constraint app_data_single_row check (id = 'main')
@@ -200,7 +200,7 @@ using (id = 'main')
 with check (id = 'main');
 
 insert into public.app_data (id, data)
-values ('main', '{"workers":[],"attendance":{},"lastSaved":null}'::jsonb)
+values ('main', '{"workers":[],"attendance":{},"payments":{},"expenses":[],"logs":[],"lastSaved":null}'::jsonb)
 on conflict (id) do nothing;
 
 create index if not exists workers_status_idx on public.workers(status);

@@ -45,6 +45,7 @@
           <button class="nav-item active" data-view="dashboard" data-i18n="dashboard">Dashboard</button>
           <button class="nav-item" data-view="workers" data-i18n="workers">Workers</button>
           <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
+          <button class="nav-item" data-view="expenses" data-i18n="expenses">Expenses</button>
           <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
           <button class="nav-item" data-view="logs" data-i18n="logs">Logs</button>
           <button class="nav-item" data-view="backup" data-i18n="backup">Backup</button>
@@ -96,6 +97,14 @@
             <article class="stat-card blue">
               <span data-i18n="monthWages">This month wages</span>
               <strong id="statMonthWages">AED 0</strong>
+            </article>
+            <article class="stat-card">
+              <span data-i18n="monthlyExpenses">Company monthly expenses</span>
+              <strong id="statMonthExpenses">AED 0</strong>
+            </article>
+            <article class="stat-card blue">
+              <span data-i18n="grandTotal">Grand total</span>
+              <strong id="statGrandTotal">AED 0</strong>
             </article>
             <article class="stat-card">
               <span data-i18n="monthlyOvertime">Monthly overtime</span>
@@ -182,6 +191,39 @@
             </div>
             <div id="monthAttendanceGrid" class="month-grid-wrap"></div>
           </div>
+        </section>
+
+        <section id="expenses" class="view">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3 data-i18n="companyExpenses">Company expenses</h3>
+                <p class="help-text" data-i18n="companyExpensesHelp">Store daily company expenses such as worker food, car oil, fuel, tools, or site costs.</p>
+              </div>
+              <input id="expenseMonth" type="month">
+            </div>
+            <form id="expenseForm" class="expense-form">
+              <label><span data-i18n="expenseDate">Expense date</span><input id="expenseDate" type="date" required></label>
+              <label><span data-i18n="expenseCategory">Category</span><input id="expenseCategory" data-i18n-placeholder="expenseCategoryPlaceholder" placeholder="Food, car oil, tools..." required></label>
+              <label><span data-i18n="expenseAmount">Amount (AED)</span><input id="expenseAmount" type="number" min="0" step="0.01" required></label>
+              <label><span data-i18n="expenseDescription">Description</span><input id="expenseDescription" data-i18n-placeholder="expenseDescriptionPlaceholder" placeholder="Optional note"></label>
+              <button class="primary" data-i18n="addExpense">Add expense</button>
+            </form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="date">Date</th>
+                    <th data-i18n="expenseCategory">Category</th>
+                    <th data-i18n="expenseDescription">Description</th>
+                    <th data-i18n="expenseAmount">Amount (AED)</th>
+                    <th data-i18n="action">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="expensesList"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
 
         <section id="reports" class="view">
@@ -297,6 +339,7 @@
         </div>
         <div class="form-grid">
           <label><span data-i18n="fullName">Full name</span><input id="workerName" required data-i18n-placeholder="workerNamePlaceholder" placeholder="Worker name"></label>
+          <label><span data-i18n="pashtoName">Pashto name</span><input id="workerNamePs" data-i18n-placeholder="pashtoNamePlaceholder" placeholder="Worker name in Pashto"></label>
           <label><span data-i18n="roleTrade">Role / trade</span><input id="workerRole" data-i18n-placeholder="rolePlaceholder" placeholder="Electrician, plumber, helper"></label>
           <label><span data-i18n="city">City</span><input id="workerCity" data-i18n-placeholder="cityPlaceholder" placeholder="Dubai, Sharjah..."></label>
           <label><span data-i18n="nationality">Nationality</span><input id="workerNationality" data-i18n-placeholder="nationalityPlaceholder" placeholder="Afghan, Pakistani..."></label>
