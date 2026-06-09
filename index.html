@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=dashboard-paid-worker-summary-1">
+    <link rel="stylesheet" href="styles.css?v=attendance-filter-weekly-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -121,6 +121,14 @@
           </div>
 
           <div class="content-grid">
+            <section class="panel daily-dashboard-panel">
+              <div class="panel-head">
+                <h3 data-i18n="dailyAttendance">Daily Attendance</h3>
+                <span id="dashboardDateLabel" class="pill">Today</span>
+              </div>
+              <div id="todayList" class="worker-list compact-attendance-list"></div>
+            </section>
+
             <section class="panel">
               <div class="panel-head">
                 <h3 data-i18n="monthlyWageSummary">Monthly Wage Summary</h3>
@@ -145,13 +153,6 @@
               </div>
             </section>
 
-            <section class="panel">
-              <div class="panel-head">
-                <h3 data-i18n="dailyAttendance">Daily Attendance</h3>
-                <span id="dashboardDateLabel" class="pill">Today</span>
-              </div>
-              <div id="todayList" class="worker-list"></div>
-            </section>
           </div>
         </section>
 
@@ -187,8 +188,31 @@
         </section>
 
         <section id="attendance" class="view">
+          <section class="panel attendance-filter-panel">
+            <div class="panel-head">
+              <div>
+                <h3 data-i18n="attendanceView">Attendance view</h3>
+                <p class="help-text" data-i18n="attendanceViewHelp">Choose all workers, one worker, or multiple workers.</p>
+              </div>
+            </div>
+            <div class="attendance-filter-grid">
+              <label>
+                <span data-i18n="workerFilter">Worker filter</span>
+                <select id="attendanceWorkerFilter">
+                  <option value="all" data-i18n="allWorkers">All workers</option>
+                  <option value="selected" data-i18n="selectedWorkers">Selected workers</option>
+                </select>
+              </label>
+              <label class="attendance-worker-picker">
+                <span data-i18n="chooseWorkers">Choose workers</span>
+                <select id="attendanceWorkerSelect" multiple size="5"></select>
+              </label>
+            </div>
+          </section>
+
           <div class="mode-tabs" role="tablist">
             <button class="mode-tab active" data-mode="day" data-i18n="oneDay">One day</button>
+            <button class="mode-tab" data-mode="week" data-i18n="weekly">Weekly</button>
             <button class="mode-tab" data-mode="month" data-i18n="fullMonth">Full month</button>
           </div>
 
@@ -198,6 +222,14 @@
               <input id="attendanceDate" type="date">
             </div>
             <div id="dayAttendanceList" class="attendance-list"></div>
+          </div>
+
+          <div id="weekAttendancePanel" class="panel hidden">
+            <div class="panel-head">
+              <h3 data-i18n="weeklyAttendance">Weekly Attendance</h3>
+              <input id="attendanceWeekDate" type="date">
+            </div>
+            <div id="weekAttendanceGrid" class="month-grid-wrap"></div>
           </div>
 
           <div id="monthAttendancePanel" class="panel hidden">
@@ -442,6 +474,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=dashboard-paid-worker-summary-1"></script>
+    <script src="app.js?v=attendance-filter-weekly-1"></script>
   </body>
 </html>

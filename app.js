@@ -77,9 +77,16 @@ const translations = {
     mainNavigation: "Main navigation",
     search: "Search",
     searchPlaceholder: "Name, role, phone, Emirates ID",
-    markVisiblePresent: "Mark visible days present",
-    markVisibleOff: "Mark visible days off",
-    clearVisibleMonth: "Clear visible month",
+  markVisiblePresent: "Mark visible days present",
+  markVisibleOff: "Mark visible days off",
+  clearVisibleMonth: "Clear visible month",
+  attendanceView: "Attendance view",
+  attendanceViewHelp: "Choose all workers, one worker, or multiple workers.",
+  workerFilter: "Worker filter",
+  allWorkers: "All workers",
+  selectedWorkers: "Selected workers",
+  chooseWorkers: "Choose workers",
+  weeklyAttendance: "Weekly Attendance",
     reportType: "Report type",
     daily: "Daily",
     weekly: "Weekly",
@@ -235,9 +242,16 @@ const translations = {
     mainNavigation: "اصلي مینو",
     search: "لټون",
     searchPlaceholder: "نوم، کار، تلیفون، امارات ID",
-    markVisiblePresent: "ښکاره ورځې حاضر کړئ",
-    markVisibleOff: "ښکاره ورځې رخصت کړئ",
-    clearVisibleMonth: "ښکاره میاشت پاکه کړئ",
+  markVisiblePresent: "ښکاره ورځې حاضر کړئ",
+  markVisibleOff: "ښکاره ورځې رخصت کړئ",
+  clearVisibleMonth: "ښکاره میاشت پاکه کړئ",
+  attendanceView: "د حاضري لید",
+  attendanceViewHelp: "ټول کارکوونکي، یو کارکوونکی، یا څو کارکوونکي وټاکئ.",
+  workerFilter: "د کارکوونکي فلټر",
+  allWorkers: "ټول کارکوونکي",
+  selectedWorkers: "ټاکل شوي کارکوونکي",
+  chooseWorkers: "کارکوونکي وټاکئ",
+  weeklyAttendance: "اونیزه حاضري",
     reportType: "د راپور ډول",
     daily: "ورځنی",
     weekly: "اونیز",
@@ -515,6 +529,7 @@ const app = {
   workerFilter: "active",
   workerView: localStorage.getItem(WORKER_VIEW_KEY) || "large",
   selectedWorkerSummaryId: "",
+  attendanceWorkerFilter: "all",
 };
 
 let supabaseClient = null;
@@ -1084,6 +1099,7 @@ function setDefaults() {
   $("#languageSelect").value = app.language;
   $("#todayInput").value = today;
   $("#attendanceDate").value = today;
+  $("#attendanceWeekDate").value = today;
   $("#expenseDate").value = today;
   $("#reportDate").value = today;
   $("#dashboardMonth").value = month;
@@ -1096,6 +1112,32 @@ function setDefaults() {
 
 function activeWorkers() {
   return app.workers.filter((worker) => worker.status === "active");
+}
+
+function selectedAttendanceWorkerIds() {
+  const select = $("#attendanceWorkerSelect");
+  if (!select) return [];
+  return Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+}
+
+function attendanceWorkers() {
+  const workers = activeWorkers();
+  if (($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) !== "selected") return workers;
+  const selected = new Set(selectedAttendanceWorkerIds());
+  if (!selected.size) return workers;
+  return workers.filter((worker) => selected.has(worker.id));
+}
+
+function renderAttendanceWorkerPicker() {
+  const filter = $("#attendanceWorkerFilter");
+  const select = $("#attendanceWorkerSelect");
+  if (!filter || !select) return;
+  filter.value = app.attendanceWorkerFilter || "all";
+  const selected = new Set(selectedAttendanceWorkerIds());
+  select.innerHTML = activeWorkers().map((worker) => `
+    <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
+  `).join("");
+  select.disabled = filter.value !== "selected";
 }
 
 function getAttendance(date, workerId) {
@@ -1494,7 +1536,9 @@ function renderAll() {
   renderAuthStatus();
   renderDashboard();
   renderWorkers();
+  renderAttendanceWorkerPicker();
   renderDayAttendance();
+  renderWeekAttendance();
   renderMonthAttendance();
   renderExpenses();
   renderReport();
@@ -1811,7 +1855,59 @@ function renderWorkers() {
 
 function renderDayAttendance() {
   const date = $("#attendanceDate").value || todayISO();
-  $("#dayAttendanceList").innerHTML = activeWorkers().map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"));
+  $("#dayAttendanceList").innerHTML = attendanceWorkers().map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"));
+}
+
+function weekRange(dateValue = todayISO()) {
+  const start = new Date(`${dateValue}T00:00:00`);
+  const day = start.getDay();
+  start.setDate(start.getDate() - day);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+function renderWeekAttendance() {
+  const dates = weekRange($("#attendanceWeekDate")?.value || todayISO());
+  const rows = attendanceWorkers().map((worker) => `
+    <tr>
+      <td>
+        <div class="month-worker-cell">
+          ${worker.photo ? `<img class="month-worker-photo" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="month-worker-photo worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          <div>
+            <strong>${escapeHTML(displayWorkerName(worker))}</strong><br>
+            <span>${money(wageForDate(worker, dates[0]))}</span>
+          </div>
+        </div>
+      </td>
+      ${dates.map((date) => {
+        const record = getAttendanceRecord(date, worker.id);
+        const hours = calculateHours(record);
+        const overtime = record.status === "present" ? hours.overtime : 0;
+        return `
+          <td>
+            <span class="status-chip status-${record.status || "empty"}">${record.status ? statusLabel(record.status) : "-"}</span>
+            <small>${record.inTime || "-"} / ${record.outTime || "-"}</small>
+            <small>${formatHours(hours.total)} · ${formatHours(overtime)}</small>
+          </td>
+        `;
+      }).join("")}
+    </tr>
+  `).join("");
+
+  $("#weekAttendanceGrid").innerHTML = `
+    <table class="month-table weekly-attendance-table">
+      <thead>
+        <tr>
+          <th>${t("worker")}</th>
+          ${dates.map((date) => `<th>${date.slice(5)}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>${rows || `<tr><td colspan="8">${t("noActiveWorkers")}</td></tr>`}</tbody>
+    </table>
+  `;
 }
 
 function attendanceRowWithTime(worker, date) {
@@ -1875,7 +1971,7 @@ function attendanceRow(worker, date) {
 function renderMonthAttendance() {
   const month = $("#attendanceMonth").value || monthISO();
   const dates = daysInMonth(month);
-  const rows = activeWorkers().map((worker) => `
+  const rows = attendanceWorkers().map((worker) => `
     <tr>
       <td>
         <div class="month-worker-cell">
@@ -2784,8 +2880,13 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceMonth", "expenseMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "expenseMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
+  });
+
+  $("#attendanceWorkerFilter").addEventListener("change", () => {
+    app.attendanceWorkerFilter = $("#attendanceWorkerFilter").value;
+    renderAll();
   });
 
   $("#expenseForm").addEventListener("submit", (event) => {
@@ -2809,6 +2910,7 @@ function bindEvents() {
       $$(".mode-tab").forEach((item) => item.classList.remove("active"));
       tab.classList.add("active");
       $("#dayAttendancePanel").classList.toggle("hidden", tab.dataset.mode !== "day");
+      $("#weekAttendancePanel").classList.toggle("hidden", tab.dataset.mode !== "week");
       $("#monthAttendancePanel").classList.toggle("hidden", tab.dataset.mode !== "month");
     });
   });
@@ -2845,7 +2947,7 @@ function bindEvents() {
 function bulkSetMonth(status) {
   const month = $("#attendanceMonth").value || monthISO();
   daysInMonth(month).forEach((date) => {
-    activeWorkers().forEach((worker) => {
+    attendanceWorkers().forEach((worker) => {
       app.attendance[date] ||= {};
       if (status) app.attendance[date][worker.id] = status;
       else delete app.attendance[date][worker.id];
