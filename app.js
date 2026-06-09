@@ -1310,6 +1310,15 @@ function renderWorkers() {
 
   list.innerHTML = workers.map((worker) => {
     const workerIndex = app.workers.findIndex((item) => item.id === worker.id);
+    if (view !== "list") {
+      return `
+        <article class="worker-card worker-icon-card" data-open-worker-details="${worker.id}" tabindex="0" role="button" aria-label="${escapeHTML(displayWorkerName(worker))}">
+          ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+          <h3><span class="worker-number">#${workerIndex + 1}</span> ${escapeHTML(displayWorkerName(worker))}</h3>
+          <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
+        </article>
+      `;
+    }
     return `
     <article class="worker-card">
       <div class="worker-card-head">
@@ -2133,6 +2142,9 @@ function bindEvents() {
     const moveButton = event.target.closest("[data-move-worker]");
     if (moveButton) moveWorker(moveButton.dataset.moveWorker, moveButton.dataset.moveDirection);
 
+    const detailsCard = event.target.closest("[data-open-worker-details]");
+    if (detailsCard) openWorkerDialog(detailsCard.dataset.openWorkerDetails);
+
     const removeExpenseButton = event.target.closest("[data-remove-expense]");
     if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
 
@@ -2173,6 +2185,13 @@ function bindEvents() {
         whatsappButton.dataset.whatsappTitle,
       );
     }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const detailsCard = event.target.closest?.("[data-open-worker-details]");
+    if (!detailsCard || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    openWorkerDialog(detailsCard.dataset.openWorkerDetails);
   });
 
   document.addEventListener("change", (event) => {
