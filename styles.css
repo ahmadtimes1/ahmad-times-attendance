@@ -1694,6 +1694,22 @@ tbody tr:hover {
   gap: 10px;
 }
 
+#safety .content-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+#safety .panel {
+  min-width: 0;
+}
+
+#paymentLedgerList td {
+  white-space: nowrap;
+}
+
+.quick-attendance-row .attendance-actions {
+  min-width: min(420px, 100%);
+}
+
 .file-button {
   display: inline-grid;
   min-height: 42px;

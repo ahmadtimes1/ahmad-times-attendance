@@ -74,10 +74,36 @@ const translations = {
     workers: "Workers",
     attendance: "Attendance",
     reports: "Reports",
+    safety: "Safety",
     logs: "Logs",
     backup: "Backup",
     appSubtitle: "Automatic attendance and daily wage system",
     buildingMaintenance: "Building Maintenance",
+    payrollLock: "Payroll lock",
+    payrollLockHelp: "Lock a finished month so attendance, wages, and payments cannot be changed by mistake.",
+    lockMonth: "Lock month",
+    unlockMonth: "Unlock month",
+    dailyBackups: "Daily backups",
+    dailyBackupsHelp: "The system keeps one automatic backup copy per day.",
+    downloadLatestBackup: "Download latest backup",
+    mistakeAlerts: "Mistake alerts",
+    mistakeAlertsHelp: "Important attendance and payment problems that need checking.",
+    paymentLedger: "Payment ledger",
+    paymentLedgerHelp: "All worker payments in one clear place.",
+    amount: "Amount",
+    finalSettlement: "Final settlement",
+    finalSettlementHelp: "Choose an inactive worker and print their final unpaid balance.",
+    printSettlement: "Print settlement",
+    mobileQuickAttendance: "Mobile quick attendance",
+    mobileQuickAttendanceHelp: "Large buttons for fast site attendance.",
+    auditReport: "Audit report",
+    auditReportHelp: "Print who changed what and when.",
+    printAuditReport: "Print audit report",
+    noAlerts: "No important alerts.",
+    monthLocked: "This month is locked. Unlock it before changing records.",
+    locked: "Locked",
+    adminOnly: "Only admin can do this.",
+    oldChangeWarning: "You are changing an old record. Continue?",
     mainNavigation: "Main navigation",
     search: "Search",
     searchPlaceholder: "Name, role, phone, Emirates ID",
@@ -242,10 +268,36 @@ const translations = {
     workers: "کارکوونکي",
     attendance: "حاضري",
     reports: "راپورونه",
+    safety: "خوندیتوب",
     logs: "لاګونه",
     backup: "بیک اپ",
     appSubtitle: "اتومات حاضري او ورځنۍ مزدوري سیستم",
     buildingMaintenance: "بلډنګ مینټیننس",
+    payrollLock: "د معاش بندول",
+    payrollLockHelp: "ختمه میاشت بنده کړئ چې معلومات په غلطۍ بدل نه شي.",
+    lockMonth: "میاشت بنده کړئ",
+    unlockMonth: "میاشت خلاصه کړئ",
+    dailyBackups: "ورځني بیک اپونه",
+    dailyBackupsHelp: "سیسټم هره ورځ یو بیک اپ ساتي.",
+    downloadLatestBackup: "وروستی بیک اپ ښکته کړئ",
+    mistakeAlerts: "د غلطۍ خبرتیاوې",
+    mistakeAlertsHelp: "مهمې ستونزې چې کتل غواړي.",
+    paymentLedger: "د تادیاتو کتاب",
+    paymentLedgerHelp: "ټولې تادیات په یو ځای کې.",
+    amount: "اندازه",
+    finalSettlement: "وروستی حساب",
+    finalSettlementHelp: "غیر فعال کارکوونکی وټاکئ او وروستی حساب چاپ کړئ.",
+    printSettlement: "حساب چاپ کړئ",
+    mobileQuickAttendance: "چټکه موبایل حاضري",
+    mobileQuickAttendanceHelp: "د سایټ لپاره لوی بټنونه.",
+    auditReport: "د بدلونونو راپور",
+    auditReportHelp: "چا څه بدل کړل چاپ کړئ.",
+    printAuditReport: "راپور چاپ کړئ",
+    noAlerts: "مهمه خبرتیا نشته.",
+    monthLocked: "دا میاشت بنده ده.",
+    locked: "بنده",
+    adminOnly: "یوازې اډمین دا کولی شي.",
+    oldChangeWarning: "تاسو پخوانی ریکارډ بدلوئ. دوام؟",
     mainNavigation: "اصلي مینو",
     search: "لټون",
     searchPlaceholder: "نوم، کار، تلیفون، امارات ID",
@@ -528,6 +580,8 @@ const app = {
   payments: {},
   expenses: [],
   logs: [],
+  payrollLocks: {},
+  dailyBackups: {},
   lastSaved: null,
   storageMode: "local",
   user: null,
@@ -562,6 +616,8 @@ function snapshotAppData() {
     attendance: app.attendance || {},
     payments: app.payments || {},
     expenses: app.expenses || [],
+    payrollLocks: app.payrollLocks || {},
+    dailyBackups: app.dailyBackups || {},
   });
 }
 
@@ -571,6 +627,8 @@ function normalizeAppCollections() {
   app.payments ||= [];
   app.expenses ||= [];
   app.logs ||= [];
+  app.payrollLocks ||= {};
+  app.dailyBackups ||= {};
   normalizePaymentLedger();
 }
 
@@ -683,6 +741,53 @@ function addLog(action, details = "") {
   app.logs = app.logs.slice(0, 500);
 }
 
+function isAdmin() {
+  return app.profile?.role === "admin";
+}
+
+function requireAdmin() {
+  if (isAdmin()) return true;
+  toast(t("adminOnly"));
+  return false;
+}
+
+function monthFromDate(date) {
+  return String(date || todayISO()).slice(0, 7);
+}
+
+function isMonthLocked(dateOrMonth) {
+  return Boolean(app.payrollLocks?.[String(dateOrMonth || "").slice(0, 7)]);
+}
+
+function canChangePayrollDate(date, action = "change") {
+  if (isMonthLocked(date)) {
+    toast(t("monthLocked"));
+    addLog("Blocked locked payroll change", `${action} · ${date}`);
+    return false;
+  }
+  if (date < todayISO() && !confirm(t("oldChangeWarning"))) {
+    addLog("Old record change cancelled", `${action} · ${date}`);
+    return false;
+  }
+  return true;
+}
+
+function createDailyBackup() {
+  normalizeAppCollections();
+  const date = todayISO();
+  if (app.dailyBackups[date]) return;
+  app.dailyBackups[date] = {
+    at: new Date().toISOString(),
+    workers: app.workers,
+    attendance: app.attendance,
+    payments: app.payments,
+    expenses: app.expenses,
+    payrollLocks: app.payrollLocks,
+  };
+  const dates = Object.keys(app.dailyBackups).sort();
+  while (dates.length > 45) delete app.dailyBackups[dates.shift()];
+}
+
 function withLanguage(language, callback) {
   const previous = app.language;
   app.language = language || previous;
@@ -770,6 +875,7 @@ function normalizePaymentLedger() {
       method: entry.method || "cash",
       note: entry.note || "",
       source: entry.source || "payment",
+      user: entry.user || currentUserLabel(),
       updatedAt: entry.updatedAt || new Date().toISOString(),
     });
   };
@@ -1033,6 +1139,7 @@ async function loadData() {
 }
 
 async function saveData(show = true) {
+  createDailyBackup();
   recordHistory();
   app.lastSaved = new Date().toISOString();
   setBrowserBackup();
@@ -1043,6 +1150,8 @@ async function saveData(show = true) {
       attendance: app.attendance,
       payments: app.payments,
       expenses: app.expenses,
+      payrollLocks: app.payrollLocks,
+      dailyBackups: app.dailyBackups,
       logs: app.logs,
       lastSaved: app.lastSaved,
     };
@@ -1077,6 +1186,8 @@ function setBrowserBackup() {
       attendance: app.attendance,
       payments: app.payments,
       expenses: app.expenses,
+      payrollLocks: app.payrollLocks,
+      dailyBackups: app.dailyBackups,
       logs: app.logs,
       lastSaved: app.lastSaved,
     }));
@@ -1108,9 +1219,11 @@ function setDefaults() {
   $("#todayInput").value = today;
   $("#attendanceDate").value = today;
   $("#attendanceWeekDate").value = today;
+  $("#quickAttendanceDate").value = today;
   $("#expenseDate").value = today;
   $("#reportDate").value = today;
   $("#dashboardMonth").value = month;
+  $("#lockMonth").value = month;
   $("#attendanceMonth").value = month;
   $("#expenseMonth").value = month;
   $("#reportMonth").value = month;
@@ -1173,6 +1286,7 @@ function normalizeAttendanceRecord(record) {
 }
 
 function setAttendance(date, workerId, status, autoTime = true) {
+  if (!canChangePayrollDate(date, "Attendance status")) return;
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   const worker = app.workers.find((item) => item.id === workerId);
@@ -1195,6 +1309,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
 }
 
 function setAttendanceTime(date, workerId, field, value) {
+  if (!canChangePayrollDate(date, "Attendance time")) return;
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   app.attendance[date][workerId] = {
@@ -1209,6 +1324,7 @@ function setAttendanceTime(date, workerId, field, value) {
 }
 
 function setAttendanceMoney(date, workerId, field, value) {
+  if (!canChangePayrollDate(date, "Attendance money")) return;
   if (field === "paidAmount") {
     saveDailyPayment(workerId, date, value);
     return;
@@ -1226,6 +1342,7 @@ function setAttendanceMoney(date, workerId, field, value) {
 }
 
 function setAttendanceNumber(date, workerId, field, value) {
+  if (!canChangePayrollDate(date, "Attendance overtime")) return;
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   app.attendance[date][workerId] = {
@@ -1316,6 +1433,7 @@ function paymentTotals(rows, start, end) {
 }
 
 function savePayment(workerId, start, end, paidAmount, paymentDate, method, note) {
+  if (!canChangePayrollDate(paymentDate || end, "Payment")) return;
   const worker = app.workers.find((item) => item.id === workerId);
   const date = paymentDate || end || todayISO();
   const id = `report__${workerId}__${start}__${end}`;
@@ -1333,6 +1451,7 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
       method: method || "cash",
       note: note || "",
       source: "report",
+      user: currentUserLabel(),
       updatedAt: new Date().toISOString(),
     });
   }
@@ -1342,6 +1461,7 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
 }
 
 function saveDailyPayment(workerId, date, paidAmount) {
+  if (!canChangePayrollDate(date, "Daily payment")) return;
   const worker = app.workers.find((item) => item.id === workerId);
   const id = `attendance__${workerId}__${date}`;
   normalizePaymentLedger();
@@ -1358,6 +1478,7 @@ function saveDailyPayment(workerId, date, paidAmount) {
       method: "cash",
       note: "Daily attendance payment",
       source: "attendance",
+      user: currentUserLabel(),
       updatedAt: new Date().toISOString(),
     });
   }
@@ -1554,6 +1675,7 @@ function renderAll() {
   renderReport();
   renderStorage();
   renderLogs();
+  renderSafety();
 }
 
 function applyLanguage() {
@@ -2342,6 +2464,93 @@ function renderStorage() {
   $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
 }
 
+function payrollAlerts() {
+  const alerts = [];
+  Object.entries(app.attendance || {}).forEach(([date, day]) => {
+    Object.entries(day || {}).forEach(([workerId, raw]) => {
+      const worker = app.workers.find((item) => item.id === workerId);
+      const record = normalizeAttendanceRecord(raw);
+      const label = `${worker?.name || workerId} · ${date}`;
+      const hours = calculateHours(record);
+      const payable = attendanceWage(worker || { dailyWage: 0 }, record, record.status === "present" ? hours.overtime : 0, date);
+      const paid = paymentLedgerTotal(workerId, date, date);
+      if (["present", "halfday"].includes(record.status) && record.inTime && !record.outTime) alerts.push(`${label}: in time without out time`);
+      if (record.status === "present" && hours.total > 14) alerts.push(`${label}: more than 14 hours`);
+      if (record.foodDeduction > payable && payable > 0) alerts.push(`${label}: food deduction bigger than wage`);
+      if (paid > payable && payable > 0) alerts.push(`${label}: payment bigger than payable wage`);
+    });
+  });
+  return alerts;
+}
+
+function workerLifetimeSummary(workerId) {
+  const records = summarizeRecords(recordsForRange("2000-01-01", "2099-12-31", workerId))[0];
+  if (!records) return { wage: 0, paid: 0, unpaid: 0, present: 0, halfday: 0, overtime: 0 };
+  const paid = paymentLedgerTotal(workerId, "2000-01-01", "2099-12-31");
+  return {
+    wage: records.wage || 0,
+    paid,
+    unpaid: Math.max(0, Number(records.wage || 0) - paid),
+    present: records.present || 0,
+    halfday: records.halfday || 0,
+    overtime: records.overtime || 0,
+  };
+}
+
+function renderSafety() {
+  if (!$("#payrollLocksList")) return;
+  const month = $("#lockMonth").value || monthISO();
+  const locks = Object.entries(app.payrollLocks || {}).sort((a, b) => b[0].localeCompare(a[0]));
+  $("#payrollLocksList").innerHTML = locks.length
+    ? locks.map(([lockMonth, lock]) => `<div><span>${lockMonth}</span><strong>${escapeHTML(lock.user || "-")} · ${new Date(lock.at).toLocaleString()}</strong></div>`).join("")
+    : `<div><span>${t("payrollLock")}</span><strong>${month}: ${isMonthLocked(month) ? t("locked") : "-"}</strong></div>`;
+
+  const backups = Object.entries(app.dailyBackups || {}).sort((a, b) => b[0].localeCompare(a[0]));
+  $("#dailyBackupsList").innerHTML = backups.length
+    ? backups.slice(0, 10).map(([date, backup]) => `<div><span>${date}</span><strong>${new Date(backup.at).toLocaleString()}</strong></div>`).join("")
+    : `<div><span>${t("dailyBackups")}</span><strong>-</strong></div>`;
+
+  const alerts = payrollAlerts();
+  $("#mistakeAlertsList").innerHTML = alerts.length
+    ? alerts.slice(0, 30).map((alert) => `<div><span>${t("mistakeAlerts")}</span><strong>${escapeHTML(alert)}</strong></div>`).join("")
+    : `<div><span>${t("mistakeAlerts")}</span><strong>${t("noAlerts")}</strong></div>`;
+
+  $("#paymentLedgerList").innerHTML = paymentLedgerEntries().slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((payment) => {
+    const worker = app.workers.find((item) => item.id === payment.workerId);
+    return `<tr><td>${payment.date}</td><td>${escapeHTML(worker?.name || payment.workerId)}</td><td>${money(payment.amount)}</td><td>${escapeHTML(payment.method || "-")}</td><td>${escapeHTML(payment.user || "-")}</td><td>${escapeHTML(payment.note || "-")}</td></tr>`;
+  }).join("") || `<tr><td colspan="6">-</td></tr>`;
+
+  const inactive = app.workers.filter((worker) => worker.status === "inactive");
+  const select = $("#settlementWorker");
+  const current = select.value;
+  select.innerHTML = inactive.map((worker) => `<option value="${worker.id}" ${worker.id === current ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>`).join("");
+  const selected = app.workers.find((worker) => worker.id === (select.value || inactive[0]?.id));
+  if (selected) {
+    const summary = workerLifetimeSummary(selected.id);
+    $("#settlementOutput").innerHTML = `
+      <div><span>${t("worker")}</span><strong>${escapeHTML(displayWorkerName(selected))}</strong></div>
+      <div><span>${t("payableWage")}</span><strong>${money(summary.wage)}</strong></div>
+      <div><span>${t("paid")}</span><strong>${money(summary.paid)}</strong></div>
+      <div><span>${t("unpaid")}</span><strong>${money(summary.unpaid)}</strong></div>
+    `;
+  } else {
+    $("#settlementOutput").innerHTML = `<div><span>${t("finalSettlement")}</span><strong>-</strong></div>`;
+  }
+
+  const quickDate = $("#quickAttendanceDate").value || todayISO();
+  $("#quickAttendanceList").innerHTML = activeWorkers().map((worker) => {
+    const record = getAttendanceRecord(quickDate, worker.id);
+    return `<div class="attendance-row quick-attendance-row">
+      <div class="attendance-person">${worker.photo ? `<img class="attendance-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="attendance-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}<div><strong>${escapeHTML(displayWorkerName(worker))}</strong><p class="time-summary">${statusLabel(record.status || "not marked")}</p></div></div>
+      <div class="attendance-actions" data-worker="${worker.id}" data-date="${quickDate}">
+        ${["present", "halfday", "absent", "off"].map((status) => `<button data-status="${status}" class="${record.status === status ? "active" : ""}">${statusLabel(status)}</button>`).join("")}
+      </div>
+    </div>`;
+  }).join("") || emptyState(t("noActiveWorkers"));
+
+  $("#auditReportPreview").innerHTML = (app.logs || []).slice(0, 8).map((entry) => `<div><span>${new Date(entry.at).toLocaleString()} · ${escapeHTML(entry.user || "-")}</span><strong>${escapeHTML(entry.action || "-")} · ${escapeHTML(entry.details || "-")}</strong></div>`).join("") || `<div><span>${t("auditReport")}</span><strong>-</strong></div>`;
+}
+
 function renderLogs() {
   const list = $("#logsList");
   if (!list) return;
@@ -2395,6 +2604,7 @@ function resizePhotoDataUrl(dataUrl, maxSize = 520) {
   });
 }
 function openWorkerDialog(workerId = "") {
+  if (!requireAdmin()) return;
   const worker = app.workers.find((item) => item.id === workerId);
   stopWorkerCamera();
   $("#workerDialogTitle").textContent = worker ? t("editWorkerTitle") : t("addWorkerTitle");
@@ -2419,6 +2629,7 @@ function openWorkerDialog(workerId = "") {
 }
 
 function saveWorkerFromForm() {
+  if (!requireAdmin()) return;
   const id = $("#workerId").value || makeId();
   const existing = app.workers.find((worker) => worker.id === id);
   const dailyWage = Number($("#workerDailyWage").value || 0);
@@ -2473,6 +2684,7 @@ function saveWorkerFromForm() {
 }
 
 function removeWorker() {
+  if (!requireAdmin()) return;
   const id = $("#workerId").value;
   if (!id) return;
   const worker = app.workers.find((item) => item.id === id);
@@ -2495,6 +2707,7 @@ function removeWorker() {
 }
 
 function moveWorker(workerId, direction) {
+  if (!requireAdmin()) return;
   const index = app.workers.findIndex((worker) => worker.id === workerId);
   if (index < 0) return;
   const target = direction === "up" ? index - 1 : index + 1;
@@ -2506,6 +2719,7 @@ function moveWorker(workerId, direction) {
 }
 
 function addExpenseFromForm() {
+  if (!requireAdmin()) return;
   app.expenses ||= [];
   const expense = {
     id: makeId(),
@@ -2535,6 +2749,7 @@ function addExpenseFromForm() {
 }
 
 function removeExpense(expenseId) {
+  if (!requireAdmin()) return;
   const expense = (app.expenses || []).find((item) => item.id === expenseId);
   app.expenses = (app.expenses || []).filter((item) => item.id !== expenseId);
   addLog("Company expense removed", expense ? `${expense.date} · ${expense.category} · ${money(expense.amount)}` : expenseId);
@@ -2548,6 +2763,55 @@ function exportBackup() {
   downloadFile(`ahmad-times-backup-${todayISO()}.json`, JSON.stringify(app, null, 2), "application/json");
 }
 
+function downloadLatestDailyBackup() {
+  const latest = Object.entries(app.dailyBackups || {}).sort((a, b) => b[0].localeCompare(a[0]))[0];
+  if (!latest) return exportBackup();
+  downloadFile(`ahmad-times-daily-backup-${latest[0]}.json`, JSON.stringify(latest[1], null, 2), "application/json");
+  addLog("Daily backup downloaded", latest[0]);
+}
+
+function lockPayrollMonth() {
+  if (!requireAdmin()) return;
+  const month = $("#lockMonth").value || monthISO();
+  app.payrollLocks[month] = { at: new Date().toISOString(), user: currentUserLabel() };
+  addLog("Payroll month locked", month);
+  saveData();
+}
+
+function unlockPayrollMonth() {
+  if (!requireAdmin()) return;
+  const month = $("#lockMonth").value || monthISO();
+  delete app.payrollLocks[month];
+  addLog("Payroll month unlocked", month);
+  saveData();
+}
+
+function printPlainReport(title, bodyHtml) {
+  const win = window.open("", "_blank");
+  if (!win) return;
+  win.document.write(`<!doctype html><html><head><title>${escapeHTML(title)}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#1d2433}h1{font-size:24px}.row{padding:10px;border-bottom:1px solid #ddd}strong{display:block;margin-top:4px}</style></head><body><h1>${escapeHTML(title)}</h1>${bodyHtml}<script>window.print()</script></body></html>`);
+  win.document.close();
+}
+
+function printSettlement() {
+  const worker = app.workers.find((item) => item.id === $("#settlementWorker").value);
+  if (!worker) return;
+  const summary = workerLifetimeSummary(worker.id);
+  printPlainReport("Final settlement", `
+    <div class="row"><span>Worker</span><strong>${escapeHTML(displayWorkerName(worker))}</strong></div>
+    <div class="row"><span>Payable</span><strong>${money(summary.wage)}</strong></div>
+    <div class="row"><span>Paid</span><strong>${money(summary.paid)}</strong></div>
+    <div class="row"><span>Unpaid</span><strong>${money(summary.unpaid)}</strong></div>
+  `);
+  addLog("Final settlement printed", worker.name);
+}
+
+function printAuditReport() {
+  const rows = (app.logs || []).slice(0, 200).map((entry) => `<div class="row"><span>${new Date(entry.at).toLocaleString()} · ${escapeHTML(entry.user || "-")}</span><strong>${escapeHTML(entry.action || "-")} · ${escapeHTML(entry.details || "-")}</strong></div>`).join("");
+  printPlainReport("Audit report", rows || "<p>No logs.</p>");
+  addLog("Audit report printed", `${(app.logs || []).length} logs`);
+}
+
 function importBackup(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -2558,6 +2822,8 @@ function importBackup(file) {
       app.attendance = parsed.attendance;
       app.payments = parsed.payments || {};
       app.expenses = parsed.expenses || [];
+      app.payrollLocks = parsed.payrollLocks || {};
+      app.dailyBackups = parsed.dailyBackups || {};
       app.logs = parsed.logs || app.logs || [];
       app.lastSaved = parsed.lastSaved || new Date().toISOString();
       addLog("Backup imported", `${app.workers.length} workers`);
@@ -2907,7 +3173,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "expenseMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
 
@@ -2959,6 +3225,11 @@ function bindEvents() {
   });
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
+  $("#downloadLatestBackup").addEventListener("click", downloadLatestDailyBackup);
+  $("#lockPayrollMonth").addEventListener("click", lockPayrollMonth);
+  $("#unlockPayrollMonth").addEventListener("click", unlockPayrollMonth);
+  $("#printSettlement").addEventListener("click", printSettlement);
+  $("#printAuditReport").addEventListener("click", printAuditReport);
   $("#importBackup").addEventListener("change", (event) => {
     if (event.target.files[0]) importBackup(event.target.files[0]);
   });
@@ -2973,6 +3244,11 @@ function bindEvents() {
 
 function bulkSetMonth(status) {
   const month = $("#attendanceMonth").value || monthISO();
+  if (isMonthLocked(month)) {
+    toast(t("monthLocked"));
+    return;
+  }
+  if (month < monthISO() && !confirm(t("oldChangeWarning"))) return;
   daysInMonth(month).forEach((date) => {
     attendanceWorkers().forEach((worker) => {
       app.attendance[date] ||= {};

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=theme-dashboard-clean-1">
+    <link rel="stylesheet" href="styles.css?v=payroll-safety-2">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -47,6 +47,7 @@
           <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
           <button class="nav-item" data-view="expenses" data-i18n="expenses">Expenses</button>
           <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
+          <button class="nav-item" data-view="safety" data-i18n="safety">Safety</button>
           <button class="nav-item" data-view="logs" data-i18n="logs">Logs</button>
           <button class="nav-item" data-view="backup" data-i18n="backup">Backup</button>
         </nav>
@@ -326,6 +327,106 @@
           <section class="panel report-panel" id="reportOutput"></section>
         </section>
 
+        <section id="safety" class="view">
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="payrollLock">Payroll lock</h3>
+                  <p class="help-text" data-i18n="payrollLockHelp">Lock a finished month so attendance, wages, and payments cannot be changed by mistake.</p>
+                </div>
+                <input id="lockMonth" type="month">
+              </div>
+              <div class="button-row">
+                <button class="primary" id="lockPayrollMonth" data-i18n="lockMonth">Lock month</button>
+                <button id="unlockPayrollMonth" data-i18n="unlockMonth">Unlock month</button>
+              </div>
+              <div id="payrollLocksList" class="storage-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="dailyBackups">Daily backups</h3>
+                  <p class="help-text" data-i18n="dailyBackupsHelp">The system keeps one automatic backup copy per day.</p>
+                </div>
+                <button id="downloadLatestBackup" data-i18n="downloadLatestBackup">Download latest backup</button>
+              </div>
+              <div id="dailyBackupsList" class="storage-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="mistakeAlerts">Mistake alerts</h3>
+                  <p class="help-text" data-i18n="mistakeAlertsHelp">Important attendance and payment problems that need checking.</p>
+                </div>
+              </div>
+              <div id="mistakeAlertsList" class="storage-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="paymentLedger">Payment ledger</h3>
+                  <p class="help-text" data-i18n="paymentLedgerHelp">All worker payments in one clear place.</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-i18n="date">Date</th>
+                      <th data-i18n="worker">Worker</th>
+                      <th data-i18n="amount">Amount</th>
+                      <th data-i18n="paymentMethod">Payment method</th>
+                      <th data-i18n="user">User</th>
+                      <th data-i18n="paymentNote">Payment note</th>
+                    </tr>
+                  </thead>
+                  <tbody id="paymentLedgerList"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="finalSettlement">Final settlement</h3>
+                  <p class="help-text" data-i18n="finalSettlementHelp">Choose an inactive worker and print their final unpaid balance.</p>
+                </div>
+                <select id="settlementWorker"></select>
+              </div>
+              <div id="settlementOutput" class="storage-list"></div>
+              <div class="button-row">
+                <button id="printSettlement" data-i18n="printSettlement">Print settlement</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="mobileQuickAttendance">Mobile quick attendance</h3>
+                  <p class="help-text" data-i18n="mobileQuickAttendanceHelp">Large buttons for fast site attendance.</p>
+                </div>
+                <input id="quickAttendanceDate" type="date">
+              </div>
+              <div id="quickAttendanceList" class="attendance-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="auditReport">Audit report</h3>
+                  <p class="help-text" data-i18n="auditReportHelp">Print who changed what and when.</p>
+                </div>
+                <button id="printAuditReport" data-i18n="printAuditReport">Print audit report</button>
+              </div>
+              <div id="auditReportPreview" class="storage-list"></div>
+            </section>
+          </div>
+        </section>
+
         <section id="backup" class="view">
           <div class="content-grid">
             <section class="panel">
@@ -470,6 +571,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=theme-dashboard-clean-1"></script>
+    <script src="app.js?v=payroll-safety-2"></script>
   </body>
 </html>
