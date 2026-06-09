@@ -1050,8 +1050,8 @@ function openPrintableReport() {
         <style>
           body { margin: 0; padding: 24px; color: #1d2433; font-family: Arial, sans-serif; background: #fff; }
           .report-page { position: relative; max-width: 1100px; margin: 0 auto; overflow: hidden; }
-          .report-stamp { position: absolute !important; right: 28px; top: 190px; width: 150px !important; max-width: 150px !important; height: auto !important; opacity: 0.10; pointer-events: none; z-index: 0; }
-          [dir="rtl"] .report-stamp { right: auto; left: 28px; }
+          .report-stamp { margin-left: auto; width: 118px !important; max-width: 118px !important; height: auto !important; opacity: 0.82; pointer-events: none; mix-blend-mode: multiply; }
+          [dir="rtl"] .report-stamp { margin-right: auto; margin-left: 0; }
           .print-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 0 auto 16px; max-width: 1100px; }
           .print-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid #bce7f7; border-radius: 8px; color: #087fae; background: #f4fbfe; font-weight: 700; cursor: pointer; }
           .report-brand { display: flex; gap: 12px; align-items: center; padding: 12px; margin-bottom: 12px; border: 1px solid #bce7f7; border-radius: 8px; background: #f4fbfe; }
@@ -1060,6 +1060,16 @@ function openPrintableReport() {
           .report-brand strong, .report-brand span { display: block; }
           .report-brand strong { font-size: 20px; }
           .report-brand span, .help-text { color: #667085; }
+          .worker-report-details { padding: 12px; margin: 12px 0; border: 1px solid #d9eaf1; border-radius: 8px; background: #fbfdff; }
+          .worker-report-id { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+          .worker-report-id img, .worker-report-id .worker-avatar { width: 64px; height: 64px; flex-basis: 64px; border-radius: 50%; object-fit: cover; }
+          .worker-report-id h4 { margin: 0 0 3px; font-size: 18px; }
+          .worker-report-id p { margin: 0; color: #667085; }
+          .worker-report-grid { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 8px; }
+          .worker-report-grid div { padding: 9px 10px; border-radius: 8px; background: #f4f7fb; }
+          .worker-report-grid .wide { grid-column: span 2; }
+          .worker-report-grid span { display: block; color: #667085; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+          .worker-report-grid strong { display: block; margin-top: 2px; word-break: break-word; }
           .summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
           .summary-strip div { padding: 10px; border-radius: 8px; background: #f4f7fb; }
           .summary-strip span { display: block; color: #667085; font-size: 12px; font-weight: 700; }
@@ -1070,6 +1080,8 @@ function openPrintableReport() {
           table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
           th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
+          @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .report-stamp { width: 86px !important; max-width: 86px !important; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } }
+          @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .report-stamp { margin-left: 0; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
           @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; } }
         </style>
       </head>
@@ -1458,6 +1470,36 @@ function renderMonthAttendance() {
   `;
 }
 
+function workerReportDetails(worker, start, end) {
+  if (!worker) return "";
+  const workerIndex = app.workers.findIndex((item) => item.id === worker.id);
+  const name = displayWorkerName(worker);
+  return `
+    <section class="worker-report-details">
+      <div class="worker-report-id">
+        ${worker.photo ? `<img src="${worker.photo}" alt="${escapeHTML(name)}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
+        <div>
+          <h4>${escapeHTML(name)}</h4>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${t("serialNo")}: ${reportSerial(worker, start, end)}</p>
+        </div>
+      </div>
+      <div class="worker-report-grid">
+        <div><span>${t("workerNumber")}</span><strong>#${workerIndex + 1}</strong></div>
+        <div><span>${t("status")}</span><strong>${t(worker.status || "active")}</strong></div>
+        <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
+        <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
+        <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
+        <div><span>${t("nationality")}</span><strong>${escapeHTML(worker.nationality || "-")}</strong></div>
+        <div><span>${t("performance")}</span><strong>${performanceLabel(worker.performance)}</strong></div>
+        <div><span>${t("joiningDate")}</span><strong>${escapeHTML(worker.joinDate || "-")}</strong></div>
+        <div><span>${t("currentDailyWage")}</span><strong>${money(currentDailyWage(worker))}</strong></div>
+        <div class="wide"><span>${t("wageHistory")}</span><strong>${escapeHTML(wageHistoryText(worker))}</strong></div>
+        ${worker.notes ? `<div class="wide"><span>${t("notes")}</span><strong>${escapeHTML(worker.notes)}</strong></div>` : ""}
+      </div>
+    </section>
+  `;
+}
+
 function renderReport() {
   const language = reportLanguage();
   return withLanguage(language, () => {
@@ -1512,18 +1554,20 @@ function renderReport() {
     return acc;
   }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0 });
   const payTotals = paymentTotals(rows, start, end);
+  const selectedWorker = selectedWorkerId === "all" ? null : app.workers.find((worker) => worker.id === selectedWorkerId);
 
   $("#reportOutput").innerHTML = `
-    <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="150" height="150">
     <div class="report-brand">
       <img src="ahmad-times-logo.png" alt="Ahmad Times logo">
       <div>
         <strong>Ahmad Times For Building Maintenance L.L.C</strong>
         <span>${t("wageAttendanceReport")}</span>
       </div>
+      <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="118" height="118">
     </div>
     <h3>${title}</h3>
-    <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(displayWorkerName(app.workers.find((worker) => worker.id === selectedWorkerId)) || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
+    <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(displayWorkerName(selectedWorker) || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
+    ${selectedWorker ? workerReportDetails(selectedWorker, start, end) : ""}
     <div class="summary-strip">
       <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
       <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>

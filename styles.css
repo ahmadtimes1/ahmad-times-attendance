@@ -1136,25 +1136,18 @@ tbody tr:hover {
 }
 
 .report-stamp {
-  position: absolute;
-  top: 160px;
-  right: 26px;
-  width: 150px;
-  max-width: 150px;
+  margin-left: auto;
+  width: 118px;
+  max-width: 118px;
   height: auto;
-  opacity: 0.1;
+  opacity: 0.82;
   pointer-events: none;
-  z-index: 0;
+  mix-blend-mode: multiply;
 }
 
 [dir="rtl"] .report-stamp {
-  right: auto;
-  left: 26px;
-}
-
-.report-panel > :not(.report-stamp) {
-  position: relative;
-  z-index: 1;
+  margin-right: auto;
+  margin-left: 0;
 }
 
 .report-logo-fallback {
@@ -1171,6 +1164,70 @@ tbody tr:hover {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.58);
   backdrop-filter: blur(18px);
+}
+
+.worker-report-details {
+  padding: 12px;
+  margin: 12px 0;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.worker-report-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.worker-report-id img,
+.worker-report-id .worker-avatar {
+  width: 64px;
+  height: 64px;
+  flex-basis: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.worker-report-id h4 {
+  margin: 0 0 3px;
+  font-size: 18px;
+}
+
+.worker-report-id p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.worker-report-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.worker-report-grid div {
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(244, 247, 251, 0.86);
+}
+
+.worker-report-grid .wide {
+  grid-column: span 2;
+}
+
+.worker-report-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.worker-report-grid strong {
+  display: block;
+  margin-top: 2px;
+  word-break: break-word;
 }
 
 .report-brand img {
@@ -1705,13 +1762,24 @@ dialog::backdrop {
   }
 
   .report-stamp {
-    top: 150px;
-    width: 120px;
-    opacity: 0.1;
+    width: 86px;
+    max-width: 86px;
   }
 
   .report-brand strong {
     font-size: 15px;
+  }
+
+  .worker-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-report-grid .wide {
+    grid-column: 1;
+  }
+
+  .worker-report-id {
+    align-items: flex-start;
   }
 
   th,
