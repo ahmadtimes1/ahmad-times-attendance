@@ -545,9 +545,10 @@ function snapshotAppData() {
 function normalizeAppCollections() {
   app.workers ||= [];
   app.attendance ||= {};
-  app.payments ||= {};
+  app.payments ||= [];
   app.expenses ||= [];
   app.logs ||= [];
+  normalizePaymentLedger();
 }
 
 function resetHistory() {
@@ -712,8 +713,96 @@ function reportSerial(worker, start, end) {
   return `ATBM-${start.replaceAll("-", "")}-${String(Math.abs(hash)).slice(0, 5).padStart(5, "0")}`;
 }
 
+function paymentLedgerEntries() {
+  normalizePaymentLedger();
+  return Array.isArray(app.payments) ? app.payments : [];
+}
+
+function normalizePaymentLedger() {
+  const current = app.payments;
+  const entries = [];
+  const seen = new Set();
+
+  const pushEntry = (entry) => {
+    const workerId = entry?.workerId;
+    const amount = Math.max(0, Number(entry?.amount ?? entry?.paidAmount ?? 0));
+    if (!workerId || amount <= 0) return;
+    const date = entry.date || entry.paymentDate || entry.end || entry.start || todayISO();
+    const start = entry.start || date;
+    const end = entry.end || date;
+    const id = entry.id || `pay__${workerId}__${date}__${start}__${end}`;
+    if (seen.has(id)) {
+      const existing = entries.find((item) => item.id === id);
+      if (existing) existing.amount += amount;
+      return;
+    }
+    seen.add(id);
+    entries.push({
+      id,
+      workerId,
+      date,
+      start,
+      end,
+      amount,
+      method: entry.method || "cash",
+      note: entry.note || "",
+      source: entry.source || "payment",
+      updatedAt: entry.updatedAt || new Date().toISOString(),
+    });
+  };
+
+  if (Array.isArray(current)) {
+    current.forEach(pushEntry);
+  } else if (current && typeof current === "object") {
+    Object.entries(current).forEach(([key, value]) => {
+      const [workerId, start, end] = key.split("__");
+      pushEntry({
+        id: `legacy__${key}`,
+        workerId,
+        start,
+        end,
+        date: value?.paymentDate || end || start,
+        amount: value?.paidAmount,
+        method: value?.method,
+        note: value?.note,
+        source: "legacy-report",
+        updatedAt: value?.updatedAt,
+      });
+    });
+  }
+
+  Object.entries(app.attendance || {}).forEach(([date, day]) => {
+    Object.entries(day || {}).forEach(([workerId, record]) => {
+      if (!record || typeof record !== "object") return;
+      const amount = Number(record.paidAmount || 0);
+      if (amount <= 0) return;
+      pushEntry({
+        id: `attendance__${workerId}__${date}`,
+        workerId,
+        date,
+        start: date,
+        end: date,
+        amount,
+        method: "cash",
+        note: "Daily attendance payment",
+        source: "attendance",
+        updatedAt: record.updatedAt || new Date().toISOString(),
+      });
+      record.paidAmount = 0;
+    });
+  });
+
+  app.payments = entries.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+}
+
+function paymentLedgerTotal(workerId, start, end) {
+  return paymentLedgerEntries()
+    .filter((payment) => payment.workerId === workerId && payment.date >= start && payment.date <= end)
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+}
+
 function rowPaidAmount(row, start, end) {
-  return Number(row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0);
+  return paymentLedgerTotal(row.worker.id, start, end);
 }
 
 function rowUnpaidAmount(row, start, end) {
@@ -1060,7 +1149,7 @@ function setAttendanceTime(date, workerId, field, value) {
   const current = getAttendanceRecord(date, workerId);
   app.attendance[date][workerId] = {
     ...current,
-    status: current.status || "present",
+    status: current.status || "",
     [field]: value,
   };
   if (field === "inTime" && value && !current.outTime) app.attendance[date][workerId].outTime = "";
@@ -1070,11 +1159,15 @@ function setAttendanceTime(date, workerId, field, value) {
 }
 
 function setAttendanceMoney(date, workerId, field, value) {
+  if (field === "paidAmount") {
+    saveDailyPayment(workerId, date, value);
+    return;
+  }
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   app.attendance[date][workerId] = {
     ...current,
-    status: current.status || "present",
+    status: current.status || "",
     [field]: Number(value || 0),
   };
   const worker = app.workers.find((item) => item.id === workerId);
@@ -1087,7 +1180,7 @@ function setAttendanceNumber(date, workerId, field, value) {
   const current = getAttendanceRecord(date, workerId);
   app.attendance[date][workerId] = {
     ...current,
-    status: current.status || "present",
+    status: current.status || "",
     [field]: value === "" ? "" : Number(value || 0),
   };
   const worker = app.workers.find((item) => item.id === workerId);
@@ -1096,6 +1189,11 @@ function setAttendanceNumber(date, workerId, field, value) {
 }
 
 function setNowTime(date, workerId, field) {
+  const current = getAttendanceRecord(date, workerId);
+  if (!current.status) {
+    app.attendance[date] ||= {};
+    app.attendance[date][workerId] = { ...current, status: "present" };
+  }
   setAttendanceTime(date, workerId, field, currentTime());
 }
 
@@ -1129,7 +1227,8 @@ function attendanceBaseWage(worker, status, date = todayISO()) {
   return 0;
 }
 
-function attendanceOvertimeWage(worker, overtimeHours, date = todayISO()) {
+function attendanceOvertimeWage(worker, overtimeHours, date = todayISO(), status = "present") {
+  if (status !== "present") return 0;
   const hourlyRate = wageForDate(worker, date) / STANDARD_HOURS;
   return overtimeHours * hourlyRate;
 }
@@ -1141,7 +1240,7 @@ function foodDeduction(record, status) {
 
 function attendanceWage(worker, record, overtimeHours = 0, date = todayISO()) {
   const status = normalizeAttendanceRecord(record).status;
-  return Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date) - foodDeduction(record, status));
+  return Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date, status) - foodDeduction(record, status));
 }
 
 function paymentKey(workerId, start, end) {
@@ -1149,12 +1248,17 @@ function paymentKey(workerId, start, end) {
 }
 
 function paymentRecord(workerId, start, end) {
-  return app.payments[paymentKey(workerId, start, end)] || { paidAmount: 0, paymentDate: "", method: "cash", note: "" };
+  const payment = paymentLedgerEntries()
+    .filter((item) => item.workerId === workerId && item.start === start && item.end === end && item.source === "report")
+    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))[0];
+  return payment
+    ? { paidAmount: payment.amount, paymentDate: payment.date, method: payment.method || "cash", note: payment.note || "" }
+    : { paidAmount: 0, paymentDate: "", method: "cash", note: "" };
 }
 
 function paymentTotals(rows, start, end) {
   return rows.reduce((acc, row) => {
-    const paid = Number(row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0);
+    const paid = rowPaidAmount(row, start, end);
     acc.paid += paid;
     acc.pending += Math.max(0, Number(row.wage || 0) - paid);
     return acc;
@@ -1163,16 +1267,52 @@ function paymentTotals(rows, start, end) {
 
 function savePayment(workerId, start, end, paidAmount, paymentDate, method, note) {
   const worker = app.workers.find((item) => item.id === workerId);
-  app.payments[paymentKey(workerId, start, end)] = {
-    paidAmount: Number(paidAmount || 0),
-    paymentDate,
-    method,
-    note,
-    updatedAt: new Date().toISOString(),
-  };
+  const date = paymentDate || end || todayISO();
+  const id = `report__${workerId}__${start}__${end}`;
+  normalizePaymentLedger();
+  app.payments = paymentLedgerEntries().filter((payment) => payment.id !== id);
+  const amount = Math.max(0, Number(paidAmount || 0));
+  if (amount > 0) {
+    app.payments.push({
+      id,
+      workerId,
+      date,
+      start,
+      end,
+      amount,
+      method: method || "cash",
+      note: note || "",
+      source: "report",
+      updatedAt: new Date().toISOString(),
+    });
+  }
   addLog("Payment saved", `${worker?.name || workerId} · ${start} to ${end} · ${money(paidAmount)}`);
   saveData();
   toast(t("paymentSaved"));
+}
+
+function saveDailyPayment(workerId, date, paidAmount) {
+  const worker = app.workers.find((item) => item.id === workerId);
+  const id = `attendance__${workerId}__${date}`;
+  normalizePaymentLedger();
+  app.payments = paymentLedgerEntries().filter((payment) => payment.id !== id);
+  const amount = Math.max(0, Number(paidAmount || 0));
+  if (amount > 0) {
+    app.payments.push({
+      id,
+      workerId,
+      date,
+      start: date,
+      end: date,
+      amount,
+      method: "cash",
+      note: "Daily attendance payment",
+      source: "attendance",
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  addLog("Daily payment saved", `${worker?.name || workerId} · ${date} · ${money(amount)}`);
+  saveData();
 }
 
 function openPrintableReport() {
@@ -1286,6 +1426,7 @@ function recordsForRange(start, end, workerId = "all") {
       const status = record.status;
       if (!status) return;
       const hours = calculateHours(record);
+      const overtime = status === "present" ? hours.overtime : 0;
       rows.push({
         date,
         worker,
@@ -1293,13 +1434,13 @@ function recordsForRange(start, end, workerId = "all") {
         inTime: record.inTime,
         outTime: record.outTime,
         hours: hours.total,
-        overtime: hours.overtime,
+        overtime,
         dailyWage: wageForDate(worker, date),
         baseWage: attendanceBaseWage(worker, status, date),
-        overtimeWage: attendanceOvertimeWage(worker, hours.overtime, date),
+        overtimeWage: attendanceOvertimeWage(worker, overtime, date, status),
         foodDeduction: foodDeduction(record, status),
-        paidAmount: Number(record.paidAmount || 0),
-        wage: attendanceWage(worker, record, hours.overtime, date),
+        paidAmount: paymentLedgerTotal(worker.id, date, date),
+        wage: attendanceWage(worker, record, overtime, date),
       });
     });
     current.setDate(current.getDate() + 1);
@@ -1317,11 +1458,18 @@ function monthSummary(month, workerId = "all") {
       const absent = dates.filter((date) => getAttendance(date, worker.id) === "absent").length;
       const off = dates.filter((date) => getAttendance(date, worker.id) === "off").length;
       const hours = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
-      const overtime = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).overtime, 0);
+      const overtime = dates.reduce((sum, date) => {
+        const status = getAttendance(date, worker.id);
+        return sum + (status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0);
+      }, 0);
       const baseWage = dates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id), date), 0);
-      const overtimeWage = dates.reduce((sum, date) => sum + attendanceOvertimeWage(worker, calculateHours(getAttendanceRecord(date, worker.id)).overtime, date), 0);
+      const overtimeWage = dates.reduce((sum, date) => {
+        const status = getAttendance(date, worker.id);
+        const overtimeHours = status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0;
+        return sum + attendanceOvertimeWage(worker, overtimeHours, date, status);
+      }, 0);
       const food = dates.reduce((sum, date) => sum + foodDeduction(getAttendanceRecord(date, worker.id), getAttendance(date, worker.id)), 0);
-      const paidAmount = dates.reduce((sum, date) => sum + Number(getAttendanceRecord(date, worker.id).paidAmount || 0), 0);
+      const paidAmount = paymentLedgerTotal(worker.id, dates[0], dates[dates.length - 1]);
       return {
         worker,
         present,
@@ -1406,7 +1554,7 @@ function renderAuthStatus() {
   authButton.textContent = t("logout");
 }
 
-function renderDashboard() {
+function renderDashboardLegacyUnused() {
   const date = $("#todayInput").value || todayISO();
   const month = $("#dashboardMonth").value || monthISO();
   const summary = monthSummary(month);
@@ -1499,7 +1647,8 @@ function workerSummaryPanel(worker) {
   const today = $("#todayInput")?.value || todayISO();
   const todayRecord = getAttendanceRecord(today, worker.id);
   const todayHours = calculateHours(todayRecord);
-  const todayPayable = attendanceWage(worker, todayRecord, todayHours.overtime, today);
+  const todayOvertime = todayRecord.status === "present" ? todayHours.overtime : 0;
+  const todayPayable = attendanceWage(worker, todayRecord, todayOvertime, today);
   const recentRows = dates
     .filter((date) => date <= today && getAttendance(date, worker.id))
     .slice(-10)
@@ -1507,7 +1656,9 @@ function workerSummaryPanel(worker) {
     .map((date) => {
       const record = getAttendanceRecord(date, worker.id);
       const hours = calculateHours(record);
-      const payable = attendanceWage(worker, record, hours.overtime, date);
+      const overtime = record.status === "present" ? hours.overtime : 0;
+      const payable = attendanceWage(worker, record, overtime, date);
+      const paid = paymentLedgerTotal(worker.id, date, date);
       return `
         <tr>
           <td>${date}</td>
@@ -1515,9 +1666,9 @@ function workerSummaryPanel(worker) {
           <td>${record.inTime || "-"}</td>
           <td>${record.outTime || "-"}</td>
           <td>${formatHours(hours.total)}</td>
-          <td>${formatHours(hours.overtime)}</td>
+          <td>${formatHours(overtime)}</td>
           <td>${money(payable)}</td>
-          <td>${money(record.paidAmount || 0)}</td>
+          <td>${money(paid)}</td>
         </tr>
       `;
     }).join("") || `<tr><td colspan="8">${t("noRecordsReport")}</td></tr>`;
@@ -1666,8 +1817,9 @@ function renderDayAttendance() {
 function attendanceRowWithTime(worker, date) {
   const record = getAttendanceRecord(date, worker.id);
   const hours = calculateHours(record);
-  const payable = attendanceWage(worker, record, hours.overtime, date);
-  const paid = Number(record.paidAmount || 0);
+  const overtime = record.status === "present" ? hours.overtime : 0;
+  const payable = attendanceWage(worker, record, overtime, date);
+  const paid = paymentLedgerTotal(worker.id, date, date);
   const unpaid = Math.max(0, payable - paid);
   return `
     <div class="attendance-row">
@@ -1676,7 +1828,7 @@ function attendanceRowWithTime(worker, date) {
         <div>
           <strong>${escapeHTML(displayWorkerName(worker))}</strong>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
-          <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
+          <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(overtime)}</p>
           <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
         </div>
       </div>
@@ -1691,7 +1843,7 @@ function attendanceRowWithTime(worker, date) {
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
           <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
-          <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${record.paidAmount || 0}"></label>
+          <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${paid || 0}"></label>
           <button data-now-field="inTime">${t("startNow")}</button>
           <button data-now-field="outTime">${t("outNow")}</button>
         </div>
@@ -1882,8 +2034,7 @@ function renderReport() {
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
         const payment = paymentRecord(row.worker.id, start, end);
-        const attendancePaid = Number(row.paidAmount || 0);
-        const paid = attendancePaid + Number(payment.paidAmount || 0);
+        const paid = rowPaidAmount(row, start, end);
         const pending = Math.max(0, Number(row.wage || 0) - paid);
         const serial = reportSerial(row.worker, start, end);
         return `
@@ -1891,7 +2042,7 @@ function renderReport() {
             <div>
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
-              <p>${t("payableWage")}: ${money(row.wage)} · ${t("paidToday")}: ${money(attendancePaid)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
+              <p>${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${payment.paidAmount || 0}"></label>
             <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${payment.paymentDate || ""}"></label>
@@ -1947,8 +2098,8 @@ function renderReport() {
               <td>${money(row.overtimeWage || 0)}</td>
               <td>${money(row.foodDeduction || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
-              <td>${money((row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0))}</td>
-              <td><strong>${money(Math.max(0, Number(row.wage || 0) - ((row.paidAmount || 0) + Number(paymentRecord(row.worker.id, start, end).paidAmount || 0))))}</strong></td>
+              <td>${money(rowPaidAmount(row, start, end))}</td>
+              <td><strong>${money(rowUnpaidAmount(row, start, end))}</strong></td>
             </tr>
           `).join("") || `<tr><td colspan="15">${t("noRecordsReport")}</td></tr>`}
         </tbody>
