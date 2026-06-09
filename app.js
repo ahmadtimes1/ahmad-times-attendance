@@ -1007,8 +1007,8 @@ function getAttendanceRecord(date, workerId) {
 }
 
 function normalizeAttendanceRecord(record) {
-  if (!record) return { status: "", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0, paidMode: "" };
-  if (typeof record === "string") return { status: record, inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0, paidMode: "" };
+  if (!record) return { status: "", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (typeof record === "string") return { status: record, inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
   const overtimeHours = record.overtimeHours === "" || record.overtimeHours === null || record.overtimeHours === undefined
     ? ""
     : Number(record.overtimeHours || 0);
@@ -1019,7 +1019,6 @@ function normalizeAttendanceRecord(record) {
     overtimeHours,
     foodDeduction: Number(record.foodDeduction || 0),
     paidAmount: Number(record.paidAmount || 0),
-    paidMode: record.paidMode || "",
   };
 }
 
@@ -1037,7 +1036,6 @@ function setAttendance(date, workerId, status, autoTime = true) {
       overtimeHours: ["present", "halfday"].includes(status) ? current.overtimeHours : "",
       foodDeduction: ["present", "halfday"].includes(status) ? current.foodDeduction : 0,
       paidAmount: ["present", "halfday"].includes(status) ? current.paidAmount : 0,
-      paidMode: ["present", "halfday"].includes(status) ? current.paidMode : "",
     };
   }
   else delete app.attendance[date][workerId];
@@ -1063,25 +1061,13 @@ function setAttendanceTime(date, workerId, field, value) {
 function setAttendanceMoney(date, workerId, field, value) {
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
-  const worker = app.workers.find((item) => item.id === workerId);
-  const cleanValue = String(value || "").trim();
-  let amount = Number(cleanValue || 0);
-  if (!Number.isFinite(amount)) amount = 0;
-  let paidMode = current.paidMode || "";
-  if (field === "paidAmount" && cleanValue.toLowerCase() === "paid" && worker) {
-    const payableRecord = { ...current, status: current.status || "present" };
-    amount = workerPendingThroughDate(worker, date, payableRecord);
-    paidMode = "paid";
-  } else if (field === "paidAmount") {
-    paidMode = amount > 0 ? "amount" : "";
-  }
   app.attendance[date][workerId] = {
     ...current,
     status: current.status || "present",
-    [field]: amount,
-    ...(field === "paidAmount" ? { paidMode } : {}),
+    [field]: Number(value || 0),
   };
-  addLog("Attendance money changed", `${worker?.name || workerId} · ${date} · ${field}: ${cleanValue || 0}`);
+  const worker = app.workers.find((item) => item.id === workerId);
+  addLog("Attendance money changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || 0}`);
   saveData();
 }
 
@@ -1145,26 +1131,6 @@ function foodDeduction(record, status) {
 function attendanceWage(worker, record, overtimeHours = 0, date = todayISO()) {
   const status = normalizeAttendanceRecord(record).status;
   return Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date) - foodDeduction(record, status));
-}
-
-function workerPendingThroughDate(worker, endDate, endDateRecord = null) {
-  const month = String(endDate).slice(0, 7);
-  const dates = daysInMonth(month).filter((date) => date <= endDate);
-  const totalWage = dates.reduce((sum, date) => {
-    const record = date === endDate && endDateRecord ? normalizeAttendanceRecord(endDateRecord) : getAttendanceRecord(date, worker.id);
-    if (!record.status) return sum;
-    const hours = calculateHours(record);
-    return sum + attendanceWage(worker, record, hours.overtime, date);
-  }, 0);
-  const paidBeforeDate = dates
-    .filter((date) => date < endDate)
-    .reduce((sum, date) => sum + Number(getAttendanceRecord(date, worker.id).paidAmount || 0), 0);
-  const reportPayments = Object.entries(app.payments || {}).reduce((sum, [key, payment]) => {
-    const [paymentWorker, , paymentEnd] = key.split("__");
-    if (paymentWorker !== worker.id || !paymentEnd || paymentEnd > endDate || !paymentEnd.startsWith(month)) return sum;
-    return sum + Number(payment?.paidAmount || 0);
-  }, 0);
-  return Math.max(0, totalWage - paidBeforeDate - reportPayments);
 }
 
 function paymentKey(workerId, start, end) {
@@ -1553,7 +1519,6 @@ function attendanceRowWithTime(worker, date) {
   const payable = attendanceWage(worker, record, hours.overtime, date);
   const paid = Number(record.paidAmount || 0);
   const unpaid = Math.max(0, payable - paid);
-  const paidInputValue = record.paidMode === "paid" ? "paid" : (record.paidAmount || "");
   return `
     <div class="attendance-row">
       <div class="attendance-person">
@@ -1576,7 +1541,7 @@ function attendanceRowWithTime(worker, date) {
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
           <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
-          <label>${t("paidToday")}<input type="text" inputmode="decimal" data-money-field="paidAmount" value="${paidInputValue}" placeholder="paid or amount"></label>
+          <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${record.paidAmount || 0}"></label>
           <button data-now-field="inTime">${t("startNow")}</button>
           <button data-now-field="outTime">${t("outNow")}</button>
         </div>
