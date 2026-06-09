@@ -168,6 +168,13 @@ button:active {
   transform: translateY(0);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  transform: none;
+  box-shadow: none;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -315,6 +322,24 @@ textarea:focus-visible {
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.history-actions {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(14px);
+}
+
+.history-actions .icon-button {
+  min-height: 34px;
+  width: 38px;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .date-chip,

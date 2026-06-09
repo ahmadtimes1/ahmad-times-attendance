@@ -55,6 +55,12 @@ const translations = {
     logout: "Logout",
     noAccess: "No access",
     online: "online",
+    undo: "Undo",
+    redo: "Redo",
+    undoDone: "Undo complete",
+    redoDone: "Redo complete",
+    nothingToUndo: "Nothing to undo",
+    nothingToRedo: "Nothing to redo",
     dashboard: "Dashboard",
     workers: "Workers",
     attendance: "Attendance",
@@ -202,6 +208,12 @@ const translations = {
     logout: "وتل",
     noAccess: "اجازه نشته",
     online: "آنلاین",
+    undo: "بېرته",
+    redo: "بیا مخکې",
+    undoDone: "بېرته شو",
+    redoDone: "بیا مخکې شو",
+    nothingToUndo: "د بېرته کولو څه نشته",
+    nothingToRedo: "د بیا کولو څه نشته",
     dashboard: "ډشبورډ",
     workers: "کارکوونکي",
     attendance: "حاضري",
@@ -505,6 +517,107 @@ const money = (value) => `AED ${Number(value || 0).toLocaleString("en-AE", { min
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 const t = (key) => translations[app.language]?.[key] || translations.en[key] || key;
 const reportLanguage = () => $("#reportLanguage")?.value || app.language || "en";
+let undoStack = [];
+let redoStack = [];
+let historySnapshot = "";
+let historyPaused = false;
+
+function snapshotAppData() {
+  return JSON.stringify({
+    workers: app.workers || [],
+    attendance: app.attendance || {},
+    payments: app.payments || {},
+    expenses: app.expenses || [],
+  });
+}
+
+function normalizeAppCollections() {
+  app.workers ||= [];
+  app.attendance ||= {};
+  app.payments ||= {};
+  app.expenses ||= [];
+  app.logs ||= [];
+}
+
+function resetHistory() {
+  normalizeAppCollections();
+  undoStack = [];
+  redoStack = [];
+  historySnapshot = snapshotAppData();
+  updateUndoRedoButtons();
+}
+
+function recordHistory() {
+  normalizeAppCollections();
+  const nextSnapshot = snapshotAppData();
+  if (historyPaused) {
+    historySnapshot = nextSnapshot;
+    updateUndoRedoButtons();
+    return;
+  }
+  if (historySnapshot && historySnapshot !== nextSnapshot) {
+    undoStack.push(historySnapshot);
+    if (undoStack.length > 40) undoStack.shift();
+    redoStack = [];
+  }
+  historySnapshot = nextSnapshot;
+  updateUndoRedoButtons();
+}
+
+function restoreSnapshot(snapshot) {
+  const data = JSON.parse(snapshot);
+  app.workers = data.workers || [];
+  app.attendance = data.attendance || {};
+  app.payments = data.payments || {};
+  app.expenses = data.expenses || [];
+  normalizeAppCollections();
+}
+
+function updateUndoRedoButtons() {
+  const undoButton = $("#undoButton");
+  const redoButton = $("#redoButton");
+  if (!undoButton || !redoButton) return;
+  undoButton.disabled = undoStack.length === 0;
+  redoButton.disabled = redoStack.length === 0;
+  undoButton.title = t("undo");
+  redoButton.title = t("redo");
+  undoButton.setAttribute("aria-label", t("undo"));
+  redoButton.setAttribute("aria-label", t("redo"));
+}
+
+async function undoChange() {
+  if (!undoStack.length) {
+    toast(t("nothingToUndo"));
+    return;
+  }
+  redoStack.push(snapshotAppData());
+  const snapshot = undoStack.pop();
+  restoreSnapshot(snapshot);
+  historyPaused = true;
+  await saveData(false);
+  historyPaused = false;
+  historySnapshot = snapshotAppData();
+  updateUndoRedoButtons();
+  renderAll();
+  toast(t("undoDone"));
+}
+
+async function redoChange() {
+  if (!redoStack.length) {
+    toast(t("nothingToRedo"));
+    return;
+  }
+  undoStack.push(snapshotAppData());
+  const snapshot = redoStack.pop();
+  restoreSnapshot(snapshot);
+  historyPaused = true;
+  await saveData(false);
+  historyPaused = false;
+  historySnapshot = snapshotAppData();
+  updateUndoRedoButtons();
+  renderAll();
+  toast(t("redoDone"));
+}
 
 function workerInitials(worker) {
   return String(worker?.name || "?")
@@ -766,11 +879,10 @@ async function loadData() {
       .maybeSingle();
     if (!error && data?.data) {
       Object.assign(app, data.data);
-      app.payments ||= {};
-      app.expenses ||= [];
-      app.logs ||= [];
+      normalizeAppCollections();
       app.storageMode = "cloud";
       restoreSimpleLogin();
+      resetHistory();
       return;
     }
     if (error) toast(error.message);
@@ -780,10 +892,9 @@ async function loadData() {
   if (saved) {
     try {
       Object.assign(app, JSON.parse(saved));
-      app.payments ||= {};
-      app.expenses ||= [];
-      app.logs ||= [];
+      normalizeAppCollections();
       app.storageMode = supabaseClient ? "login required" : "local";
+      resetHistory();
       return;
     } catch {
       removeBrowserBackup();
@@ -794,10 +905,12 @@ async function loadData() {
   app.payments = {};
   app.expenses = [];
   app.logs = [];
+  resetHistory();
   saveData(false);
 }
 
 async function saveData(show = true) {
+  recordHistory();
   app.lastSaved = new Date().toISOString();
   setBrowserBackup();
 
@@ -894,8 +1007,8 @@ function getAttendanceRecord(date, workerId) {
 }
 
 function normalizeAttendanceRecord(record) {
-  if (!record) return { status: "", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
-  if (typeof record === "string") return { status: record, inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (!record) return { status: "", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0, paidMode: "" };
+  if (typeof record === "string") return { status: record, inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0, paidMode: "" };
   const overtimeHours = record.overtimeHours === "" || record.overtimeHours === null || record.overtimeHours === undefined
     ? ""
     : Number(record.overtimeHours || 0);
@@ -906,6 +1019,7 @@ function normalizeAttendanceRecord(record) {
     overtimeHours,
     foodDeduction: Number(record.foodDeduction || 0),
     paidAmount: Number(record.paidAmount || 0),
+    paidMode: record.paidMode || "",
   };
 }
 
@@ -923,6 +1037,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
       overtimeHours: ["present", "halfday"].includes(status) ? current.overtimeHours : "",
       foodDeduction: ["present", "halfday"].includes(status) ? current.foodDeduction : 0,
       paidAmount: ["present", "halfday"].includes(status) ? current.paidAmount : 0,
+      paidMode: ["present", "halfday"].includes(status) ? current.paidMode : "",
     };
   }
   else delete app.attendance[date][workerId];
@@ -951,15 +1066,20 @@ function setAttendanceMoney(date, workerId, field, value) {
   const worker = app.workers.find((item) => item.id === workerId);
   const cleanValue = String(value || "").trim();
   let amount = Number(cleanValue || 0);
+  if (!Number.isFinite(amount)) amount = 0;
+  let paidMode = current.paidMode || "";
   if (field === "paidAmount" && cleanValue.toLowerCase() === "paid" && worker) {
     const payableRecord = { ...current, status: current.status || "present" };
-    const hours = calculateHours(payableRecord);
-    amount = attendanceWage(worker, payableRecord, hours.overtime, date);
+    amount = workerPendingThroughDate(worker, date, payableRecord);
+    paidMode = "paid";
+  } else if (field === "paidAmount") {
+    paidMode = amount > 0 ? "amount" : "";
   }
   app.attendance[date][workerId] = {
     ...current,
     status: current.status || "present",
     [field]: amount,
+    ...(field === "paidAmount" ? { paidMode } : {}),
   };
   addLog("Attendance money changed", `${worker?.name || workerId} · ${date} · ${field}: ${cleanValue || 0}`);
   saveData();
@@ -1025,6 +1145,26 @@ function foodDeduction(record, status) {
 function attendanceWage(worker, record, overtimeHours = 0, date = todayISO()) {
   const status = normalizeAttendanceRecord(record).status;
   return Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date) - foodDeduction(record, status));
+}
+
+function workerPendingThroughDate(worker, endDate, endDateRecord = null) {
+  const month = String(endDate).slice(0, 7);
+  const dates = daysInMonth(month).filter((date) => date <= endDate);
+  const totalWage = dates.reduce((sum, date) => {
+    const record = date === endDate && endDateRecord ? normalizeAttendanceRecord(endDateRecord) : getAttendanceRecord(date, worker.id);
+    if (!record.status) return sum;
+    const hours = calculateHours(record);
+    return sum + attendanceWage(worker, record, hours.overtime, date);
+  }, 0);
+  const paidBeforeDate = dates
+    .filter((date) => date < endDate)
+    .reduce((sum, date) => sum + Number(getAttendanceRecord(date, worker.id).paidAmount || 0), 0);
+  const reportPayments = Object.entries(app.payments || {}).reduce((sum, [key, payment]) => {
+    const [paymentWorker, , paymentEnd] = key.split("__");
+    if (paymentWorker !== worker.id || !paymentEnd || paymentEnd > endDate || !paymentEnd.startsWith(month)) return sum;
+    return sum + Number(payment?.paidAmount || 0);
+  }, 0);
+  return Math.max(0, totalWage - paidBeforeDate - reportPayments);
 }
 
 function paymentKey(workerId, start, end) {
@@ -1254,6 +1394,7 @@ function applyLanguage() {
   const activeView = $(".view.active")?.id || "dashboard";
   const pageTitle = $("#pageTitle");
   if (pageTitle) pageTitle.textContent = t(activeView);
+  updateUndoRedoButtons();
 }
 
 function renderAuthStatus() {
@@ -1412,6 +1553,7 @@ function attendanceRowWithTime(worker, date) {
   const payable = attendanceWage(worker, record, hours.overtime, date);
   const paid = Number(record.paidAmount || 0);
   const unpaid = Math.max(0, payable - paid);
+  const paidInputValue = record.paidMode === "paid" ? "paid" : (record.paidAmount || "");
   return `
     <div class="attendance-row">
       <div class="attendance-person">
@@ -1434,7 +1576,7 @@ function attendanceRowWithTime(worker, date) {
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
           <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
-          <label>${t("paidToday")}<input type="text" inputmode="decimal" data-money-field="paidAmount" value="${record.paidAmount || ""}" placeholder="paid or amount"></label>
+          <label>${t("paidToday")}<input type="text" inputmode="decimal" data-money-field="paidAmount" value="${paidInputValue}" placeholder="paid or amount"></label>
           <button data-now-field="inTime">${t("startNow")}</button>
           <button data-now-field="outTime">${t("outNow")}</button>
         </div>
@@ -2206,6 +2348,8 @@ function bindEvents() {
       $("#loginUsername")?.focus();
     }
   });
+  $("#undoButton").addEventListener("click", undoChange);
+  $("#redoButton").addEventListener("click", redoChange);
   $("#loginScreenForm").addEventListener("submit", (event) => {
     event.preventDefault();
     loginFromScreen();

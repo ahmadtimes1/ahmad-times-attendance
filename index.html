@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=receipt-paid-stamp-ui-1">
+    <link rel="stylesheet" href="styles.css?v=undo-paid-through-date-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -60,6 +60,10 @@
           </div>
           <div class="top-actions">
             <span class="cloud-chip" id="cloudStatus">Local mode</span>
+            <div class="history-actions" aria-label="Undo and redo">
+              <button id="undoButton" class="icon-button" type="button" title="Undo" aria-label="Undo">↶</button>
+              <button id="redoButton" class="icon-button" type="button" title="Redo" aria-label="Redo">↷</button>
+            </div>
             <button id="authButton">Login</button>
             <label class="date-chip">
               <span data-i18n="language">Language</span>
@@ -436,6 +440,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=receipt-paid-stamp-ui-1"></script>
+    <script src="app.js?v=undo-paid-through-date-1"></script>
   </body>
 </html>
