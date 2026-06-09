@@ -370,6 +370,18 @@ Object.assign(translations.en, {
   expenseDescription: "Description",
   expenseDescriptionPlaceholder: "Optional note",
   expenseAmount: "Amount (AED)",
+  buyerName: "Buyer name",
+  buyerNamePlaceholder: "Who bought it",
+  marketName: "Market / pump",
+  marketNamePlaceholder: "Shop or fuel pump name",
+  expenseLocation: "Location",
+  expenseLocationPlaceholder: "Area or site",
+  takeBillPicture: "Take bill picture",
+  noBillPicture: "No bill picture",
+  bill: "Bill",
+  viewBill: "View bill",
+  billDetails: "Bill details",
+  receiptSaved: "Bill picture saved",
   addExpense: "Add expense",
   noExpenses: "No company expenses yet.",
   expenseSaved: "Expense saved",
@@ -445,6 +457,18 @@ Object.assign(translations.ps, {
   expenseDescription: "تفصیل",
   expenseDescriptionPlaceholder: "اختیاري یادښت",
   expenseAmount: "اندازه (AED)",
+  buyerName: "اخیستونکی",
+  buyerNamePlaceholder: "چا اخیستي",
+  marketName: "مارکېټ / پمپ",
+  marketNamePlaceholder: "دکان یا پمپ نوم",
+  expenseLocation: "ځای",
+  expenseLocationPlaceholder: "سیمه یا سایټ",
+  takeBillPicture: "د بل عکس واخلئ",
+  noBillPicture: "د بل عکس نشته",
+  bill: "بل",
+  viewBill: "بل وګورئ",
+  billDetails: "د بل معلومات",
+  receiptSaved: "د بل عکس ذخیره شو",
   addExpense: "مصرف اضافه کړئ",
   noExpenses: "د شرکت مصرف نشته.",
   expenseSaved: "مصرف ذخیره شو",
@@ -924,13 +948,20 @@ function setAttendanceTime(date, workerId, field, value) {
 function setAttendanceMoney(date, workerId, field, value) {
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
+  const worker = app.workers.find((item) => item.id === workerId);
+  const cleanValue = String(value || "").trim();
+  let amount = Number(cleanValue || 0);
+  if (field === "paidAmount" && cleanValue.toLowerCase() === "paid" && worker) {
+    const payableRecord = { ...current, status: current.status || "present" };
+    const hours = calculateHours(payableRecord);
+    amount = attendanceWage(worker, payableRecord, hours.overtime, date);
+  }
   app.attendance[date][workerId] = {
     ...current,
     status: current.status || "present",
-    [field]: Number(value || 0),
+    [field]: amount,
   };
-  const worker = app.workers.find((item) => item.id === workerId);
-  addLog("Attendance money changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || 0}`);
+  addLog("Attendance money changed", `${worker?.name || workerId} · ${date} · ${field}: ${cleanValue || 0}`);
   saveData();
 }
 
@@ -1036,6 +1067,7 @@ function openPrintableReport() {
   const report = $("#reportOutput").innerHTML
     .replace(/<div class="report-logo-fallback"[^>]*>.*?<\/div>/g, "")
     .replaceAll('src="ahmad-times-logo.png"', `src="${logoUrl}"`)
+    .replaceAll("src='ahmad-times-logo.png'", `src='${logoUrl}'`)
     .replaceAll('src="ahmad-times-stamp.png"', `src="${stampUrl}"`);
   if (!report.trim()) {
     toast(t("emptyReport"));
@@ -1049,7 +1081,7 @@ function openPrintableReport() {
         <title>Ahmad Times Wage Report</title>
         <style>
           body { margin: 0; padding: 24px; color: #1d2433; font-family: Arial, sans-serif; background: #fff; }
-          .report-page { position: relative; max-width: 1100px; margin: 0 auto; overflow: hidden; }
+          .report-page { position: relative; max-width: 1100px; margin: 0 auto; padding-bottom: 170px; }
           .report-stamp { width: 136px !important; max-width: 136px !important; height: auto !important; opacity: 0.9; pointer-events: none; mix-blend-mode: multiply; }
           .print-actions { display: flex; justify-content: flex-end; gap: 8px; margin: 0 auto 16px; max-width: 1100px; }
           .print-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid #bce7f7; border-radius: 8px; color: #087fae; background: #f4fbfe; font-weight: 700; cursor: pointer; }
@@ -1087,7 +1119,7 @@ function openPrintableReport() {
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
           @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } .report-footer { align-items: flex-start; flex-direction: column; } }
           @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
-          @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; } }
+          @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } }
         </style>
       </head>
       <body>
@@ -1402,7 +1434,7 @@ function attendanceRowWithTime(worker, date) {
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
           <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
-          <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${record.paidAmount || 0}"></label>
+          <label>${t("paidToday")}<input type="text" inputmode="decimal" data-money-field="paidAmount" value="${record.paidAmount || ""}" placeholder="paid or amount"></label>
           <button data-now-field="inTime">${t("startNow")}</button>
           <button data-now-field="outTime">${t("outNow")}</button>
         </div>
@@ -1672,7 +1704,7 @@ function renderReport() {
         <p class="help-text">Generated: ${new Date().toLocaleString()}</p>
       </div>
       <div class="report-stamp-box">
-        <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136">
+        <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
         <div>Ahmad Times stamp</div>
       </div>
     </footer>
@@ -1715,12 +1747,66 @@ function renderExpenses() {
   list.innerHTML = rows.length ? rows.map((expense) => `
     <tr>
       <td>${escapeHTML(expense.date || "-")}</td>
+      <td>${escapeHTML(expense.buyer || "-")}</td>
       <td>${escapeHTML(expense.category || "-")}</td>
+      <td>${escapeHTML(expense.merchant || "-")}</td>
+      <td>${escapeHTML(expense.location || "-")}</td>
       <td>${escapeHTML(expense.description || "-")}</td>
       <td><strong>${money(expense.amount)}</strong></td>
+      <td>${expense.receiptPhoto ? `<button class="ghost" data-view-expense="${expense.id}">${t("viewBill")}</button>` : "-"}</td>
       <td><button class="danger ghost" data-remove-expense="${expense.id}">${t("remove")}</button></td>
     </tr>
-  `).join("") : `<tr><td colspan="5">${t("noExpenses")}</td></tr>`;
+  `).join("") : `<tr><td colspan="9">${t("noExpenses")}</td></tr>`;
+}
+
+function setExpenseReceiptPhoto(photo = "") {
+  $("#expenseReceiptPhoto").value = photo;
+  const preview = $("#expenseReceiptPreview");
+  if (!preview) return;
+  preview.innerHTML = photo
+    ? `<img src="${photo}" alt="${t("bill")}"><span>${t("receiptSaved")}</span>`
+    : t("noBillPicture");
+}
+
+function suggestReceiptFields(file) {
+  const name = String(file?.name || "").replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+  if (name && !$("#expenseMerchant").value.trim()) $("#expenseMerchant").value = name.slice(0, 60);
+  const lower = name.toLowerCase();
+  if (!$("#expenseCategory").value.trim()) {
+    if (lower.includes("fuel") || lower.includes("petrol") || lower.includes("diesel") || lower.includes("oil")) $("#expenseCategory").value = "Fuel / car oil";
+    else if (lower.includes("food") || lower.includes("restaurant") || lower.includes("meal")) $("#expenseCategory").value = "Food";
+    else if (lower.includes("tool") || lower.includes("material")) $("#expenseCategory").value = "Tools / material";
+  }
+  if (!$("#expenseLocation").value.trim() && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!$("#expenseLocation").value.trim()) {
+          const { latitude, longitude } = position.coords;
+          $("#expenseLocation").value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 300000 },
+    );
+  }
+}
+
+function viewExpenseReceipt(expenseId) {
+  const expense = (app.expenses || []).find((item) => item.id === expenseId);
+  if (!expense) return;
+  $("#receiptDialogContent").innerHTML = `
+    <div class="receipt-detail-grid">
+      <div><span>${t("date")}</span><strong>${escapeHTML(expense.date || "-")}</strong></div>
+      <div><span>${t("buyerName")}</span><strong>${escapeHTML(expense.buyer || "-")}</strong></div>
+      <div><span>${t("expenseCategory")}</span><strong>${escapeHTML(expense.category || "-")}</strong></div>
+      <div><span>${t("marketName")}</span><strong>${escapeHTML(expense.merchant || "-")}</strong></div>
+      <div><span>${t("expenseLocation")}</span><strong>${escapeHTML(expense.location || "-")}</strong></div>
+      <div><span>${t("expenseAmount")}</span><strong>${money(expense.amount)}</strong></div>
+      <div class="wide"><span>${t("expenseDescription")}</span><strong>${escapeHTML(expense.description || "-")}</strong></div>
+    </div>
+    ${expense.receiptPhoto ? `<img class="receipt-full-image" src="${expense.receiptPhoto}" alt="${t("bill")}">` : `<p class="help-text">${t("noBillPicture")}</p>`}
+  `;
+  $("#receiptDialog").showModal();
 }
 
 function renderStorage() {
@@ -1898,17 +1984,26 @@ function addExpenseFromForm() {
   const expense = {
     id: makeId(),
     date: $("#expenseDate").value || todayISO(),
+    buyer: $("#expenseBuyer").value.trim(),
     category: $("#expenseCategory").value.trim(),
+    merchant: $("#expenseMerchant").value.trim(),
+    location: $("#expenseLocation").value.trim(),
     description: $("#expenseDescription").value.trim(),
     amount: Number($("#expenseAmount").value || 0),
+    receiptPhoto: $("#expenseReceiptPhoto").value || "",
     createdAt: new Date().toISOString(),
   };
   if (!expense.category || expense.amount <= 0) return;
   app.expenses.unshift(expense);
   addLog("Company expense added", `${expense.date} · ${expense.category} · ${money(expense.amount)}`);
+  $("#expenseBuyer").value = "";
   $("#expenseCategory").value = "";
+  $("#expenseMerchant").value = "";
+  $("#expenseLocation").value = "";
   $("#expenseDescription").value = "";
   $("#expenseAmount").value = "";
+  $("#expenseReceiptUpload").value = "";
+  setExpenseReceiptPhoto("");
   saveData();
   toast(t("expenseSaved"));
 }
@@ -2204,6 +2299,9 @@ function bindEvents() {
     const removeExpenseButton = event.target.closest("[data-remove-expense]");
     if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
 
+    const viewExpenseButton = event.target.closest("[data-view-expense]");
+    if (viewExpenseButton) viewExpenseReceipt(viewExpenseButton.dataset.viewExpense);
+
     const statusButton = event.target.closest(".attendance-actions button");
     if (statusButton) {
       const parent = statusButton.closest(".attendance-actions");
@@ -2281,6 +2379,17 @@ function bindEvents() {
     event.preventDefault();
     addExpenseFromForm();
   });
+  $("#expenseReceiptUpload").addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      setExpenseReceiptPhoto(await resizePhotoDataUrl(reader.result, 900));
+      suggestReceiptFields(file);
+    };
+    reader.readAsDataURL(file);
+  });
+  $("#closeReceiptDialog").addEventListener("click", () => $("#receiptDialog").close());
 
   $$(".mode-tab").forEach((tab) => {
     tab.addEventListener("click", () => {

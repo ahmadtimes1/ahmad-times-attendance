@@ -1,20 +1,20 @@
 :root {
   color-scheme: light;
-  --ink: #172033;
-  --muted: #667085;
-  --line: rgba(166, 183, 204, 0.42);
-  --soft: rgba(255, 255, 255, 0.55);
-  --panel: rgba(255, 255, 255, 0.74);
-  --brand: #19a9dc;
-  --brand-2: #087fae;
-  --green: #1f8a70;
-  --amber: #a86b18;
-  --blue: #2563a8;
-  --danger: #a6423a;
-  --shadow: 0 18px 55px rgba(31, 45, 61, 0.12);
-  --shadow-soft: 0 10px 28px rgba(31, 45, 61, 0.1);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.62);
-  --focus: 0 0 0 4px rgba(25, 169, 220, 0.16);
+  --ink: #182434;
+  --muted: #667783;
+  --line: rgba(142, 163, 177, 0.34);
+  --soft: rgba(255, 255, 255, 0.6);
+  --panel: rgba(255, 255, 255, 0.78);
+  --brand: #4aa9c8;
+  --brand-2: #267f9f;
+  --green: #2f806f;
+  --amber: #9a7430;
+  --blue: #4f789b;
+  --danger: #9a504a;
+  --shadow: 0 18px 48px rgba(50, 69, 82, 0.1);
+  --shadow-soft: 0 10px 24px rgba(50, 69, 82, 0.08);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.68);
+  --focus: 0 0 0 4px rgba(74, 169, 200, 0.15);
 }
 
 * {
@@ -31,9 +31,7 @@ body {
   overflow-x: hidden;
   color: var(--ink);
   background:
-    radial-gradient(circle at 18% 12%, rgba(25, 169, 220, 0.18), transparent 26%),
-    radial-gradient(circle at 92% 6%, rgba(255, 255, 255, 0.9), transparent 24%),
-    linear-gradient(135deg, #f8fcff 0%, #e9f3f8 48%, #f6f9fc 100%);
+    linear-gradient(135deg, #f7fbfc 0%, #edf5f6 48%, #f8faf9 100%);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -1087,7 +1085,7 @@ tbody tr:hover {
 
 .expense-form {
   display: grid;
-  grid-template-columns: 1.1fr 1fr 0.8fr 1.4fr auto;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 10px;
   align-items: end;
   margin: 16px 0;
@@ -1099,6 +1097,71 @@ tbody tr:hover {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+.receipt-upload {
+  min-height: 44px;
+}
+
+.receipt-preview {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed rgba(74, 169, 200, 0.34);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.receipt-preview img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.receipt-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.receipt-detail-grid div {
+  padding: 10px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.receipt-detail-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.receipt-detail-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.receipt-detail-grid strong {
+  display: block;
+  margin-top: 3px;
+}
+
+.receipt-full-image {
+  width: 100%;
+  max-height: 68vh;
+  margin-top: 14px;
+  border: var(--glass-border);
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
 }
 
 .month-day {
@@ -1910,5 +1973,19 @@ dialog::backdrop {
   .panel {
     border: 0;
     box-shadow: none;
+  }
+
+  .report-panel {
+    padding-bottom: 176px;
+  }
+
+  .report-footer {
+    position: fixed;
+    right: 0;
+    bottom: 12px;
+    left: 0;
+    padding-right: 24px;
+    padding-left: 24px;
+    background: #fff;
   }
 }
