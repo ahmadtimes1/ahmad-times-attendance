@@ -3,6 +3,7 @@ const LANG_KEY = "ahmad-times-language";
 const SIMPLE_LOGIN_KEY = "ahmad-times-simple-user";
 const LAST_ACTIVITY_KEY = "ahmad-times-last-activity";
 const WORKER_VIEW_KEY = "ahmad-times-worker-view";
+const THEME_KEY = "ahmad-times-theme";
 const STANDARD_HOURS = 9;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -15,6 +16,9 @@ const SIMPLE_USERS = [
 const translations = {
   en: {
     language: "Language",
+    toggleTheme: "Switch theme",
+    darkMode: "Dark",
+    lightMode: "Light",
     today: "Today",
     addWorkerShort: "+ Worker",
     totalWorkers: "Total workers",
@@ -180,6 +184,9 @@ const translations = {
   },
   ps: {
     language: "ژبه",
+    toggleTheme: "رنګ بدل کړئ",
+    darkMode: "تیاره",
+    lightMode: "روښانه",
     today: "نن",
     addWorkerShort: "+ کارکوونکی",
     totalWorkers: "ټول کارکوونکي",
@@ -526,6 +533,7 @@ const app = {
   user: null,
   profile: null,
   language: localStorage.getItem(LANG_KEY) || "en",
+  theme: localStorage.getItem(THEME_KEY) || "light",
   workerFilter: "active",
   workerView: localStorage.getItem(WORKER_VIEW_KEY) || "large",
   selectedWorkerSummaryId: "",
@@ -1531,7 +1539,9 @@ function monthSummary(month, workerId = "all") {
 }
 
 function renderAll() {
+  applyTheme();
   applyLanguage();
+  applyTheme();
   renderLoginGate();
   renderAuthStatus();
   renderDashboard();
@@ -1564,6 +1574,18 @@ function applyLanguage() {
   const pageTitle = $("#pageTitle");
   if (pageTitle) pageTitle.textContent = t(activeView);
   updateUndoRedoButtons();
+}
+
+function applyTheme() {
+  const theme = app.theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = theme;
+  const button = $("#themeToggle");
+  const label = $("#themeToggleText");
+  if (button) {
+    button.classList.toggle("active", theme === "dark");
+    button.setAttribute("aria-pressed", String(theme === "dark"));
+  }
+  if (label) label.textContent = theme === "dark" ? t("lightMode") : t("darkMode");
 }
 
 function renderAuthStatus() {
@@ -1618,7 +1640,7 @@ function renderDashboardLegacyUnused() {
   $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
-  $("#dashboardDateLabel").textContent = date;
+  if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
@@ -1639,7 +1661,7 @@ function renderDashboardLegacyUnused() {
       `;
     }).join("") || `<tr><td colspan="8">No wage records for this month.</td></tr>`;
 
-  $("#todayList").innerHTML = activeWorkers().map((worker) => {
+  if ($("#todayList")) $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
     const status = record.status || "not marked";
     const hours = calculateHours(record);
@@ -2702,6 +2724,11 @@ function bindEvents() {
     localStorage.setItem(LANG_KEY, app.language);
     renderAll();
   });
+  $("#themeToggle").addEventListener("click", () => {
+    app.theme = app.theme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, app.theme);
+    applyTheme();
+  });
   $("#authButton").addEventListener("click", async () => {
     if (app.user) {
       await logout();
@@ -2977,7 +3004,7 @@ function renderDashboard() {
   $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
-  $("#dashboardDateLabel").textContent = date;
+  if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
@@ -2998,7 +3025,7 @@ function renderDashboard() {
       `;
     }).join("") || `<tr><td colspan="8">${t("noWageRecords")}</td></tr>`;
 
-  $("#todayList").innerHTML = activeWorkers().map((worker) => {
+  if ($("#todayList")) $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
     const status = record.status || "not marked";
     const hours = calculateHours(record);

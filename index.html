@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=attendance-filter-weekly-1">
+    <link rel="stylesheet" href="styles.css?v=theme-dashboard-clean-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -64,6 +64,10 @@
               <button id="undoButton" class="icon-button" type="button" title="Undo" aria-label="Undo">↶</button>
               <button id="redoButton" class="icon-button" type="button" title="Redo" aria-label="Redo">↷</button>
             </div>
+            <button id="themeToggle" class="theme-toggle" type="button" data-i18n-aria-label="toggleTheme" aria-label="Switch theme">
+              <span class="theme-toggle-knob" aria-hidden="true"></span>
+              <span id="themeToggleText" data-i18n="darkMode">Dark</span>
+            </button>
             <button id="authButton">Login</button>
             <label class="date-chip">
               <span data-i18n="language">Language</span>
@@ -121,14 +125,6 @@
           </div>
 
           <div class="content-grid">
-            <section class="panel daily-dashboard-panel">
-              <div class="panel-head">
-                <h3 data-i18n="dailyAttendance">Daily Attendance</h3>
-                <span id="dashboardDateLabel" class="pill">Today</span>
-              </div>
-              <div id="todayList" class="worker-list compact-attendance-list"></div>
-            </section>
-
             <section class="panel">
               <div class="panel-head">
                 <h3 data-i18n="monthlyWageSummary">Monthly Wage Summary</h3>
@@ -474,6 +470,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=attendance-filter-weekly-1"></script>
+    <script src="app.js?v=theme-dashboard-clean-1"></script>
   </body>
 </html>
