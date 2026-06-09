@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=mobile-worker-view-1">
+    <link rel="stylesheet" href="styles.css?v=windows-worker-view-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -161,9 +161,19 @@
               <button class="worker-filter" data-worker-filter="all" data-i18n="allLabour">All labour</button>
             </div>
             <div class="view-picker" role="group" aria-label="Worker view">
-              <button class="worker-view active" data-worker-view="large" data-i18n="largeIcons">Large icons</button>
-              <button class="worker-view" data-worker-view="medium" data-i18n="mediumIcons">Medium icons</button>
-              <button class="worker-view" data-worker-view="list" data-i18n="listView">List</button>
+              <span class="view-picker-label">View</span>
+              <button class="worker-view active" data-worker-view="large" title="Large icons" aria-label="Large icons">
+                <span class="view-icon icon-large" aria-hidden="true"></span>
+                <span data-i18n="largeIcons">Large icons</span>
+              </button>
+              <button class="worker-view" data-worker-view="medium" title="Medium icons" aria-label="Medium icons">
+                <span class="view-icon icon-medium" aria-hidden="true"></span>
+                <span data-i18n="mediumIcons">Medium icons</span>
+              </button>
+              <button class="worker-view" data-worker-view="list" title="Details list" aria-label="Details list">
+                <span class="view-icon icon-list" aria-hidden="true"></span>
+                <span data-i18n="listView">List</span>
+              </button>
             </div>
             <button class="primary" id="addWorkerBtn" data-i18n="addWorker">Add worker</button>
           </div>
@@ -403,6 +413,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=mobile-worker-view-1"></script>
+    <script src="app.js?v=windows-worker-view-1"></script>
   </body>
 </html>

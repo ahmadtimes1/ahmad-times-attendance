@@ -574,11 +574,11 @@ tbody tr:hover {
 }
 
 .worker-cards.worker-view-large {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 }
 
 .worker-cards.worker-view-medium {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
 }
 
 .worker-cards.worker-view-list {
@@ -586,13 +586,103 @@ tbody tr:hover {
 }
 
 .worker-card {
+  position: relative;
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.72);
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
+.worker-view-large .worker-card,
+.worker-view-medium .worker-card {
+  display: grid;
+  min-height: 178px;
+  align-content: start;
+  justify-items: center;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.worker-view-large .worker-card-head,
+.worker-view-medium .worker-card-head {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.worker-view-large .worker-title,
+.worker-view-medium .worker-title {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.worker-view-large .worker-title > div,
+.worker-view-medium .worker-title > div {
+  min-width: 0;
+}
+
+.worker-view-large .worker-card h3,
+.worker-view-medium .worker-card h3 {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  line-height: 1.18;
+}
+
+.worker-view-large .worker-card p,
+.worker-view-medium .worker-card p {
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+.worker-view-large .status-pill,
+.worker-view-medium .status-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+[dir="rtl"] .worker-view-large .status-pill,
+[dir="rtl"] .worker-view-medium .status-pill {
+  right: auto;
+  left: 10px;
+}
+
+.worker-view-large .worker-meta,
+.worker-view-medium .worker-meta {
+  display: none;
+}
+
+.worker-view-large .worker-card-actions,
+.worker-view-medium .worker-card-actions {
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.worker-view-large .worker-card-actions [data-move-worker],
+.worker-view-medium .worker-card-actions [data-move-worker] {
+  display: none;
+}
+
+.worker-view-large .worker-card-actions button,
+.worker-view-medium .worker-card-actions button {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.worker-view-large .worker-avatar {
+  flex-basis: 74px;
+  width: 74px;
+  height: 74px;
+}
+
 .worker-view-medium .worker-card {
   padding: 12px;
+  min-height: 146px;
 }
 
 .worker-view-medium .worker-meta {
@@ -621,6 +711,10 @@ tbody tr:hover {
   align-items: center;
 }
 
+.worker-view-list .worker-title {
+  min-width: 240px;
+}
+
 .worker-view-list .worker-meta {
   grid-template-columns: repeat(4, minmax(120px, 1fr));
 }
@@ -631,16 +725,27 @@ tbody tr:hover {
 
 .view-picker {
   display: inline-flex;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   padding: 4px;
   border: var(--glass-border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.58);
 }
 
+.view-picker-label {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .view-picker button {
   min-height: 36px;
-  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
   border-color: transparent;
   box-shadow: none;
   font-size: 13px;
@@ -650,6 +755,65 @@ tbody tr:hover {
   color: #fff;
   background: linear-gradient(180deg, var(--brand), var(--brand-2));
   border-color: var(--brand-2);
+}
+
+.view-icon {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.icon-large {
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+
+.icon-large::before,
+.icon-large::after,
+.icon-medium::before,
+.icon-medium::after,
+.icon-list::before,
+.icon-list::after {
+  content: "";
+}
+
+.icon-large::before,
+.icon-large::after {
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+
+.icon-medium {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.icon-medium::before,
+.icon-medium::after {
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  box-shadow: 7px 0 0 -1.5px currentColor, 14px 0 0 -1.5px currentColor, 0 7px 0 -1.5px currentColor, 7px 7px 0 -1.5px currentColor, 14px 7px 0 -1.5px currentColor;
+}
+
+.icon-list::before,
+.icon-list::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 99px;
+  background: currentColor;
+  box-shadow: 0 6px 0 currentColor, 0 12px 0 currentColor;
+}
+
+.icon-list::before {
+  width: 4px;
+}
+
+.icon-list::after {
+  left: 7px;
 }
 
 .worker-card-head,
@@ -1540,7 +1704,16 @@ dialog::backdrop {
 
   .view-picker {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr 1fr 1fr;
+  }
+
+  .view-picker button {
+    justify-content: center;
+    padding: 7px 6px;
+  }
+
+  .view-picker button span:not(.view-icon) {
+    font-size: 12px;
   }
 
   .mode-tab,
