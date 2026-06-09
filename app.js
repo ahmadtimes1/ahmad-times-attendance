@@ -1063,6 +1063,7 @@ function openPrintableReport() {
           .report-brand span, .help-text { color: #667085; }
           .worker-report-details { padding: 12px; margin: 12px 0; border: 1px solid #d9eaf1; border-radius: 8px; background: #fbfdff; }
           .worker-report-id { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+          .worker-report-id img, .worker-report-id .worker-avatar { width: 64px; height: 64px; flex-basis: 64px; border-radius: 50%; object-fit: cover; }
           .worker-report-id h4 { margin: 0 0 3px; font-size: 18px; }
           .worker-report-id p { margin: 0; color: #667085; }
           .worker-report-grid { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 8px; }
@@ -1470,32 +1471,31 @@ function renderMonthAttendance() {
   `;
 }
 
-function workerReportDetails(row, start, end, paidTotal = 0, unpaidTotal = 0) {
-  if (!row?.worker) return "";
-  const worker = row.worker;
+function workerReportDetails(worker, start, end) {
+  if (!worker) return "";
+  const workerIndex = app.workers.findIndex((item) => item.id === worker.id);
   const name = displayWorkerName(worker);
   return `
     <section class="worker-report-details">
       <div class="worker-report-id">
+        ${worker.photo ? `<img src="${worker.photo}" alt="${escapeHTML(name)}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
         <div>
           <h4>${escapeHTML(name)}</h4>
-          <p>${t("serialNo")}: ${reportSerial(worker, start, end)} · ${reportPeriodLabel(start, end)}</p>
+          <p>${escapeHTML(worker.role || t("roleWorker"))} · ${t("serialNo")}: ${reportSerial(worker, start, end)}</p>
         </div>
       </div>
       <div class="worker-report-grid">
-        <div><span>${t("present")} ${t("days")}</span><strong>${row.present || 0}</strong></div>
-        <div><span>${t("halfDays")}</span><strong>${row.halfday || 0}</strong></div>
-        <div><span>${t("absent")} ${t("days")}</span><strong>${row.absent || 0}</strong></div>
-        <div><span>${t("off")} ${t("days")}</span><strong>${row.off || 0}</strong></div>
-        <div><span>${t("totalHours")}</span><strong>${formatHours(row.hours || 0)}</strong></div>
-        <div><span>${t("overtime")}</span><strong>${formatHours(row.overtime || 0)}</strong></div>
-        <div><span>${t("dailyWage")}</span><strong>${money(row.dailyWage || currentDailyWage(worker))}</strong></div>
-        <div><span>${t("baseWage")}</span><strong>${money(row.baseWage || 0)}</strong></div>
-        <div><span>${t("overtimeWage")}</span><strong>${money(row.overtimeWage || 0)}</strong></div>
-        <div><span>${t("foodDeductionTotal")}</span><strong>${money(row.foodDeduction || 0)}</strong></div>
-        <div><span>${t("paid")}</span><strong>${money(paidTotal)}</strong></div>
-        <div><span>${t("unpaid")}</span><strong>${money(unpaidTotal)}</strong></div>
-        <div class="wide"><span>${t("payableWage")}</span><strong>${money(row.wage || 0)}</strong></div>
+        <div><span>${t("workerNumber")}</span><strong>#${workerIndex + 1}</strong></div>
+        <div><span>${t("status")}</span><strong>${t(worker.status || "active")}</strong></div>
+        <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
+        <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
+        <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
+        <div><span>${t("nationality")}</span><strong>${escapeHTML(worker.nationality || "-")}</strong></div>
+        <div><span>${t("performance")}</span><strong>${performanceLabel(worker.performance)}</strong></div>
+        <div><span>${t("joiningDate")}</span><strong>${escapeHTML(worker.joinDate || "-")}</strong></div>
+        <div><span>${t("currentDailyWage")}</span><strong>${money(currentDailyWage(worker))}</strong></div>
+        <div class="wide"><span>${t("wageHistory")}</span><strong>${escapeHTML(wageHistoryText(worker))}</strong></div>
+        ${worker.notes ? `<div class="wide"><span>${t("notes")}</span><strong>${escapeHTML(worker.notes)}</strong></div>` : ""}
       </div>
     </section>
   `;
@@ -1555,12 +1555,7 @@ function renderReport() {
     return acc;
   }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0 });
   const payTotals = paymentTotals(rows, start, end);
-  const selectedWorker = selectedWorkerId === "all"
-    ? (rows.length === 1 ? rows[0].worker : null)
-    : app.workers.find((worker) => worker.id === selectedWorkerId);
-  const selectedWorkerRow = selectedWorker ? rows.find((row) => row.worker.id === selectedWorker.id) : null;
-  const selectedWorkerPaid = selectedWorkerRow ? rowPaidAmount(selectedWorkerRow, start, end) : 0;
-  const selectedWorkerUnpaid = selectedWorkerRow ? Math.max(0, Number(selectedWorkerRow.wage || 0) - selectedWorkerPaid) : 0;
+  const selectedWorker = selectedWorkerId === "all" ? null : app.workers.find((worker) => worker.id === selectedWorkerId);
 
   $("#reportOutput").innerHTML = `
     <div class="report-brand">
@@ -1573,7 +1568,6 @@ function renderReport() {
     </div>
     <h3>${title}</h3>
     <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(displayWorkerName(selectedWorker) || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
-    ${selectedWorkerRow ? workerReportDetails(selectedWorkerRow, start, end, selectedWorkerPaid, selectedWorkerUnpaid) : ""}
     <div class="summary-strip">
       <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
       <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>

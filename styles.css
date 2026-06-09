@@ -1191,6 +1191,15 @@ tbody tr:hover {
   color: var(--muted);
 }
 
+.worker-report-id img,
+.worker-report-id .worker-avatar {
+  width: 64px;
+  height: 64px;
+  flex-basis: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .worker-report-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(130px, 1fr));
