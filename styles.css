@@ -721,6 +721,21 @@ tbody tr:hover {
   gap: 10px;
 }
 
+.attendance-group {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(8, 145, 178, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.attendance-group h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+}
+
 .attendance-filter-panel {
   margin-bottom: 14px;
 }

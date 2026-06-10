@@ -1290,16 +1290,31 @@ function selectedAttendanceShift() {
   return $("#attendanceShiftFilter")?.value || app.attendanceShiftFilter || "all";
 }
 
+function selectedReportShift() {
+  return $("#reportShiftFilter")?.value || "all";
+}
+
 function attendanceShiftLabel(shift) {
   return shift === "night" ? t("nightShift") : t("dayShift");
+}
+
+function effectiveAttendanceShift(record) {
+  const selected = selectedAttendanceShift();
+  if (!record.status && selected !== "all") return selected;
+  return record.shift || "day";
+}
+
+function recordMatchesShift(record, shift = "all") {
+  if (shift === "all") return true;
+  return (record.shift || "day") === shift;
 }
 
 function attendanceWorkerMatchesShift(worker, dates = []) {
   const shift = selectedAttendanceShift();
   if (shift === "all") return true;
-  const records = dates.map((date) => getAttendanceRecord(date, worker.id)).filter((record) => record.status);
-  if (!records.length) return true;
-  return records.some((record) => (record.shift || "day") === shift);
+  const rawRecords = dates.map((date) => app.attendance[date]?.[worker.id]).filter(Boolean);
+  if (!rawRecords.length) return true;
+  return rawRecords.some((record) => normalizeAttendanceRecord(record).shift === shift);
 }
 
 function attendanceWorkers(dates = []) {
@@ -1362,7 +1377,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
     app.attendance[date][workerId] = {
       ...current,
       status,
-      shift: current.shift || (selectedAttendanceShift() === "all" ? "day" : selectedAttendanceShift()),
+      shift: selectedAttendanceShift() === "all" ? (current.shift || "day") : selectedAttendanceShift(),
       inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
       outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
       overtimeHours: ["present", "halfday"].includes(status) ? current.overtimeHours : "",
@@ -1671,7 +1686,7 @@ function daysInMonth(month) {
   return Array.from({ length: total }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`);
 }
 
-function recordsForRange(start, end, workerId = "all") {
+function recordsForRange(start, end, workerId = "all", shift = "all") {
   const rows = [];
   const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
   const current = new Date(`${start}T00:00:00`);
@@ -1684,6 +1699,7 @@ function recordsForRange(start, end, workerId = "all") {
       const record = normalizeAttendanceRecord(day[worker.id]);
       const status = record.status;
       if (!status) return;
+      if (!recordMatchesShift(record, shift)) return;
       const hours = calculateHours(record);
       const overtime = status === "present" ? hours.overtime : 0;
       rows.push({
@@ -1707,28 +1723,34 @@ function recordsForRange(start, end, workerId = "all") {
   return rows;
 }
 
-function monthSummary(month, workerId = "all") {
+function monthSummary(month, workerId = "all", shift = "all") {
   const dates = daysInMonth(month);
   const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
   return app.workers
     .filter((worker) => workerMatchesSelection(worker, workerSelection))
     .map((worker) => {
-      const present = dates.filter((date) => getAttendance(date, worker.id) === "present").length;
-      const halfday = dates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
-      const absent = dates.filter((date) => getAttendance(date, worker.id) === "absent").length;
-      const off = dates.filter((date) => getAttendance(date, worker.id) === "off").length;
-      const hours = dates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
+      const shiftedDates = dates.filter((date) => {
+        const record = getAttendanceRecord(date, worker.id);
+        return record.status && recordMatchesShift(record, shift);
+      });
+      const present = shiftedDates.filter((date) => getAttendance(date, worker.id) === "present").length;
+      const halfday = shiftedDates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
+      const absent = shiftedDates.filter((date) => getAttendance(date, worker.id) === "absent").length;
+      const off = shiftedDates.filter((date) => getAttendance(date, worker.id) === "off").length;
+      const hours = shiftedDates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
       const overtime = dates.reduce((sum, date) => {
-        const status = getAttendance(date, worker.id);
+        const record = getAttendanceRecord(date, worker.id);
+        if (!record.status || !recordMatchesShift(record, shift)) return sum;
+        const status = record.status;
         return sum + (status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0);
       }, 0);
-      const baseWage = dates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id), date), 0);
-      const overtimeWage = dates.reduce((sum, date) => {
+      const baseWage = shiftedDates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id), date), 0);
+      const overtimeWage = shiftedDates.reduce((sum, date) => {
         const status = getAttendance(date, worker.id);
         const overtimeHours = status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0;
         return sum + attendanceOvertimeWage(worker, overtimeHours, date, status);
       }, 0);
-      const food = dates.reduce((sum, date) => sum + foodDeduction(getAttendanceRecord(date, worker.id), getAttendance(date, worker.id)), 0);
+      const food = shiftedDates.reduce((sum, date) => sum + foodDeduction(getAttendanceRecord(date, worker.id), getAttendance(date, worker.id)), 0);
       const paidAmount = paymentLedgerTotal(worker.id, dates[0], dates[dates.length - 1]);
       return {
         worker,
@@ -2088,7 +2110,29 @@ function renderWorkers() {
 
 function renderDayAttendance() {
   const date = $("#attendanceDate").value || todayISO();
-  $("#dayAttendanceList").innerHTML = attendanceWorkers([date]).map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"));
+  const workers = attendanceWorkers([date]);
+  const shift = selectedAttendanceShift();
+  if (shift !== "all") {
+    $("#dayAttendanceList").innerHTML = `
+      <div class="attendance-group">
+        <h4>${attendanceShiftLabel(shift)}</h4>
+        ${workers.map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"))}
+      </div>
+    `;
+    return;
+  }
+  const dayWorkers = workers.filter((worker) => effectiveAttendanceShift(getAttendanceRecord(date, worker.id)) !== "night");
+  const nightWorkers = workers.filter((worker) => effectiveAttendanceShift(getAttendanceRecord(date, worker.id)) === "night");
+  $("#dayAttendanceList").innerHTML = `
+    <div class="attendance-group">
+      <h4>${t("dayShift")}</h4>
+      ${dayWorkers.map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"))}
+    </div>
+    <div class="attendance-group">
+      <h4>${t("nightShift")}</h4>
+      ${nightWorkers.map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"))}
+    </div>
+  `;
 }
 
 function weekRange(dateValue = todayISO()) {
@@ -2146,6 +2190,7 @@ function renderWeekAttendance() {
 
 function attendanceRowWithTime(worker, date) {
   const record = getAttendanceRecord(date, worker.id);
+  const rowShift = effectiveAttendanceShift(record);
   const hours = calculateHours(record);
   const overtime = record.status === "present" ? hours.overtime : 0;
   const payable = attendanceWage(worker, record, overtime, date);
@@ -2158,7 +2203,7 @@ function attendanceRowWithTime(worker, date) {
         <div>
           <strong>${escapeHTML(displayWorkerName(worker))}</strong>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
-          <p class="time-summary">${t("shift")}: ${attendanceShiftLabel(record.shift)}</p>
+          <p class="time-summary">${t("shift")}: ${attendanceShiftLabel(rowShift)}</p>
           <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(overtime)}</p>
           <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
         </div>
@@ -2171,8 +2216,8 @@ function attendanceRowWithTime(worker, date) {
         </div>
         <div class="time-grid" data-worker="${worker.id}" data-date="${date}">
           <label>${t("shift")}<select data-shift-field="shift">
-            <option value="day" ${record.shift === "day" ? "selected" : ""}>${t("dayShift")}</option>
-            <option value="night" ${record.shift === "night" ? "selected" : ""}>${t("nightShift")}</option>
+            <option value="day" ${rowShift === "day" ? "selected" : ""}>${t("dayShift")}</option>
+            <option value="night" ${rowShift === "night" ? "selected" : ""}>${t("nightShift")}</option>
           </select></label>
           <label>${t("in")}<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
@@ -2289,6 +2334,7 @@ function renderReport() {
   $("#reportOutput").setAttribute("dir", language === "ps" ? "rtl" : "ltr");
   const type = $("#reportType").value;
   const selectedReportIds = selectedReportWorkerIds();
+  const reportShift = selectedReportShift();
   const month = $("#reportMonth").value || monthISO();
   const reportDate = $("#reportDate").value || todayISO();
   let start = reportDate;
@@ -2323,8 +2369,9 @@ function renderReport() {
   if (selectedWorkerIds.includes("all")) $("#reportWorker").querySelector('option[value="all"]').selected = true;
 
   const reportSelection = selectedWorkerIds.includes("all") ? ["all"] : selectedWorkerIds;
-  const reportRows = type === "monthly" ? monthSummary(month, reportSelection) : summarizeRecords(recordsForRange(start, end, reportSelection));
-  const rows = selectedWorkerIds.includes("all") ? reportRows.filter((row) => row.worker.status === "active") : reportRows;
+  const reportRows = type === "monthly" ? monthSummary(month, reportSelection, reportShift) : summarizeRecords(recordsForRange(start, end, reportSelection, reportShift));
+  const rows = (selectedWorkerIds.includes("all") ? reportRows.filter((row) => row.worker.status === "active") : reportRows)
+    .filter((row) => reportShift === "all" || row.present || row.halfday || row.absent || row.off);
   const totals = rows.reduce((acc, row) => {
     acc.present += row.present;
     acc.halfday += row.halfday || 0;
@@ -2357,6 +2404,7 @@ function renderReport() {
     </div>
     <div class="report-meta">
       <span>${title}</span>
+      <span>${t("shift")}: ${reportShift === "all" ? t("allShifts") : attendanceShiftLabel(reportShift)}</span>
       <span>${t("serialNo")}: ATBM-${start.replaceAll("-", "")}-${end.replaceAll("-", "")}</span>
     </div>
     <h3>${title}</h3>
@@ -2411,6 +2459,7 @@ function renderReport() {
         <thead>
           <tr>
             <th>${t("worker")}</th>
+            <th>${t("shift")}</th>
             <th>${t("statusColumn")}</th>
             <th>${t("present")}</th>
             <th>${t("halfday")}</th>
@@ -2431,6 +2480,7 @@ function renderReport() {
           ${rows.map((row) => `
             <tr>
               <td>${escapeHTML(displayWorkerName(row.worker))}</td>
+              <td>${reportShift === "all" ? t("allShifts") : attendanceShiftLabel(reportShift)}</td>
               <td>${t(row.worker.status)}</td>
               <td>${row.present}</td>
               <td>${row.halfday || 0}</td>
@@ -2446,7 +2496,7 @@ function renderReport() {
               <td>${money(rowPaidAmount(row, start, end))}</td>
               <td><strong>${money(rowUnpaidAmount(row, start, end))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="15">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="16">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3353,7 +3403,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
@@ -3449,7 +3499,7 @@ function bulkSetMonth(status) {
         app.attendance[date][worker.id] = {
           ...current,
           status,
-          shift: current.shift || (selectedAttendanceShift() === "all" ? "day" : selectedAttendanceShift()),
+          shift: selectedAttendanceShift() === "all" ? (current.shift || "day") : selectedAttendanceShift(),
         };
       }
       else delete app.attendance[date][worker.id];

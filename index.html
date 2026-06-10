@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=shift-report-multi-1">
+    <link rel="stylesheet" href="styles.css?v=shift-report-fix-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -330,6 +330,14 @@
               <select id="reportWorker" multiple size="5"></select>
             </label>
             <label>
+              <span data-i18n="shiftFilter">Shift filter</span>
+              <select id="reportShiftFilter">
+                <option value="all" data-i18n="allShifts">All shifts</option>
+                <option value="day" data-i18n="dayShift">Day shift</option>
+                <option value="night" data-i18n="nightShift">Night shift</option>
+              </select>
+            </label>
+            <label>
               <span data-i18n="reportLanguage">Report language</span>
               <select id="reportLanguage">
                 <option value="en">English</option>
@@ -589,6 +597,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=shift-report-multi-1"></script>
+    <script src="app.js?v=shift-report-fix-1"></script>
   </body>
 </html>
