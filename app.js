@@ -1492,11 +1492,13 @@ function openPrintableReport() {
   const dir = language === "ps" ? "rtl" : "ltr";
   const logoUrl = new URL("ahmad-times-logo.png", window.location.href).href;
   const stampUrl = new URL("ahmad-times-stamp.png", window.location.href).href;
+  const signatureUrl = new URL("ahmad-signature.png", window.location.href).href;
   const report = $("#reportOutput").innerHTML
     .replace(/<div class="report-logo-fallback"[^>]*>.*?<\/div>/g, "")
     .replaceAll('src="ahmad-times-logo.png"', `src="${logoUrl}"`)
     .replaceAll("src='ahmad-times-logo.png'", `src='${logoUrl}'`)
-    .replaceAll('src="ahmad-times-stamp.png"', `src="${stampUrl}"`);
+    .replaceAll('src="ahmad-times-stamp.png"', `src="${stampUrl}"`)
+    .replaceAll('src="ahmad-signature.png"', `src="${signatureUrl}"`);
   if (!report.trim()) {
     toast(t("emptyReport"));
     return;
@@ -1536,7 +1538,9 @@ function openPrintableReport() {
           .summary-strip strong { display: block; margin-top: 3px; font-size: 16px; }
           .report-footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-top: 28px; padding-top: 18px; border-top: 1px solid #d9e0ea; break-inside: avoid; }
           .report-signature { min-width: 220px; color: #667085; font-size: 12px; }
-          .report-signature-line { height: 34px; margin-bottom: 6px; border-bottom: 1px solid #98a2b3; }
+          .report-signature-image { display: block; width: 180px; max-width: 180px; height: 62px; object-fit: contain; object-position: left bottom; margin-bottom: 4px; mix-blend-mode: multiply; }
+          [dir="rtl"] .report-signature-image { object-position: right bottom; }
+          .report-signature-line { width: 180px; height: 1px; margin-bottom: 6px; border-bottom: 1px solid #98a2b3; }
           .report-stamp-box { margin-left: auto; text-align: center; color: #667085; font-size: 12px; }
           [dir="rtl"] .report-stamp-box { margin-right: auto; margin-left: 0; }
           .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
@@ -2347,13 +2351,13 @@ function renderReport() {
     </div>
     <footer class="report-footer">
       <div class="report-signature">
+        <img class="report-signature-image" src="ahmad-signature.png" alt="Authorized signature" width="180" height="62">
         <div class="report-signature-line"></div>
         <strong>Authorized signature</strong>
         <p class="help-text">Generated: ${new Date().toLocaleString()}</p>
       </div>
       <div class="report-stamp-box">
         <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
-        <div>Ahmad Times stamp</div>
       </div>
     </footer>
   `;
