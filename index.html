@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=real-signature-1">
+    <link rel="stylesheet" href="styles.css?v=expenses-ledger-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -250,13 +250,19 @@
                 <h3 data-i18n="companyExpenses">Company expenses</h3>
                 <p class="help-text" data-i18n="companyExpensesHelp">Store daily company expenses such as worker food, car oil, fuel, tools, or site costs.</p>
               </div>
-              <input id="expenseMonth" type="month">
+              <div class="panel-actions">
+                <input id="expenseMonth" type="month">
+                <input id="expenseBuyerFilter" list="expenseBuyerOptions" data-i18n-placeholder="allBuyers" placeholder="All buyers">
+                <datalist id="expenseBuyerOptions"></datalist>
+              </div>
             </div>
+            <div id="expenseSummary" class="expense-summary"></div>
             <form id="expenseForm" class="expense-form">
               <label><span data-i18n="expenseDate">Expense date</span><input id="expenseDate" type="date" required></label>
               <label><span data-i18n="buyerName">Buyer name</span><input id="expenseBuyer" data-i18n-placeholder="buyerNamePlaceholder" placeholder="Who bought it"></label>
               <label><span data-i18n="expenseCategory">Category</span><input id="expenseCategory" data-i18n-placeholder="expenseCategoryPlaceholder" placeholder="Food, car oil, tools..." required></label>
               <label><span data-i18n="expenseAmount">Amount (AED)</span><input id="expenseAmount" type="number" min="0" step="0.01" required></label>
+              <label><span data-i18n="expensePaidAmount">Paid / given (AED)</span><input id="expensePaidAmount" type="number" min="0" step="0.01"></label>
               <label><span data-i18n="marketName">Market / pump</span><input id="expenseMerchant" data-i18n-placeholder="marketNamePlaceholder" placeholder="Shop or fuel pump name"></label>
               <label><span data-i18n="expenseLocation">Location</span><input id="expenseLocation" data-i18n-placeholder="expenseLocationPlaceholder" placeholder="Area or site"></label>
               <label><span data-i18n="expenseDescription">Description</span><input id="expenseDescription" data-i18n-placeholder="expenseDescriptionPlaceholder" placeholder="Optional note"></label>
@@ -279,6 +285,10 @@
                     <th data-i18n="expenseLocation">Location</th>
                     <th data-i18n="expenseDescription">Description</th>
                     <th data-i18n="expenseAmount">Amount (AED)</th>
+                    <th data-i18n="paid">Paid</th>
+                    <th data-i18n="unpaid">Unpaid</th>
+                    <th data-i18n="expenseBalance">Balance</th>
+                    <th data-i18n="status">Status</th>
                     <th data-i18n="bill">Bill</th>
                     <th data-i18n="action">Action</th>
                   </tr>
@@ -571,6 +581,6 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=real-signature-1"></script>
+    <script src="app.js?v=expenses-ledger-1"></script>
   </body>
 </html>

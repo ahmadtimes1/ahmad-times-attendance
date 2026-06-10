@@ -465,6 +465,15 @@ Object.assign(translations.en, {
   expenseDescription: "Description",
   expenseDescriptionPlaceholder: "Optional note",
   expenseAmount: "Amount (AED)",
+  expensePaidAmount: "Paid / given (AED)",
+  expenseBalance: "Balance",
+  expenseOverpaidHelp: "Return / next purchase",
+  allBuyers: "All buyers",
+  expenseSummary: "Expense summary",
+  totalExpenses: "Total expenses",
+  moneyGiven: "Money given",
+  expenseUnpaid: "Expense unpaid",
+  buyerBalance: "Buyer balance",
   buyerName: "Buyer name",
   buyerNamePlaceholder: "Who bought it",
   marketName: "Market / pump",
@@ -552,6 +561,15 @@ Object.assign(translations.ps, {
   expenseDescription: "تفصیل",
   expenseDescriptionPlaceholder: "اختیاري یادښت",
   expenseAmount: "اندازه (AED)",
+  expensePaidAmount: "ورکړل شوي / ادا شوي (AED)",
+  expenseBalance: "باقي حساب",
+  expenseOverpaidHelp: "واپس / بل خرید لپاره",
+  allBuyers: "ټول اخیستونکي",
+  expenseSummary: "د مصارفو لنډیز",
+  totalExpenses: "ټول مصارف",
+  moneyGiven: "ورکړل شوې پیسې",
+  expenseUnpaid: "ناادا مصرف",
+  buyerBalance: "د اخیستونکي باقي",
   buyerName: "اخیستونکی",
   buyerNamePlaceholder: "چا اخیستي",
   marketName: "مارکېټ / پمپ",
@@ -2392,13 +2410,71 @@ function companyExpenseTotal(month = monthISO()) {
   return monthExpenses(month).reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 }
 
+function expenseLedger(expense) {
+  const amount = Number(expense.amount || 0);
+  const paid = Number(
+    expense.paidAmount ?? (expense.paymentStatus === "paid" ? amount : expense.paid ? amount : 0)
+  );
+  const unpaid = Math.max(amount - paid, 0);
+  const balance = Math.max(paid - amount, 0);
+  return {
+    amount,
+    paid,
+    unpaid,
+    balance,
+    status: unpaid <= 0 ? "paid" : "unpaid",
+  };
+}
+
+function expenseStatusLabel(status) {
+  return status === "paid" ? t("paid") : t("unpaid");
+}
+
+function expenseBuyerName(expense) {
+  return String(expense.buyer || "").trim() || "-";
+}
+
+function filteredMonthExpenses(month = monthISO()) {
+  const buyer = ($("#expenseBuyerFilter")?.value || "").trim().toLowerCase();
+  return monthExpenses(month).filter((expense) => {
+    if (!buyer) return true;
+    return expenseBuyerName(expense).toLowerCase() === buyer;
+  });
+}
+
 function renderExpenses() {
   const list = $("#expensesList");
   if (!list) return;
   const month = $("#expenseMonth").value || monthISO();
-  const rows = monthExpenses(month).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const allRows = monthExpenses(month);
+  const buyers = Array.from(new Set(allRows.map(expenseBuyerName).filter((buyer) => buyer !== "-"))).sort((a, b) => a.localeCompare(b));
+  const buyerOptions = $("#expenseBuyerOptions");
+  if (buyerOptions) buyerOptions.innerHTML = buyers.map((buyer) => `<option value="${escapeHTML(buyer)}"></option>`).join("");
+  const rows = filteredMonthExpenses(month).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const totals = rows.reduce((sum, expense) => {
+    const ledger = expenseLedger(expense);
+    sum.amount += ledger.amount;
+    sum.paid += ledger.paid;
+    sum.unpaid += ledger.unpaid;
+    sum.balance += ledger.balance;
+    return sum;
+  }, { amount: 0, paid: 0, unpaid: 0, balance: 0 });
+  const summary = $("#expenseSummary");
+  if (summary) {
+    const buyerFilter = ($("#expenseBuyerFilter")?.value || "").trim();
+    summary.innerHTML = `
+      <article><span>${t("expenseSummary")}</span><strong>${buyerFilter ? escapeHTML(buyerFilter) : t("allBuyers")}</strong></article>
+      <article><span>${t("totalExpenses")}</span><strong>${money(totals.amount)}</strong></article>
+      <article><span>${t("moneyGiven")}</span><strong>${money(totals.paid)}</strong></article>
+      <article><span>${t("expenseUnpaid")}</span><strong>${money(totals.unpaid)}</strong></article>
+      <article><span>${t("buyerBalance")}</span><strong>${money(totals.balance)}</strong></article>
+    `;
+  }
   list.innerHTML = rows.length ? rows.map((expense) => `
     <tr>
+      ${(() => {
+        const ledger = expenseLedger(expense);
+        return `
       <td>${escapeHTML(expense.date || "-")}</td>
       <td>${escapeHTML(expense.buyer || "-")}</td>
       <td>${escapeHTML(expense.category || "-")}</td>
@@ -2406,10 +2482,16 @@ function renderExpenses() {
       <td>${escapeHTML(expense.location || "-")}</td>
       <td>${escapeHTML(expense.description || "-")}</td>
       <td><strong>${money(expense.amount)}</strong></td>
+      <td>${money(ledger.paid)}</td>
+      <td>${money(ledger.unpaid)}</td>
+      <td>${ledger.balance ? `${money(ledger.balance)}<br><small>${t("expenseOverpaidHelp")}</small>` : money(0)}</td>
+      <td><span class="status-pill ${ledger.status === "paid" ? "paid" : "unpaid"}">${expenseStatusLabel(ledger.status)}</span></td>
       <td>${expense.receiptPhoto ? `<button class="ghost" data-view-expense="${expense.id}">${t("viewBill")}</button>` : "-"}</td>
       <td><button class="danger ghost" data-remove-expense="${expense.id}">${t("remove")}</button></td>
+        `;
+      })()}
     </tr>
-  `).join("") : `<tr><td colspan="9">${t("noExpenses")}</td></tr>`;
+  `).join("") : `<tr><td colspan="13">${t("noExpenses")}</td></tr>`;
 }
 
 function setExpenseReceiptPhoto(photo = "") {
@@ -2455,6 +2537,9 @@ function viewExpenseReceipt(expenseId) {
       <div><span>${t("marketName")}</span><strong>${escapeHTML(expense.merchant || "-")}</strong></div>
       <div><span>${t("expenseLocation")}</span><strong>${escapeHTML(expense.location || "-")}</strong></div>
       <div><span>${t("expenseAmount")}</span><strong>${money(expense.amount)}</strong></div>
+      <div><span>${t("paid")}</span><strong>${money(expenseLedger(expense).paid)}</strong></div>
+      <div><span>${t("unpaid")}</span><strong>${money(expenseLedger(expense).unpaid)}</strong></div>
+      <div><span>${t("expenseBalance")}</span><strong>${money(expenseLedger(expense).balance)}</strong></div>
       <div class="wide"><span>${t("expenseDescription")}</span><strong>${escapeHTML(expense.description || "-")}</strong></div>
     </div>
     ${expense.receiptPhoto ? `<img class="receipt-full-image" src="${expense.receiptPhoto}" alt="${t("bill")}">` : `<p class="help-text">${t("noBillPicture")}</p>`}
@@ -2735,6 +2820,7 @@ function addExpenseFromForm() {
     location: $("#expenseLocation").value.trim(),
     description: $("#expenseDescription").value.trim(),
     amount: Number($("#expenseAmount").value || 0),
+    paidAmount: Number($("#expensePaidAmount").value || 0),
     receiptPhoto: $("#expenseReceiptPhoto").value || "",
     createdAt: new Date().toISOString(),
   };
@@ -2747,6 +2833,7 @@ function addExpenseFromForm() {
   $("#expenseLocation").value = "";
   $("#expenseDescription").value = "";
   $("#expenseAmount").value = "";
+  $("#expensePaidAmount").value = "";
   $("#expenseReceiptUpload").value = "";
   setExpenseReceiptPhoto("");
   saveData();
@@ -3178,9 +3265,10 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportWorker", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
+  $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
 
   $("#attendanceWorkerFilter").addEventListener("change", () => {
     app.attendanceWorkerFilter = $("#attendanceWorkerFilter").value;

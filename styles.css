@@ -1391,6 +1391,47 @@ tbody tr:hover {
   font-weight: 800;
 }
 
+.expense-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.expense-summary article {
+  min-height: 74px;
+  padding: 14px;
+  border: 1px solid rgba(8, 145, 178, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+  box-shadow: var(--soft-shadow);
+}
+
+.expense-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.expense-summary strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.status-pill.paid {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.status-pill.unpaid {
+  color: #b42318;
+  background: #fee4e2;
+}
+
 .receipt-upload {
   min-height: 44px;
 }
@@ -1943,6 +1984,10 @@ dialog::backdrop {
   .attendance-filter-grid,
   .expense-form {
     grid-template-columns: 1fr;
+  }
+
+  .expense-summary {
+    grid-template-columns: 1fr 1fr;
   }
 
   .dashboard-wage-wrap {
