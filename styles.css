@@ -627,6 +627,33 @@ table {
   border-collapse: collapse;
 }
 
+.dashboard-wage-wrap {
+  overflow: visible;
+}
+
+.dashboard-wage-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.dashboard-wage-table th,
+.dashboard-wage-table td {
+  padding: 9px 7px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.dashboard-wage-table th {
+  font-size: 10px;
+}
+
+.dashboard-wage-table th:first-child,
+.dashboard-wage-table td:first-child {
+  width: 20%;
+}
+
 th,
 td {
   padding: 12px 10px;
@@ -1888,6 +1915,61 @@ dialog::backdrop {
   .attendance-filter-grid,
   .expense-form {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-wage-wrap {
+    overflow: visible;
+  }
+
+  .dashboard-wage-table,
+  .dashboard-wage-table thead,
+  .dashboard-wage-table tbody,
+  .dashboard-wage-table tr,
+  .dashboard-wage-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-wage-table thead {
+    display: none;
+  }
+
+  .dashboard-wage-table tr {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: var(--glass-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.56);
+  }
+
+  :root[data-theme="dark"] .dashboard-wage-table tr {
+    background: rgba(20, 35, 45, 0.68);
+  }
+
+  .dashboard-wage-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    text-align: right;
+    white-space: normal;
+  }
+
+  .dashboard-wage-table td:first-child {
+    width: 100%;
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .dashboard-wage-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    text-align: left;
+    text-transform: uppercase;
   }
 
   .worker-meta {

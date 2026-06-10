@@ -1771,14 +1771,14 @@ function renderDashboardLegacyUnused() {
       const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
       return `
         <tr>
-          <td>${escapeHTML(displayWorkerName(row.worker))}</td>
-          <td>${row.present + (row.halfday * 0.5)}</td>
-          <td>${formatHours(row.hours)}</td>
-          <td>${formatHours(row.overtime)}</td>
-          <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
-          <td>${money(paid)}</td>
-          <td><strong>${money(unpaid)}</strong></td>
-          <td><strong>${money(row.wage)}</strong></td>
+          <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
+          <td data-label="${t("days")}">${row.present + (row.halfday * 0.5)}</td>
+          <td data-label="${t("hours")}">${formatHours(row.hours)}</td>
+          <td data-label="${t("overtime")}">${formatHours(row.overtime)}</td>
+          <td data-label="${t("dailyWage")}">${money(row.dailyWage || currentDailyWage(row.worker))}</td>
+          <td data-label="${t("paid")}">${money(paid)}</td>
+          <td data-label="${t("unpaid")}"><strong>${money(unpaid)}</strong></td>
+          <td data-label="${t("total")}"><strong>${money(row.wage)}</strong></td>
         </tr>
       `;
     }).join("") || `<tr><td colspan="8">No wage records for this month.</td></tr>`;
@@ -3289,14 +3289,14 @@ function renderDashboard() {
       const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
       return `
         <tr>
-          <td>${escapeHTML(displayWorkerName(row.worker))}</td>
-          <td>${row.present + (row.halfday * 0.5)}</td>
-          <td>${formatHours(row.hours)}</td>
-          <td>${formatHours(row.overtime)}</td>
-          <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
-          <td>${money(paid)}</td>
-          <td><strong>${money(unpaid)}</strong></td>
-          <td><strong>${money(row.wage)}</strong></td>
+          <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
+          <td data-label="${t("days")}">${row.present + (row.halfday * 0.5)}</td>
+          <td data-label="${t("hours")}">${formatHours(row.hours)}</td>
+          <td data-label="${t("overtime")}">${formatHours(row.overtime)}</td>
+          <td data-label="${t("dailyWage")}">${money(row.dailyWage || currentDailyWage(row.worker))}</td>
+          <td data-label="${t("paid")}">${money(paid)}</td>
+          <td data-label="${t("unpaid")}"><strong>${money(unpaid)}</strong></td>
+          <td data-label="${t("total")}"><strong>${money(row.wage)}</strong></td>
         </tr>
       `;
     }).join("") || `<tr><td colspan="8">${t("noWageRecords")}</td></tr>`;
