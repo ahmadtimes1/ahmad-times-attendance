@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=attendance-pay-today-1">
+    <link rel="stylesheet" href="styles.css?v=paid-wages-card-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -122,6 +122,10 @@
             <article class="stat-card amber">
               <span data-i18n="unpaidWages">Unpaid wages</span>
               <strong id="statUnpaidWages">AED 0</strong>
+            </article>
+            <article class="stat-card green">
+              <span data-i18n="paidWages">Paid wages</span>
+              <strong id="statPaidWages">AED 0</strong>
             </article>
           </div>
 
@@ -624,6 +628,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=attendance-pay-today-1"></script>
+    <script src="app.js?v=paid-wages-card-1"></script>
   </body>
 </html>

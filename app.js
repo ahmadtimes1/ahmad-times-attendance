@@ -471,6 +471,7 @@ Object.assign(translations.en, {
   pending: "Pending",
   unpaid: "Unpaid",
   unpaidWages: "Unpaid wages",
+  paidWages: "Paid wages",
   nationality: "Nationality",
   nationalityPlaceholder: "Afghan, Pakistani...",
   foodDeduction: "Food deduction (AED)",
@@ -564,6 +565,7 @@ Object.assign(translations.ps, {
   pending: "پاتې",
   unpaid: "نه ورکړل شوي",
   unpaidWages: "نه ورکړل شوې مزدوري",
+  paidWages: "ورکړل شوې مزدوري",
   nationality: "تابعیت",
   nationalityPlaceholder: "افغان، پاکستانی...",
   foodDeduction: "د خوراک کسر (AED)",
@@ -1932,6 +1934,7 @@ function renderDashboardLegacyUnused() {
   $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
+  if ($("#statPaidWages")) $("#statPaidWages").textContent = money(dashboardPayTotals.paid);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
@@ -3708,6 +3711,7 @@ function renderDashboard() {
   $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
+  if ($("#statPaidWages")) $("#statPaidWages").textContent = money(dashboardPayTotals.paid);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
