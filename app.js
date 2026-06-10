@@ -1540,6 +1540,7 @@ function openPrintableReport() {
           .report-signature { min-width: 220px; color: #667085; font-size: 12px; }
           .report-signature-image { display: block; width: 180px; max-width: 180px; height: 62px; object-fit: contain; object-position: left bottom; margin-bottom: 4px; mix-blend-mode: multiply; }
           [dir="rtl"] .report-signature-image { object-position: right bottom; }
+          .report-signature-fallback { display: block; width: 180px; height: 62px; margin-bottom: 4px; color: #111827; font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 42px; font-weight: 400; line-height: 62px; transform: skewX(-8deg); }
           .report-signature-line { width: 180px; height: 1px; margin-bottom: 6px; border-bottom: 1px solid #98a2b3; }
           .report-stamp-box { margin-left: auto; text-align: center; color: #667085; font-size: 12px; }
           [dir="rtl"] .report-stamp-box { margin-right: auto; margin-left: 0; }
@@ -2351,7 +2352,7 @@ function renderReport() {
     </div>
     <footer class="report-footer">
       <div class="report-signature">
-        <img class="report-signature-image" src="ahmad-signature.png" alt="Authorized signature" width="180" height="62">
+        <img class="report-signature-image" src="ahmad-signature.png" alt="Authorized signature" width="180" height="62" onerror="this.outerHTML='<span class=&quot;report-signature-fallback&quot;>Ahmad</span>';">
         <div class="report-signature-line"></div>
         <strong>Authorized signature</strong>
         <p class="help-text">Generated: ${new Date().toLocaleString()}</p>
