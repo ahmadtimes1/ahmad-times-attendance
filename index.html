@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=worker-context-drag-1">
+    <link rel="stylesheet" href="styles.css?v=professional-control-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -124,6 +124,29 @@
               <strong id="statUnpaidWages">AED 0</strong>
             </article>
           </div>
+
+          <section class="control-center" aria-label="Operations control center">
+            <article class="control-card control-primary">
+              <span data-i18n="todayOperations">Today operations</span>
+              <strong id="controlTodayStatus">-</strong>
+              <p id="controlTodayDetail">-</p>
+              <div class="control-actions">
+                <button type="button" data-jump-view="attendance" data-i18n="openAttendance">Open attendance</button>
+                <button type="button" data-jump-view="expenses" data-i18n="openExpenses">Open expenses</button>
+                <button type="button" data-jump-view="reports" data-i18n="openReports">Open reports</button>
+              </div>
+            </article>
+            <article class="control-card">
+              <span data-i18n="systemHealth">System health</span>
+              <strong id="controlHealthStatus">-</strong>
+              <p id="controlHealthDetail">-</p>
+            </article>
+            <article class="control-card">
+              <span data-i18n="dataSafety">Data safety</span>
+              <strong id="controlDataSafety">-</strong>
+              <p id="controlDataSafetyDetail">-</p>
+            </article>
+          </section>
 
           <div class="content-grid">
             <section class="panel">
@@ -601,6 +624,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=worker-context-drag-1"></script>
+    <script src="app.js?v=professional-control-1"></script>
   </body>
 </html>

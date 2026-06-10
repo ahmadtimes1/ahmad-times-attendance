@@ -28,6 +28,20 @@ const translations = {
     monthWages: "This month wages",
     monthlyOvertime: "Monthly overtime",
     monthlyWageSummary: "Monthly Wage Summary",
+    todayOperations: "Today operations",
+    openAttendance: "Open attendance",
+    openExpenses: "Open expenses",
+    openReports: "Open reports",
+    systemHealth: "System health",
+    dataSafety: "Data safety",
+    healthy: "Healthy",
+    needsReview: "Needs review",
+    cloudMode: "Cloud mode",
+    recordsSaved: "Records saved",
+    latestBackup: "Latest backup",
+    noBackupYet: "No backup yet",
+    never: "Never",
+    fullDayBasis: "full day basis",
     worker: "Worker",
     days: "Days",
     hours: "Hours",
@@ -268,6 +282,20 @@ const translations = {
     back: "بېرته",
     workerSummary: "د کارکوونکي لنډیز",
     monthlySummary: "میاشتنی لنډیز",
+    todayOperations: "د نن ورځې کارونه",
+    openAttendance: "حاضري خلاصه کړئ",
+    openExpenses: "مصارف خلاص کړئ",
+    openReports: "راپورونه خلاص کړئ",
+    systemHealth: "د سیستم حالت",
+    dataSafety: "د معلوماتو خوندیتوب",
+    healthy: "ښه",
+    needsReview: "کتنې ته اړتیا",
+    cloudMode: "کلاوډ حالت",
+    recordsSaved: "ریکارډونه ذخیره شوي",
+    latestBackup: "وروستی بیک اپ",
+    noBackupYet: "بیک اپ نشته",
+    never: "هېڅکله",
+    fullDayBasis: "د بشپړې ورځې حساب",
     recentAttendance: "وروستۍ حاضري",
     todaysAttendance: "د نن حاضري",
     dashboard: "ډشبورډ",
@@ -1780,6 +1808,7 @@ function renderAll() {
   renderLoginGate();
   renderAuthStatus();
   renderDashboard();
+  renderControlCenter();
   renderWorkers();
   renderAttendanceWorkerPicker();
   renderDayAttendance();
@@ -1790,6 +1819,33 @@ function renderAll() {
   renderStorage();
   renderLogs();
   renderSafety();
+}
+
+function renderControlCenter() {
+  const date = $("#todayInput")?.value || todayISO();
+  const todayRecords = app.attendance[date] || {};
+  const activeCount = activeWorkers().length;
+  const presentToday = Object.values(todayRecords)
+    .filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status))
+    .length;
+  const alerts = payrollAlerts();
+  const latestBackup = Object.entries(app.dailyBackups || {})
+    .sort((a, b) => b[0].localeCompare(a[0]))[0];
+  const storageLabel = app.storageMode === "cloud" ? t("cloudMode") : t("localMode");
+  const lastSaved = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
+
+  if ($("#controlTodayStatus")) $("#controlTodayStatus").textContent = `${presentToday}/${activeCount}`;
+  if ($("#controlTodayDetail")) {
+    $("#controlTodayDetail").textContent = `${t("presentToday")} · ${date} · ${STANDARD_HOURS}h ${t("fullDayBasis")}`;
+  }
+  if ($("#controlHealthStatus")) $("#controlHealthStatus").textContent = alerts.length ? t("needsReview") : t("healthy");
+  if ($("#controlHealthDetail")) {
+    $("#controlHealthDetail").textContent = alerts.length ? `${alerts.length} ${t("mistakeAlerts")}` : t("noAlerts");
+  }
+  if ($("#controlDataSafety")) $("#controlDataSafety").textContent = storageLabel;
+  if ($("#controlDataSafetyDetail")) {
+    $("#controlDataSafetyDetail").textContent = `${t("recordsSaved")}: ${lastSaved} · ${t("latestBackup")}: ${latestBackup?.[0] || t("noBackupYet")}`;
+  }
 }
 
 function applyLanguage() {
@@ -3251,6 +3307,14 @@ function bindEvents() {
       $("#pageTitle").textContent = t(button.dataset.view);
       renderAll();
     });
+  });
+
+  document.addEventListener("click", (event) => {
+    const jumpButton = event.target.closest("[data-jump-view]");
+    if (!jumpButton) return;
+    const targetView = jumpButton.dataset.jumpView;
+    const navButton = $(`.nav-item[data-view="${targetView}"]`);
+    if (navButton) navButton.click();
   });
 
   $("#quickAddWorker").addEventListener("click", () => openWorkerDialog());
