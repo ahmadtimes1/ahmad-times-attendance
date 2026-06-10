@@ -2255,6 +2255,7 @@ function attendanceRowWithTime(worker, date) {
   const payable = attendanceWage(worker, record, overtime, date);
   const paid = paymentLedgerTotal(worker.id, date, date);
   const unpaid = Math.max(0, payable - paid);
+  const isFullyPaid = payable > 0 && paid >= payable;
   return `
     <div class="attendance-row">
       <div class="attendance-person">
@@ -2283,8 +2284,7 @@ function attendanceRowWithTime(worker, date) {
           <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
           <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${paid || 0}"></label>
-          <button data-now-field="inTime">${t("startNow")}</button>
-          <button data-now-field="outTime">${t("outNow")}</button>
+          <button class="pay-today-button ${isFullyPaid ? "paid" : ""}" data-pay-today="${payable}" ${payable <= 0 ? "disabled" : ""}>${isFullyPaid ? t("paid") : t("paidToday")}</button>
         </div>
       </div>
     </div>
@@ -3465,6 +3465,14 @@ function bindEvents() {
     if (nowButton) {
       const parent = nowButton.closest(".time-grid");
       setNowTime(parent.dataset.date, parent.dataset.worker, nowButton.dataset.nowField);
+    }
+
+    const payTodayButton = event.target.closest("[data-pay-today]");
+    if (payTodayButton) {
+      const parent = payTodayButton.closest(".time-grid");
+      saveDailyPayment(parent.dataset.worker, parent.dataset.date, payTodayButton.dataset.payToday);
+      renderAll();
+      return;
     }
 
     const paymentButton = event.target.closest("[data-save-payment]");

@@ -1364,6 +1364,35 @@ tbody tr:hover {
   padding: 6px 8px;
 }
 
+.pay-today-button {
+  border-color: rgba(31, 138, 112, 0.28);
+  background: rgba(31, 138, 112, 0.1);
+  color: #166853;
+  font-weight: 900;
+}
+
+.pay-today-button:hover {
+  border-color: rgba(31, 138, 112, 0.48);
+  background: rgba(31, 138, 112, 0.16);
+}
+
+.pay-today-button.paid {
+  color: #fff;
+  background: #1f8a70;
+  border-color: #1f8a70;
+}
+
+:root[data-theme="dark"] .pay-today-button {
+  color: #8fe3cc;
+  background: rgba(31, 138, 112, 0.18);
+}
+
+:root[data-theme="dark"] .pay-today-button.paid {
+  color: #052118;
+  background: #8fe3cc;
+  border-color: #8fe3cc;
+}
+
 .time-summary {
   margin-top: 4px;
   color: var(--muted);
