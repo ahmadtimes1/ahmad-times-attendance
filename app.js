@@ -626,6 +626,9 @@ const app = {
 };
 
 let supabaseClient = null;
+let workerContextTargetId = "";
+let draggedWorkerId = "";
+let suppressWorkerOpen = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -2067,7 +2070,7 @@ function renderWorkers() {
     const workerIndex = app.workers.findIndex((item) => item.id === worker.id);
     if (view !== "list") {
       return `
-        <article class="worker-card worker-icon-card" data-open-worker-details="${worker.id}" tabindex="0" role="button" aria-label="${escapeHTML(displayWorkerName(worker))}">
+        <article class="worker-card worker-icon-card" data-worker-id="${worker.id}" data-open-worker-details="${worker.id}" draggable="true" tabindex="0" role="button" aria-label="${escapeHTML(displayWorkerName(worker))}">
           ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
           <h3><span class="worker-number">#${workerIndex + 1}</span> ${escapeHTML(displayWorkerName(worker))}</h3>
           <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
@@ -2075,7 +2078,7 @@ function renderWorkers() {
       `;
     }
     return `
-    <article class="worker-card">
+    <article class="worker-card" data-worker-id="${worker.id}" draggable="true">
       <div class="worker-card-head">
         <div class="worker-title">
           ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
@@ -2940,6 +2943,48 @@ function moveWorker(workerId, direction) {
   saveData();
 }
 
+function moveWorkerToPosition(workerId, targetWorkerId) {
+  if (!requireAdmin()) return;
+  if (!workerId || !targetWorkerId || workerId === targetWorkerId) return;
+  const fromIndex = app.workers.findIndex((worker) => worker.id === workerId);
+  const targetIndex = app.workers.findIndex((worker) => worker.id === targetWorkerId);
+  if (fromIndex < 0 || targetIndex < 0) return;
+  const [worker] = app.workers.splice(fromIndex, 1);
+  const insertIndex = app.workers.findIndex((item) => item.id === targetWorkerId);
+  app.workers.splice(insertIndex, 0, worker);
+  addLog("Worker moved", `${worker.name} · #${fromIndex + 1} to #${insertIndex + 1}`);
+  saveData();
+}
+
+function toggleWorkerStatus(workerId) {
+  if (!requireAdmin()) return;
+  const worker = app.workers.find((item) => item.id === workerId);
+  if (!worker) return;
+  worker.status = worker.status === "active" ? "inactive" : "active";
+  addLog(worker.status === "active" ? "Worker marked active" : "Worker marked inactive", worker.name);
+  saveData();
+}
+
+function hideWorkerContextMenu() {
+  const menu = $("#workerContextMenu");
+  if (!menu) return;
+  menu.classList.add("hidden");
+  workerContextTargetId = "";
+}
+
+function showWorkerContextMenu(event, workerId) {
+  event.preventDefault();
+  const menu = $("#workerContextMenu");
+  const worker = app.workers.find((item) => item.id === workerId);
+  if (!menu || !worker) return;
+  workerContextTargetId = workerId;
+  const toggle = menu.querySelector('[data-context-action="toggle-status"]');
+  if (toggle) toggle.textContent = worker.status === "active" ? t("inactive") : t("active");
+  menu.style.left = `${Math.min(event.clientX, window.innerWidth - 190)}px`;
+  menu.style.top = `${Math.min(event.clientY, window.innerHeight - 96)}px`;
+  menu.classList.remove("hidden");
+}
+
 function addExpenseFromForm() {
   if (!requireAdmin()) return;
   app.expenses ||= [];
@@ -3310,6 +3355,17 @@ function bindEvents() {
   $("#deleteWorkerBtn").addEventListener("click", removeWorker);
 
   document.addEventListener("click", (event) => {
+    const contextAction = event.target.closest("[data-context-action]");
+    if (contextAction) {
+      const action = contextAction.dataset.contextAction;
+      const workerId = workerContextTargetId;
+      hideWorkerContextMenu();
+      if (action === "edit") openWorkerDialog(workerId);
+      if (action === "toggle-status") toggleWorkerStatus(workerId);
+      return;
+    }
+    if (!event.target.closest("#workerContextMenu")) hideWorkerContextMenu();
+
     const editButton = event.target.closest("[data-edit-worker]");
     if (editButton) openWorkerDialog(editButton.dataset.editWorker);
 
@@ -3320,7 +3376,13 @@ function bindEvents() {
     if (backWorkersButton) closeWorkerSummary();
 
     const detailsCard = event.target.closest("[data-open-worker-details]");
-    if (detailsCard) openWorkerSummary(detailsCard.dataset.openWorkerDetails);
+    if (detailsCard) {
+      if (suppressWorkerOpen) {
+        suppressWorkerOpen = false;
+        return;
+      }
+      openWorkerSummary(detailsCard.dataset.openWorkerDetails);
+    }
 
     const removeExpenseButton = event.target.closest("[data-remove-expense]");
     if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
@@ -3365,6 +3427,51 @@ function bindEvents() {
         whatsappButton.dataset.whatsappTitle,
       );
     }
+  });
+
+  document.addEventListener("contextmenu", (event) => {
+    const workerCard = event.target.closest("[data-worker-id]");
+    if (!workerCard) return;
+    showWorkerContextMenu(event, workerCard.dataset.workerId);
+  });
+
+  document.addEventListener("dragstart", (event) => {
+    const workerCard = event.target.closest("[data-worker-id]");
+    if (!workerCard || event.target.closest("button, input, select, textarea, a")) return;
+    draggedWorkerId = workerCard.dataset.workerId;
+    workerCard.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", draggedWorkerId);
+  });
+
+  document.addEventListener("dragover", (event) => {
+    const workerCard = event.target.closest("[data-worker-id]");
+    if (!workerCard || !draggedWorkerId || workerCard.dataset.workerId === draggedWorkerId) return;
+    event.preventDefault();
+    workerCard.classList.add("drag-over");
+    event.dataTransfer.dropEffect = "move";
+  });
+
+  document.addEventListener("dragleave", (event) => {
+    const workerCard = event.target.closest("[data-worker-id]");
+    if (workerCard) workerCard.classList.remove("drag-over");
+  });
+
+  document.addEventListener("drop", (event) => {
+    const workerCard = event.target.closest("[data-worker-id]");
+    if (!workerCard || !draggedWorkerId) return;
+    event.preventDefault();
+    const targetWorkerId = workerCard.dataset.workerId;
+    $$(".worker-card.drag-over").forEach((item) => item.classList.remove("drag-over"));
+    moveWorkerToPosition(draggedWorkerId, targetWorkerId);
+    draggedWorkerId = "";
+    suppressWorkerOpen = true;
+    window.setTimeout(() => { suppressWorkerOpen = false; }, 200);
+  });
+
+  document.addEventListener("dragend", () => {
+    draggedWorkerId = "";
+    $$(".worker-card.dragging, .worker-card.drag-over").forEach((item) => item.classList.remove("dragging", "drag-over"));
   });
 
   document.addEventListener("keydown", (event) => {

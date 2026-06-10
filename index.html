@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=shift-report-fix-1">
+    <link rel="stylesheet" href="styles.css?v=worker-context-drag-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -595,8 +595,12 @@
     </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="workerContextMenu" class="context-menu hidden" role="menu">
+      <button type="button" data-context-action="edit" role="menuitem" data-i18n="editWorkerTitle">Edit worker</button>
+      <button type="button" data-context-action="toggle-status" role="menuitem">Active / inactive</button>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=shift-report-fix-1"></script>
+    <script src="app.js?v=worker-context-drag-1"></script>
   </body>
 </html>
