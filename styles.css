@@ -727,7 +727,7 @@ tbody tr:hover {
 
 .attendance-filter-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(280px, 1fr);
+  grid-template-columns: minmax(170px, 240px) minmax(280px, 1fr) minmax(170px, 220px);
   gap: 12px;
   align-items: start;
 }
@@ -746,6 +746,17 @@ tbody tr:hover {
 
 .attendance-worker-picker select {
   min-height: 132px;
+}
+
+#reportWorker {
+  min-height: 132px;
+}
+
+.month-worker-cell small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .worker-cards {

@@ -116,6 +116,12 @@ const translations = {
   allWorkers: "All workers",
   selectedWorkers: "Selected workers",
   chooseWorkers: "Choose workers",
+  shift: "Shift",
+  shiftFilter: "Shift filter",
+  allShifts: "All shifts",
+  dayShift: "Day shift",
+  nightShift: "Night shift",
+  selectedWorkerReports: "Selected worker report",
   weeklyAttendance: "Weekly Attendance",
     reportType: "Report type",
     daily: "Daily",
@@ -310,6 +316,12 @@ const translations = {
   allWorkers: "ټول کارکوونکي",
   selectedWorkers: "ټاکل شوي کارکوونکي",
   chooseWorkers: "کارکوونکي وټاکئ",
+  shift: "شفټ",
+  shiftFilter: "د شفټ فلټر",
+  allShifts: "ټول شفټونه",
+  dayShift: "د ورځې شفټ",
+  nightShift: "د شپې شفټ",
+  selectedWorkerReports: "د ټاکل شوو کارکوونکو راپور",
   weeklyAttendance: "اونیزه حاضري",
     reportType: "د راپور ډول",
     daily: "ورځنی",
@@ -610,6 +622,7 @@ const app = {
   workerView: localStorage.getItem(WORKER_VIEW_KEY) || "large",
   selectedWorkerSummaryId: "",
   attendanceWorkerFilter: "all",
+  attendanceShiftFilter: "all",
 };
 
 let supabaseClient = null;
@@ -1259,12 +1272,45 @@ function selectedAttendanceWorkerIds() {
   return Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
 }
 
-function attendanceWorkers() {
+function selectedReportWorkerIds() {
+  const select = $("#reportWorker");
+  if (!select) return ["all"];
+  const values = Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+  if (!values.length || values.includes("all")) return ["all"];
+  return values;
+}
+
+function workerMatchesSelection(worker, workerSelection = ["all"]) {
+  if (workerSelection === "all") return true;
+  const values = Array.isArray(workerSelection) ? workerSelection : [workerSelection];
+  return values.includes("all") || values.includes(worker.id);
+}
+
+function selectedAttendanceShift() {
+  return $("#attendanceShiftFilter")?.value || app.attendanceShiftFilter || "all";
+}
+
+function attendanceShiftLabel(shift) {
+  return shift === "night" ? t("nightShift") : t("dayShift");
+}
+
+function attendanceWorkerMatchesShift(worker, dates = []) {
+  const shift = selectedAttendanceShift();
+  if (shift === "all") return true;
+  const records = dates.map((date) => getAttendanceRecord(date, worker.id)).filter((record) => record.status);
+  if (!records.length) return true;
+  return records.some((record) => (record.shift || "day") === shift);
+}
+
+function attendanceWorkers(dates = []) {
   const workers = activeWorkers();
-  if (($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) !== "selected") return workers;
+  const base = (() => {
+    if (($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) !== "selected") return workers;
   const selected = new Set(selectedAttendanceWorkerIds());
   if (!selected.size) return workers;
   return workers.filter((worker) => selected.has(worker.id));
+  })();
+  return base.filter((worker) => attendanceWorkerMatchesShift(worker, dates));
 }
 
 function renderAttendanceWorkerPicker() {
@@ -1272,6 +1318,8 @@ function renderAttendanceWorkerPicker() {
   const select = $("#attendanceWorkerSelect");
   if (!filter || !select) return;
   filter.value = app.attendanceWorkerFilter || "all";
+  const shiftFilter = $("#attendanceShiftFilter");
+  if (shiftFilter) shiftFilter.value = app.attendanceShiftFilter || "all";
   const selected = new Set(selectedAttendanceWorkerIds());
   select.innerHTML = activeWorkers().map((worker) => `
     <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
@@ -1288,13 +1336,14 @@ function getAttendanceRecord(date, workerId) {
 }
 
 function normalizeAttendanceRecord(record) {
-  if (!record) return { status: "", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
-  if (typeof record === "string") return { status: record, inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (!record) return { status: "", shift: "day", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (typeof record === "string") return { status: record, shift: "day", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
   const overtimeHours = record.overtimeHours === "" || record.overtimeHours === null || record.overtimeHours === undefined
     ? ""
     : Number(record.overtimeHours || 0);
   return {
     status: record.status || "",
+    shift: record.shift === "night" ? "night" : "day",
     inTime: record.inTime || "",
     outTime: record.outTime || "",
     overtimeHours,
@@ -1313,6 +1362,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
     app.attendance[date][workerId] = {
       ...current,
       status,
+      shift: current.shift || (selectedAttendanceShift() === "all" ? "day" : selectedAttendanceShift()),
       inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
       outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
       overtimeHours: ["present", "halfday"].includes(status) ? current.overtimeHours : "",
@@ -1323,6 +1373,20 @@ function setAttendance(date, workerId, status, autoTime = true) {
   else delete app.attendance[date][workerId];
   if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
   addLog("Attendance changed", `${worker?.name || workerId} · ${date} · ${status || "cleared"}`);
+  saveData();
+}
+
+function setAttendanceShift(date, workerId, value) {
+  if (!canChangePayrollDate(date, "Attendance shift")) return;
+  app.attendance[date] ||= {};
+  const current = getAttendanceRecord(date, workerId);
+  app.attendance[date][workerId] = {
+    ...current,
+    status: current.status || "",
+    shift: value === "night" ? "night" : "day",
+  };
+  const worker = app.workers.find((item) => item.id === workerId);
+  addLog("Attendance shift changed", `${worker?.name || workerId} · ${date} · ${attendanceShiftLabel(value)}`);
   saveData();
 }
 
@@ -1609,13 +1673,14 @@ function daysInMonth(month) {
 
 function recordsForRange(start, end, workerId = "all") {
   const rows = [];
+  const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
   const current = new Date(`${start}T00:00:00`);
   const last = new Date(`${end}T00:00:00`);
   while (current <= last) {
     const date = current.toISOString().slice(0, 10);
     const day = app.attendance[date] || {};
     app.workers.forEach((worker) => {
-      if (workerId !== "all" && worker.id !== workerId) return;
+      if (!workerMatchesSelection(worker, workerSelection)) return;
       const record = normalizeAttendanceRecord(day[worker.id]);
       const status = record.status;
       if (!status) return;
@@ -1644,8 +1709,9 @@ function recordsForRange(start, end, workerId = "all") {
 
 function monthSummary(month, workerId = "all") {
   const dates = daysInMonth(month);
+  const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
   return app.workers
-    .filter((worker) => workerId === "all" || worker.id === workerId)
+    .filter((worker) => workerMatchesSelection(worker, workerSelection))
     .map((worker) => {
       const present = dates.filter((date) => getAttendance(date, worker.id) === "present").length;
       const halfday = dates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
@@ -2022,7 +2088,7 @@ function renderWorkers() {
 
 function renderDayAttendance() {
   const date = $("#attendanceDate").value || todayISO();
-  $("#dayAttendanceList").innerHTML = attendanceWorkers().map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"));
+  $("#dayAttendanceList").innerHTML = attendanceWorkers([date]).map((worker) => attendanceRowWithTime(worker, date)).join("") || emptyState(t("noActiveWorkers"));
 }
 
 function weekRange(dateValue = todayISO()) {
@@ -2038,7 +2104,7 @@ function weekRange(dateValue = todayISO()) {
 
 function renderWeekAttendance() {
   const dates = weekRange($("#attendanceWeekDate")?.value || todayISO());
-  const rows = attendanceWorkers().map((worker) => `
+  const rows = attendanceWorkers(dates).map((worker) => `
     <tr>
       <td>
         <div class="month-worker-cell">
@@ -2046,6 +2112,7 @@ function renderWeekAttendance() {
           <div>
             <strong>${escapeHTML(displayWorkerName(worker))}</strong><br>
             <span>${money(wageForDate(worker, dates[0]))}</span>
+            <small>${t("shift")}: ${attendanceShiftLabel(getAttendanceRecord(dates.find((date) => getAttendance(date, worker.id)) || dates[0], worker.id).shift)}</small>
           </div>
         </div>
       </td>
@@ -2091,6 +2158,7 @@ function attendanceRowWithTime(worker, date) {
         <div>
           <strong>${escapeHTML(displayWorkerName(worker))}</strong>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
+          <p class="time-summary">${t("shift")}: ${attendanceShiftLabel(record.shift)}</p>
           <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(overtime)}</p>
           <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
         </div>
@@ -2102,6 +2170,10 @@ function attendanceRowWithTime(worker, date) {
           `).join("")}
         </div>
         <div class="time-grid" data-worker="${worker.id}" data-date="${date}">
+          <label>${t("shift")}<select data-shift-field="shift">
+            <option value="day" ${record.shift === "day" ? "selected" : ""}>${t("dayShift")}</option>
+            <option value="night" ${record.shift === "night" ? "selected" : ""}>${t("nightShift")}</option>
+          </select></label>
           <label>${t("in")}<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
           <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
@@ -2138,7 +2210,7 @@ function attendanceRow(worker, date) {
 function renderMonthAttendance() {
   const month = $("#attendanceMonth").value || monthISO();
   const dates = daysInMonth(month);
-  const rows = attendanceWorkers().map((worker) => `
+  const rows = attendanceWorkers(dates).map((worker) => `
     <tr>
       <td>
         <div class="month-worker-cell">
@@ -2146,6 +2218,7 @@ function renderMonthAttendance() {
           <div>
         <strong>${escapeHTML(displayWorkerName(worker))}</strong><br>
         <span>${money(wageForDate(worker, `${month}-01`))}</span>
+        <small>${t("shift")}: ${attendanceShiftLabel(getAttendanceRecord(dates.find((date) => getAttendance(date, worker.id)) || dates[0], worker.id).shift)}</small>
           </div>
         </div>
       </td>
@@ -2215,7 +2288,7 @@ function renderReport() {
   $("#reportOutput").setAttribute("lang", language);
   $("#reportOutput").setAttribute("dir", language === "ps" ? "rtl" : "ltr");
   const type = $("#reportType").value;
-  const workerId = $("#reportWorker").value || "all";
+  const selectedReportIds = selectedReportWorkerIds();
   const month = $("#reportMonth").value || monthISO();
   const reportDate = $("#reportDate").value || todayISO();
   let start = reportDate;
@@ -2240,14 +2313,18 @@ function renderReport() {
   }
 
   const reportWorkers = app.workers.filter((worker) => worker.status === "active");
-  const selectedWorkerId = workerId === "all" || reportWorkers.some((worker) => worker.id === workerId) ? workerId : "all";
-  if (selectedWorkerId !== workerId) $("#reportWorker").value = "all";
+  const validSelectedIds = selectedReportIds.includes("all")
+    ? ["all"]
+    : selectedReportIds.filter((id) => reportWorkers.some((worker) => worker.id === id));
+  const selectedWorkerIds = validSelectedIds.length ? validSelectedIds : ["all"];
   const workerOptions = [`<option value="all">${t("companyWideReport")}</option>`]
-    .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${worker.id === selectedWorkerId ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>`));
+    .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${selectedWorkerIds.includes(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>`));
   $("#reportWorker").innerHTML = workerOptions.join("");
+  if (selectedWorkerIds.includes("all")) $("#reportWorker").querySelector('option[value="all"]').selected = true;
 
-  const reportRows = type === "monthly" ? monthSummary(month, selectedWorkerId) : summarizeRecords(recordsForRange(start, end, selectedWorkerId));
-  const rows = selectedWorkerId === "all" ? reportRows.filter((row) => row.worker.status === "active") : reportRows;
+  const reportSelection = selectedWorkerIds.includes("all") ? ["all"] : selectedWorkerIds;
+  const reportRows = type === "monthly" ? monthSummary(month, reportSelection) : summarizeRecords(recordsForRange(start, end, reportSelection));
+  const rows = selectedWorkerIds.includes("all") ? reportRows.filter((row) => row.worker.status === "active") : reportRows;
   const totals = rows.reduce((acc, row) => {
     acc.present += row.present;
     acc.halfday += row.halfday || 0;
@@ -2263,7 +2340,12 @@ function renderReport() {
     return acc;
   }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0 });
   const payTotals = paymentTotals(rows, start, end);
-  const selectedWorker = selectedWorkerId === "all" ? null : app.workers.find((worker) => worker.id === selectedWorkerId);
+  const selectedWorker = selectedWorkerIds.length === 1 && !selectedWorkerIds.includes("all") ? app.workers.find((worker) => worker.id === selectedWorkerIds[0]) : null;
+  const reportSubject = selectedWorkerIds.includes("all")
+    ? t("companyWideReport")
+    : selectedWorker
+      ? escapeHTML(displayWorkerName(selectedWorker))
+      : `${t("selectedWorkerReports")} (${rows.length})`;
 
   $("#reportOutput").innerHTML = `
     <div class="report-brand">
@@ -2278,7 +2360,7 @@ function renderReport() {
       <span>${t("serialNo")}: ATBM-${start.replaceAll("-", "")}-${end.replaceAll("-", "")}</span>
     </div>
     <h3>${title}</h3>
-    <p class="help-text">${selectedWorkerId === "all" ? t("companyWideReport") : escapeHTML(displayWorkerName(selectedWorker) || t("roleWorker"))} ${t("wageAttendanceReport")}</p>
+    <p class="help-text">${reportSubject} ${t("wageAttendanceReport")}</p>
     <div class="summary-strip">
       <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
       <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>
@@ -3252,6 +3334,12 @@ function bindEvents() {
       setAttendanceTime(parent.dataset.date, parent.dataset.worker, timeInput.dataset.timeField, timeInput.value);
     }
 
+    const shiftInput = event.target.closest("[data-shift-field]");
+    if (shiftInput) {
+      const parent = shiftInput.closest(".time-grid");
+      setAttendanceShift(parent.dataset.date, parent.dataset.worker, shiftInput.value);
+    }
+
     const moneyInput = event.target.closest("[data-money-field]");
     if (moneyInput) {
       const parent = moneyInput.closest(".time-grid");
@@ -3272,6 +3360,10 @@ function bindEvents() {
 
   $("#attendanceWorkerFilter").addEventListener("change", () => {
     app.attendanceWorkerFilter = $("#attendanceWorkerFilter").value;
+    renderAll();
+  });
+  $("#attendanceShiftFilter").addEventListener("change", () => {
+    app.attendanceShiftFilter = $("#attendanceShiftFilter").value;
     renderAll();
   });
 
@@ -3307,12 +3399,19 @@ function bindEvents() {
   $("#printReport").addEventListener("click", printReportOnly);
   $("#pdfReport").addEventListener("click", openPdfReport);
   $("#printAllWages").addEventListener("click", () => {
-    $("#reportWorker").value = "all";
+    Array.from($("#reportWorker").options).forEach((option) => {
+      option.selected = option.value === "all";
+    });
     renderReport();
     printReportOnly();
   });
   $("#printSelectedWage").addEventListener("click", () => {
-    if ($("#reportWorker").value === "all" && app.workers[0]) $("#reportWorker").value = app.workers[0].id;
+    if (selectedReportWorkerIds().includes("all")) {
+      const firstActive = app.workers.find((worker) => worker.status === "active");
+      Array.from($("#reportWorker").options).forEach((option) => {
+        option.selected = firstActive ? option.value === firstActive.id : option.value === "all";
+      });
+    }
     renderReport();
     printReportOnly();
   });
@@ -3345,7 +3444,14 @@ function bulkSetMonth(status) {
   daysInMonth(month).forEach((date) => {
     attendanceWorkers().forEach((worker) => {
       app.attendance[date] ||= {};
-      if (status) app.attendance[date][worker.id] = status;
+      if (status) {
+        const current = getAttendanceRecord(date, worker.id);
+        app.attendance[date][worker.id] = {
+          ...current,
+          status,
+          shift: current.shift || (selectedAttendanceShift() === "all" ? "day" : selectedAttendanceShift()),
+        };
+      }
       else delete app.attendance[date][worker.id];
       if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
     });
