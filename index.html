@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=internal-assistant-1">
+    <link rel="stylesheet" href="styles.css?v=overtime-rest-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -298,6 +298,15 @@
                 </label>
                 <label><span data-i18n="in">In</span><input id="bulkAttendanceIn" type="time"></label>
                 <label><span data-i18n="out">Out</span><input id="bulkAttendanceOut" type="time"></label>
+                <label>
+                  <span data-i18n="restBreak">Rest break</span>
+                  <select id="bulkAttendanceRestType">
+                    <option value="default" data-i18n="defaultRest">Default 1-hour rest</option>
+                    <option value="none" data-i18n="noRest">No rest</option>
+                    <option value="custom" data-i18n="customRest">Custom rest</option>
+                  </select>
+                </label>
+                <label><span data-i18n="customRestMinutes">Custom rest (minutes)</span><input id="bulkAttendanceRestMinutes" type="number" min="0" max="360" step="5" value="60"></label>
                 <div class="bulk-attendance-actions">
                   <button type="button" id="bulkSelectAllWorkers" data-i18n="selectAllActive">Select all active</button>
                   <button type="button" id="bulkClearWorkers" data-i18n="clearSelection">Clear selection</button>
@@ -728,6 +737,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=internal-assistant-1"></script>
+    <script src="app.js?v=overtime-rest-1"></script>
   </body>
 </html>

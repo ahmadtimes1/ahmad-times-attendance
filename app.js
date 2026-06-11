@@ -5,7 +5,7 @@ const LAST_ACTIVITY_KEY = "ahmad-times-last-activity";
 const WORKER_VIEW_KEY = "ahmad-times-worker-view";
 const THEME_KEY = "ahmad-times-theme";
 const ROLLING_BACKUPS_KEY = "ahmad-times-rolling-backups-v1";
-const STANDARD_HOURS = 9;
+const STANDARD_HOURS = 8;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 const SIMPLE_USERS = [
@@ -42,7 +42,7 @@ const translations = {
     latestBackup: "Latest backup",
     noBackupYet: "No backup yet",
     never: "Never",
-    fullDayBasis: "full day basis",
+    fullDayBasis: "actual working hours full day basis",
     worker: "Worker",
     days: "Days",
     hours: "Hours",
@@ -317,7 +317,7 @@ const translations = {
     latestBackup: "وروستی بیک اپ",
     noBackupYet: "بیک اپ نشته",
     never: "هېڅکله",
-    fullDayBasis: "د بشپړې ورځې حساب",
+    fullDayBasis: "د حقیقي کاري ساعتونو د بشپړې ورځې حساب",
     recentAttendance: "وروستۍ حاضري",
     todaysAttendance: "د نن حاضري",
     dashboard: "ډشبورډ",
@@ -531,6 +531,14 @@ Object.assign(translations.en, {
   paidAmount: "Paid amount",
   paidToday: "Paid today",
   manualOvertime: "Manual overtime (hours)",
+  restBreak: "Rest break",
+  defaultRest: "Default 1-hour rest",
+  noRest: "No rest",
+  customRest: "Custom rest",
+  customRestMinutes: "Custom rest (minutes)",
+  totalTime: "Total time",
+  actualWorkingHours: "Actual working hours",
+  normalHours: "Normal hours",
   whatsapp: "WhatsApp",
   sendWhatsapp: "Send WhatsApp",
   wageSlip: "Wage slip",
@@ -633,6 +641,14 @@ Object.assign(translations.ps, {
   paidAmount: "ورکړل شوې اندازه",
   paidToday: "نن ورکړل شوې",
   manualOvertime: "لاسي اضافي وخت (ساعتونه)",
+  restBreak: "د آرام وقفه",
+  defaultRest: "اصلي ۱ ساعت آرام",
+  noRest: "بې آرامه",
+  customRest: "ځانګړی آرام",
+  customRestMinutes: "ځانګړی آرام (دقیقې)",
+  totalTime: "ټول وخت",
+  actualWorkingHours: "حقیقي کاري ساعتونه",
+  normalHours: "عادي ساعتونه",
   whatsapp: "واټساپ",
   sendWhatsapp: "واټساپ ته واستوئ",
   wageSlip: "د مزدورۍ رسید",
@@ -1369,6 +1385,8 @@ function setDefaults() {
   $("#attendanceMonth").value = month;
   $("#expenseMonth").value = month;
   $("#reportMonth").value = month;
+  if ($("#bulkAttendanceRestType")) $("#bulkAttendanceRestType").value = "default";
+  if ($("#bulkAttendanceRestMinutes")) $("#bulkAttendanceRestMinutes").value = 60;
   $("#workerJoinDate").value = today;
   $("#workerWageEffectiveDate").value = today;
 }
@@ -1501,20 +1519,35 @@ function getAttendanceRecord(date, workerId) {
 }
 
 function normalizeAttendanceRecord(record) {
-  if (!record) return { status: "", shift: "day", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
-  if (typeof record === "string") return { status: record, shift: "day", inTime: "", outTime: "", overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (!record) return { status: "", shift: "day", inTime: "", outTime: "", restBreakType: "default", restMinutes: 60, overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
+  if (typeof record === "string") return { status: record, shift: "day", inTime: "", outTime: "", restBreakType: "default", restMinutes: 60, overtimeHours: "", foodDeduction: 0, paidAmount: 0 };
   const overtimeHours = record.overtimeHours === "" || record.overtimeHours === null || record.overtimeHours === undefined
     ? ""
     : Number(record.overtimeHours || 0);
+  const restBreakType = ["none", "custom"].includes(record.restBreakType) ? record.restBreakType : "default";
+  const restMinutes = restBreakType === "none"
+    ? 0
+    : restBreakType === "custom"
+      ? Math.max(0, Number(record.restMinutes ?? record.restBreakMinutes ?? 0))
+      : 60;
   return {
     status: record.status || "",
     shift: record.shift === "night" ? "night" : "day",
     inTime: record.inTime || "",
     outTime: record.outTime || "",
+    restBreakType,
+    restMinutes,
     overtimeHours,
     foodDeduction: Number(record.foodDeduction || 0),
     paidAmount: Number(record.paidAmount || 0),
   };
+}
+
+function restBreakLabel(record) {
+  const item = normalizeAttendanceRecord(record);
+  if (item.restBreakType === "none") return t("noRest");
+  if (item.restBreakType === "custom") return `${t("customRest")}: ${item.restMinutes} min`;
+  return t("defaultRest");
 }
 
 function setAttendance(date, workerId, status, autoTime = true) {
@@ -1530,6 +1563,8 @@ function setAttendance(date, workerId, status, autoTime = true) {
       shift: selectedAttendanceShift() === "all" ? (current.shift || "day") : selectedAttendanceShift(),
       inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
       outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
+      restBreakType: ["present", "halfday"].includes(status) ? current.restBreakType : "default",
+      restMinutes: ["present", "halfday"].includes(status) ? current.restMinutes : 60,
       overtimeHours: ["present", "halfday"].includes(status) ? current.overtimeHours : "",
       foodDeduction: ["present", "halfday"].includes(status) ? current.foodDeduction : 0,
       paidAmount: ["present", "halfday"].includes(status) ? current.paidAmount : 0,
@@ -1553,6 +1588,8 @@ function applyBulkAttendance() {
   const shift = $("#bulkAttendanceShift")?.value === "night" ? "night" : "day";
   const inTime = $("#bulkAttendanceIn")?.value || "";
   const outTime = $("#bulkAttendanceOut")?.value || "";
+  const restBreakType = ["none", "custom"].includes($("#bulkAttendanceRestType")?.value) ? $("#bulkAttendanceRestType").value : "default";
+  const restMinutes = restBreakType === "none" ? 0 : restBreakType === "custom" ? Math.max(0, Number($("#bulkAttendanceRestMinutes")?.value || 0)) : 60;
   const isWorkingStatus = ["present", "halfday"].includes(status);
 
   app.attendance[date] ||= {};
@@ -1568,13 +1605,15 @@ function applyBulkAttendance() {
       shift,
       inTime: isWorkingStatus ? (inTime || current.inTime || "") : "",
       outTime: isWorkingStatus ? (outTime || current.outTime || "") : "",
+      restBreakType: isWorkingStatus ? restBreakType : "default",
+      restMinutes: isWorkingStatus ? restMinutes : 60,
       overtimeHours: isWorkingStatus ? current.overtimeHours : "",
       foodDeduction: isWorkingStatus ? current.foodDeduction : 0,
       paidAmount: isWorkingStatus ? current.paidAmount : 0,
     };
   });
   if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
-  addLog("Bulk attendance changed", `${workerIds.length} workers · ${date} · ${statusLabel(status)} · ${inTime || "-"} / ${outTime || "-"}`);
+  addLog("Bulk attendance changed", `${workerIds.length} workers · ${date} · ${statusLabel(status)} · ${inTime || "-"} / ${outTime || "-"} · ${restBreakType}:${restMinutes}m`);
   saveData();
   renderAll();
   toast(t("saved"));
@@ -1628,7 +1667,7 @@ function setAttendanceMoney(date, workerId, field, value) {
 }
 
 function setAttendanceNumber(date, workerId, field, value) {
-  if (!canChangePayrollDate(date, "Attendance overtime")) return;
+  if (!canChangePayrollDate(date, "Attendance number")) return;
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   app.attendance[date][workerId] = {
@@ -1638,6 +1677,24 @@ function setAttendanceNumber(date, workerId, field, value) {
   };
   const worker = app.workers.find((item) => item.id === workerId);
   addLog("Attendance number changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || "-"}`);
+  saveData();
+}
+
+function setAttendanceRestBreak(date, workerId, field, value) {
+  if (!canChangePayrollDate(date, "Attendance rest break")) return;
+  app.attendance[date] ||= {};
+  const current = getAttendanceRecord(date, workerId);
+  const next = { ...current, status: current.status || "" };
+  if (field === "restBreakType") {
+    next.restBreakType = ["none", "custom"].includes(value) ? value : "default";
+    next.restMinutes = next.restBreakType === "none" ? 0 : next.restBreakType === "default" ? 60 : current.restMinutes;
+  } else {
+    next.restBreakType = current.restBreakType === "custom" ? "custom" : current.restBreakType;
+    next.restMinutes = Math.max(0, Number(value || 0));
+  }
+  app.attendance[date][workerId] = next;
+  const worker = app.workers.find((item) => item.id === workerId);
+  addLog("Attendance rest break changed", `${worker?.name || workerId} · ${date} · ${next.restBreakType}: ${next.restMinutes}m`);
   saveData();
 }
 
@@ -1657,18 +1714,23 @@ function currentTime() {
 
 function calculateHours(record) {
   const item = normalizeAttendanceRecord(record);
-  const manualOvertime = item.overtimeHours === "" ? null : Math.max(0, Number(item.overtimeHours || 0));
-  if (!item.inTime || !item.outTime) return { total: 0, overtime: manualOvertime ?? 0, autoOvertime: 0 };
+  if (!item.inTime || !item.outTime) return { total: 0, rest: item.restMinutes / 60, actual: 0, normal: 0, overtime: 0, autoOvertime: 0 };
   const [inHour, inMinute] = item.inTime.split(":").map(Number);
   const [outHour, outMinute] = item.outTime.split(":").map(Number);
   let start = inHour * 60 + inMinute;
   let end = outHour * 60 + outMinute;
   if (end < start) end += 24 * 60;
   const total = Math.max(0, (end - start) / 60);
-  const autoOvertime = Math.max(0, total - STANDARD_HOURS);
+  const rest = Math.min(total, Math.max(0, item.restMinutes / 60));
+  const actual = Math.max(0, total - rest);
+  const normal = Math.min(actual, STANDARD_HOURS);
+  const autoOvertime = Math.max(0, actual - STANDARD_HOURS);
   return {
     total,
-    overtime: manualOvertime ?? autoOvertime,
+    rest,
+    actual,
+    normal,
+    overtime: autoOvertime,
     autoOvertime,
   };
 }
@@ -1901,7 +1963,7 @@ function recordsForRange(start, end, workerId = "all", shift = "all") {
         status,
         inTime: record.inTime,
         outTime: record.outTime,
-        hours: hours.total,
+        hours: hours.actual,
         overtime,
         dailyWage: wageForDate(worker, date),
         baseWage: attendanceBaseWage(worker, status, date),
@@ -1930,7 +1992,7 @@ function monthSummary(month, workerId = "all", shift = "all") {
       const halfday = shiftedDates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
       const absent = shiftedDates.filter((date) => getAttendance(date, worker.id) === "absent").length;
       const off = shiftedDates.filter((date) => getAttendance(date, worker.id) === "off").length;
-      const hours = shiftedDates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).total, 0);
+      const hours = shiftedDates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).actual, 0);
       const overtime = dates.reduce((sum, date) => {
         const record = getAttendanceRecord(date, worker.id);
         if (!record.status || !recordMatchesShift(record, shift)) return sum;
@@ -2128,7 +2190,7 @@ function renderDashboardLegacyUnused() {
       <div class="today-row">
         <div>
           <strong>${escapeHTML(displayWorkerName(worker))}</strong>
-          <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
+          <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("actualWorkingHours")}: ${formatHours(hours.actual)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
         </div>
         <span class="pill">${statusLabel(status)}</span>
@@ -2190,7 +2252,7 @@ function workerSummaryPanel(worker) {
           <td>${statusLabel(record.status)}</td>
           <td>${record.inTime || "-"}</td>
           <td>${record.outTime || "-"}</td>
-          <td>${formatHours(hours.total)}</td>
+          <td>${formatHours(hours.actual)}</td>
           <td>${formatHours(overtime)}</td>
           <td>${money(payable)}</td>
           <td>${money(paid)}</td>
@@ -2232,7 +2294,7 @@ function workerSummaryPanel(worker) {
           <div><span>${t("statusColumn")}</span><strong>${statusLabel(todayRecord.status || "not marked")}</strong></div>
           <div><span>${t("in")}</span><strong>${todayRecord.inTime || "-"}</strong></div>
           <div><span>${t("out")}</span><strong>${todayRecord.outTime || "-"}</strong></div>
-          <div><span>${t("hours")}</span><strong>${formatHours(todayHours.total)}</strong></div>
+          <div><span>${t("actualWorkingHours")}</span><strong>${formatHours(todayHours.actual)}</strong></div>
           <div><span>${t("overtime")}</span><strong>${formatHours(todayHours.overtime)}</strong></div>
           <div><span>${t("payableWage")}</span><strong>${money(todayPayable)}</strong></div>
         </div>
@@ -2400,7 +2462,7 @@ function renderWeekAttendance() {
           <td>
             <span class="status-chip status-${record.status || "empty"}">${record.status ? statusLabel(record.status) : "-"}</span>
             <small>${record.inTime || "-"} / ${record.outTime || "-"}</small>
-            <small>${formatHours(hours.total)} · ${formatHours(overtime)}</small>
+            <small>${formatHours(hours.actual)} · ${formatHours(overtime)}</small>
           </td>
         `;
       }).join("")}
@@ -2437,7 +2499,7 @@ function attendanceRowWithTime(worker, date) {
           <strong>${escapeHTML(displayWorkerName(worker))}</strong>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
           <p class="time-summary">${t("shift")}: ${attendanceShiftLabel(rowShift)}</p>
-          <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(overtime)}</p>
+          <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("totalTime")}: ${formatHours(hours.total)} · ${t("restBreak")}: ${formatHours(hours.rest)} · ${t("actualWorkingHours")}: ${formatHours(hours.actual)} · ${t("normalHours")}: ${formatHours(hours.normal)} · ${t("overtime")}: ${formatHours(overtime)}</p>
           <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
         </div>
       </div>
@@ -2454,7 +2516,12 @@ function attendanceRowWithTime(worker, date) {
           </select></label>
           <label>${t("in")}<input type="time" data-time-field="inTime" value="${record.inTime}"></label>
           <label>${t("out")}<input type="time" data-time-field="outTime" value="${record.outTime}"></label>
-          <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}"></label>
+          <label>${t("restBreak")}<select data-rest-field="restBreakType">
+            <option value="default" ${record.restBreakType === "default" ? "selected" : ""}>${t("defaultRest")}</option>
+            <option value="none" ${record.restBreakType === "none" ? "selected" : ""}>${t("noRest")}</option>
+            <option value="custom" ${record.restBreakType === "custom" ? "selected" : ""}>${t("customRest")}</option>
+          </select></label>
+          <label>${t("customRestMinutes")}<input type="number" min="0" max="360" step="5" data-rest-minutes-field="restMinutes" value="${record.restMinutes}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
           <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${paid || 0}"></label>
           <button class="pay-today-button ${isFullyPaid ? "paid" : ""}" data-pay-today="${payable}" ${payable <= 0 ? "disabled" : ""}>${isFullyPaid ? t("paid") : t("paidToday")}</button>
@@ -2929,7 +2996,7 @@ function payrollAlerts() {
       const payable = attendanceWage(worker || { dailyWage: 0 }, record, record.status === "present" ? hours.overtime : 0, date);
       const paid = paymentLedgerTotal(workerId, date, date);
       if (["present", "halfday"].includes(record.status) && record.inTime && !record.outTime) alerts.push(`${label}: in time without out time`);
-      if (record.status === "present" && hours.total > 14) alerts.push(`${label}: more than 14 hours`);
+      if (record.status === "present" && hours.total > 14) alerts.push(`${label}: more than 14 total attendance hours`);
       if (record.foodDeduction > payable && payable > 0) alerts.push(`${label}: food deduction bigger than wage`);
       if (paid > payable && payable > 0) alerts.push(`${label}: payment bigger than payable wage`);
     });
@@ -3940,6 +4007,18 @@ function bindEvents() {
       setAttendanceShift(parent.dataset.date, parent.dataset.worker, shiftInput.value);
     }
 
+    const restInput = event.target.closest("[data-rest-field]");
+    if (restInput) {
+      const parent = restInput.closest(".time-grid");
+      setAttendanceRestBreak(parent.dataset.date, parent.dataset.worker, restInput.dataset.restField, restInput.value);
+    }
+
+    const restMinutesInput = event.target.closest("[data-rest-minutes-field]");
+    if (restMinutesInput) {
+      const parent = restMinutesInput.closest(".time-grid");
+      setAttendanceRestBreak(parent.dataset.date, parent.dataset.worker, restMinutesInput.dataset.restMinutesField, restMinutesInput.value);
+    }
+
     const moneyInput = event.target.closest("[data-money-field]");
     if (moneyInput) {
       const parent = moneyInput.closest(".time-grid");
@@ -4134,7 +4213,7 @@ function renderDashboard() {
           ${worker.photo ? `<img class="attendance-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="attendance-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
           <div>
           <strong>${escapeHTML(displayWorkerName(worker))}</strong>
-          <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("hours")}: ${formatHours(hours.total)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
+          <p>${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("actualWorkingHours")}: ${formatHours(hours.actual)} · ${t("overtime")}: ${formatHours(hours.overtime)}</p>
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
           </div>
         </div>
