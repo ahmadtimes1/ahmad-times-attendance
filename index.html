@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=paid-wages-card-1">
+    <link rel="stylesheet" href="styles.css?v=bulk-attendance-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -253,6 +253,41 @@
               <h3 data-i18n="markOneDay">Mark One Day</h3>
               <input id="attendanceDate" type="date">
             </div>
+            <section class="bulk-attendance-panel">
+              <div>
+                <h4 data-i18n="bulkAttendance">Bulk attendance</h4>
+                <p class="help-text" data-i18n="bulkAttendanceHelp">Select multiple workers and apply status, shift, in time, and out time in one click.</p>
+              </div>
+              <div class="bulk-attendance-grid">
+                <label class="bulk-worker-picker">
+                  <span data-i18n="selectWorkersForBulk">Select workers</span>
+                  <select id="bulkAttendanceWorkers" multiple size="6"></select>
+                </label>
+                <label>
+                  <span data-i18n="status">Status</span>
+                  <select id="bulkAttendanceStatus">
+                    <option value="present" data-i18n="present">Present</option>
+                    <option value="halfday" data-i18n="halfday">Half day</option>
+                    <option value="absent" data-i18n="absent">Absent</option>
+                    <option value="off" data-i18n="off">Off</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="shift">Shift</span>
+                  <select id="bulkAttendanceShift">
+                    <option value="day" data-i18n="dayShift">Day shift</option>
+                    <option value="night" data-i18n="nightShift">Night shift</option>
+                  </select>
+                </label>
+                <label><span data-i18n="in">In</span><input id="bulkAttendanceIn" type="time"></label>
+                <label><span data-i18n="out">Out</span><input id="bulkAttendanceOut" type="time"></label>
+                <div class="bulk-attendance-actions">
+                  <button type="button" id="bulkSelectAllWorkers" data-i18n="selectAllActive">Select all active</button>
+                  <button type="button" id="bulkClearWorkers" data-i18n="clearSelection">Clear selection</button>
+                  <button type="button" class="primary" id="applyBulkAttendance" data-i18n="applyBulkAttendance">Apply attendance</button>
+                </div>
+              </div>
+            </section>
             <div id="dayAttendanceList" class="attendance-list"></div>
           </div>
 
@@ -628,6 +663,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=paid-wages-card-1"></script>
+    <script src="app.js?v=bulk-attendance-1"></script>
   </body>
 </html>

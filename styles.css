@@ -876,6 +876,50 @@ tbody tr:hover {
   min-height: 132px;
 }
 
+.bulk-attendance-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid rgba(25, 169, 220, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+:root[data-theme="dark"] .bulk-attendance-panel {
+  background: rgba(20, 35, 45, 0.48);
+}
+
+.bulk-attendance-panel h4 {
+  margin: 0 0 4px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.bulk-attendance-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) repeat(4, minmax(120px, 0.75fr)) minmax(220px, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.bulk-attendance-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.bulk-worker-picker select {
+  min-height: 148px;
+}
+
+.bulk-attendance-actions {
+  display: grid;
+  gap: 8px;
+}
+
 #reportWorker {
   min-height: 132px;
 }
@@ -2155,6 +2199,7 @@ dialog::backdrop {
   .summary-strip,
   .form-grid,
   .attendance-filter-grid,
+  .bulk-attendance-grid,
   .expense-form {
     grid-template-columns: 1fr;
   }

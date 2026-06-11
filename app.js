@@ -472,6 +472,12 @@ Object.assign(translations.en, {
   unpaid: "Unpaid",
   unpaidWages: "Unpaid wages",
   paidWages: "Paid wages",
+  bulkAttendance: "Bulk attendance",
+  bulkAttendanceHelp: "Select multiple workers and apply status, shift, in time, and out time in one click.",
+  selectWorkersForBulk: "Select workers",
+  selectAllActive: "Select all active",
+  clearSelection: "Clear selection",
+  applyBulkAttendance: "Apply attendance",
   nationality: "Nationality",
   nationalityPlaceholder: "Afghan, Pakistani...",
   foodDeduction: "Food deduction (AED)",
@@ -566,6 +572,12 @@ Object.assign(translations.ps, {
   unpaid: "نه ورکړل شوي",
   unpaidWages: "نه ورکړل شوې مزدوري",
   paidWages: "ورکړل شوې مزدوري",
+  bulkAttendance: "ډله ییزه حاضري",
+  bulkAttendanceHelp: "څو کارکوونکي وټاکئ او حالت، شفټ، د داخل وخت او د وتلو وخت په یوه کلیک ثبت کړئ.",
+  selectWorkersForBulk: "کارکوونکي وټاکئ",
+  selectAllActive: "ټول فعال وټاکئ",
+  clearSelection: "انتخاب پاک کړئ",
+  applyBulkAttendance: "حاضري ثبت کړئ",
   nationality: "تابعیت",
   nationalityPlaceholder: "افغان، پاکستانی...",
   foodDeduction: "د خوراک کسر (AED)",
@@ -1375,6 +1387,24 @@ function renderAttendanceWorkerPicker() {
   select.disabled = filter.value !== "selected";
 }
 
+function selectedBulkAttendanceWorkerIds() {
+  const select = $("#bulkAttendanceWorkers");
+  if (!select) return [];
+  return Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+}
+
+function renderBulkAttendanceWorkerPicker() {
+  const select = $("#bulkAttendanceWorkers");
+  if (!select) return;
+  const selected = new Set(selectedBulkAttendanceWorkerIds());
+  if (!selected.size && ($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) === "selected") {
+    selectedAttendanceWorkerIds().forEach((id) => selected.add(id));
+  }
+  select.innerHTML = activeWorkers().map((worker) => `
+    <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
+  `).join("");
+}
+
 function getAttendance(date, workerId) {
   return getAttendanceRecord(date, workerId).status;
 }
@@ -1422,6 +1452,45 @@ function setAttendance(date, workerId, status, autoTime = true) {
   if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
   addLog("Attendance changed", `${worker?.name || workerId} · ${date} · ${status || "cleared"}`);
   saveData();
+}
+
+function applyBulkAttendance() {
+  const date = $("#attendanceDate")?.value || todayISO();
+  if (!canChangePayrollDate(date, "Bulk attendance")) return;
+  const workerIds = selectedBulkAttendanceWorkerIds();
+  if (!workerIds.length) {
+    toast(t("chooseWorkers"));
+    return;
+  }
+  const status = $("#bulkAttendanceStatus")?.value || "present";
+  const shift = $("#bulkAttendanceShift")?.value === "night" ? "night" : "day";
+  const inTime = $("#bulkAttendanceIn")?.value || "";
+  const outTime = $("#bulkAttendanceOut")?.value || "";
+  const isWorkingStatus = ["present", "halfday"].includes(status);
+
+  app.attendance[date] ||= {};
+  workerIds.forEach((workerId) => {
+    const current = getAttendanceRecord(date, workerId);
+    if (!status) {
+      delete app.attendance[date][workerId];
+      return;
+    }
+    app.attendance[date][workerId] = {
+      ...current,
+      status,
+      shift,
+      inTime: isWorkingStatus ? (inTime || current.inTime || "") : "",
+      outTime: isWorkingStatus ? (outTime || current.outTime || "") : "",
+      overtimeHours: isWorkingStatus ? current.overtimeHours : "",
+      foodDeduction: isWorkingStatus ? current.foodDeduction : 0,
+      paidAmount: isWorkingStatus ? current.paidAmount : 0,
+    };
+  });
+  if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
+  addLog("Bulk attendance changed", `${workerIds.length} workers · ${date} · ${statusLabel(status)} · ${inTime || "-"} / ${outTime || "-"}`);
+  saveData();
+  renderAll();
+  toast(t("saved"));
 }
 
 function setAttendanceShift(date, workerId, value) {
@@ -1813,6 +1882,7 @@ function renderAll() {
   renderControlCenter();
   renderWorkers();
   renderAttendanceWorkerPicker();
+  renderBulkAttendanceWorkerPicker();
   renderDayAttendance();
   renderWeekAttendance();
   renderMonthAttendance();
@@ -3598,6 +3668,15 @@ function bindEvents() {
     app.attendanceShiftFilter = $("#attendanceShiftFilter").value;
     renderAll();
   });
+  $("#bulkSelectAllWorkers").addEventListener("click", () => {
+    const select = $("#bulkAttendanceWorkers");
+    Array.from(select.options).forEach((option) => { option.selected = true; });
+  });
+  $("#bulkClearWorkers").addEventListener("click", () => {
+    const select = $("#bulkAttendanceWorkers");
+    Array.from(select.options).forEach((option) => { option.selected = false; });
+  });
+  $("#applyBulkAttendance").addEventListener("click", applyBulkAttendance);
 
   $("#expenseForm").addEventListener("submit", (event) => {
     event.preventDefault();
