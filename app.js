@@ -4,6 +4,7 @@ const SIMPLE_LOGIN_KEY = "ahmad-times-simple-user";
 const LAST_ACTIVITY_KEY = "ahmad-times-last-activity";
 const WORKER_VIEW_KEY = "ahmad-times-worker-view";
 const THEME_KEY = "ahmad-times-theme";
+const ROLLING_BACKUPS_KEY = "ahmad-times-rolling-backups-v1";
 const STANDARD_HOURS = 9;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
@@ -88,6 +89,19 @@ const translations = {
     workers: "Workers",
     attendance: "Attendance",
     reports: "Reports",
+    companyAssistant: "Company Assistant",
+    companyAssistantHelp: "Private internal assistant for company workers, attendance, wages, payments, expenses, and safety checks.",
+    assistantPlaceholder: "Ask: who is unpaid this month, show absent today, worker Naeem report...",
+    askAssistant: "Ask assistant",
+    quickQuestions: "Quick questions",
+    askTodaySummary: "Today summary",
+    askUnpaidMonth: "Unpaid this month",
+    askPaidMonth: "Paid this month",
+    askExpensesMonth: "Expenses this month",
+    askMistakes: "Attendance mistakes",
+    askNightShift: "Night shift workers",
+    assistantReady: "Internal assistant ready",
+    assistantNoAnswer: "I could not understand that yet. Try asking about unpaid wages, attendance, expenses, workers, shifts, or mistakes.",
     safety: "Safety",
     logs: "Logs",
     backup: "Backup",
@@ -102,6 +116,14 @@ const translations = {
     downloadLatestBackup: "Download latest backup",
     mistakeAlerts: "Mistake alerts",
     mistakeAlertsHelp: "Important attendance and payment problems that need checking.",
+    payrollVerification: "Payroll verification",
+    payrollVerificationHelp: "Independent checks for wage math, unpaid balances, overtime, and backup safety.",
+    verified: "Verified",
+    needsReview: "Needs review",
+    cloudSaveProblem: "Cloud save problem",
+    browserCopySaved: "Browser safety copy saved",
+    backupSnapshotSafe: "Daily backup snapshot protected",
+    calculationVerified: "Payroll calculation verified",
     paymentLedger: "Payment ledger",
     paymentLedgerHelp: "All worker payments in one clear place.",
     amount: "Amount",
@@ -302,6 +324,19 @@ const translations = {
     workers: "کارکوونکي",
     attendance: "حاضري",
     reports: "راپورونه",
+    companyAssistant: "د شرکت مرستیال",
+    companyAssistantHelp: "د شرکت د کارکوونکو، حاضري، مزدوري، تادیاتو، مصارفو او غلطیو لپاره داخلي مرستیال.",
+    assistantPlaceholder: "پوښتنه وکړئ: د دې میاشتې ناادا مزدوران، د نن غیر حاضر، د نعیم راپور...",
+    askAssistant: "پوښتنه وکړئ",
+    quickQuestions: "چټکې پوښتنې",
+    askTodaySummary: "د نن لنډیز",
+    askUnpaidMonth: "د دې میاشتې ناادا",
+    askPaidMonth: "د دې میاشتې ادا شوي",
+    askExpensesMonth: "د دې میاشتې مصارف",
+    askMistakes: "د حاضري غلطۍ",
+    askNightShift: "د شپې شفټ کارکوونکي",
+    assistantReady: "داخلي مرستیال چمتو دی",
+    assistantNoAnswer: "دا پوښتنه مې ښه ونه پېژندله. د مزدورۍ، حاضري، مصارفو، کارکوونکو، شفټونو یا غلطیو په اړه پوښتنه وکړئ.",
     safety: "خوندیتوب",
     logs: "لاګونه",
     backup: "بیک اپ",
@@ -316,6 +351,14 @@ const translations = {
     downloadLatestBackup: "وروستی بیک اپ ښکته کړئ",
     mistakeAlerts: "د غلطۍ خبرتیاوې",
     mistakeAlertsHelp: "مهمې ستونزې چې کتل غواړي.",
+    payrollVerification: "د مزدورۍ تصدیق",
+    payrollVerificationHelp: "د مزدورۍ حساب، پاتې پیسې، اضافي وخت او بیک اپ دقت چک کوي.",
+    verified: "تایید شو",
+    needsReview: "بیا کتنه غواړي",
+    cloudSaveProblem: "د کلاوډ ذخیرې ستونزه",
+    browserCopySaved: "د براوزر خوندي کاپي ذخیره شوه",
+    backupSnapshotSafe: "ورځنی بیک اپ خوندي دی",
+    calculationVerified: "د مزدورۍ حساب تایید شو",
     paymentLedger: "د تادیاتو کتاب",
     paymentLedgerHelp: "ټولې تادیات په یو ځای کې.",
     amount: "اندازه",
@@ -659,9 +702,11 @@ const app = {
   payrollLocks: {},
   dailyBackups: {},
   lastSaved: null,
+  lastCloudSaveError: "",
   storageMode: "local",
   user: null,
   profile: null,
+  assistantMessages: [],
   language: localStorage.getItem(LANG_KEY) || "en",
   theme: localStorage.getItem(THEME_KEY) || "light",
   workerFilter: "active",
@@ -683,7 +728,8 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
-const money = (value) => `AED ${Number(value || 0).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+const money = (value) => `AED ${roundMoney(value).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 const t = (key) => translations[app.language]?.[key] || translations.en[key] || key;
 const reportLanguage = () => $("#reportLanguage")?.value || app.language || "en";
@@ -691,6 +737,10 @@ let undoStack = [];
 let redoStack = [];
 let historySnapshot = "";
 let historyPaused = false;
+
+function cloneData(value) {
+  return JSON.parse(JSON.stringify(value || null));
+}
 
 function snapshotAppData() {
   return JSON.stringify({
@@ -860,11 +910,11 @@ function createDailyBackup() {
   if (app.dailyBackups[date]) return;
   app.dailyBackups[date] = {
     at: new Date().toISOString(),
-    workers: app.workers,
-    attendance: app.attendance,
-    payments: app.payments,
-    expenses: app.expenses,
-    payrollLocks: app.payrollLocks,
+    workers: cloneData(app.workers),
+    attendance: cloneData(app.attendance),
+    payments: cloneData(app.payments),
+    expenses: cloneData(app.expenses),
+    payrollLocks: cloneData(app.payrollLocks),
   };
   const dates = Object.keys(app.dailyBackups).sort();
   while (dates.length > 45) delete app.dailyBackups[dates.shift()];
@@ -1007,9 +1057,9 @@ function normalizePaymentLedger() {
 }
 
 function paymentLedgerTotal(workerId, start, end) {
-  return paymentLedgerEntries()
+  return roundMoney(paymentLedgerEntries()
     .filter((payment) => payment.workerId === workerId && payment.date >= start && payment.date <= end)
-    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
 }
 
 function rowPaidAmount(row, start, end) {
@@ -1017,7 +1067,7 @@ function rowPaidAmount(row, start, end) {
 }
 
 function rowUnpaidAmount(row, start, end) {
-  return Math.max(0, Number(row.wage || 0) - rowPaidAmount(row, start, end));
+  return roundMoney(Math.max(0, Number(row.wage || 0) - rowPaidAmount(row, start, end)));
 }
 
 function whatsappNumber(worker) {
@@ -1241,8 +1291,12 @@ async function saveData(show = true) {
       .from("app_data")
       .upsert({ id: "main", data: payload, updated_by: app.user.id || null, updated_at: new Date().toISOString() });
     if (error) {
+      app.lastCloudSaveError = `${new Date().toLocaleString()}: ${error.message}`;
+      app.storageMode = "cloud save failed";
+      setBrowserBackup();
       toast(`${t("cloudSaveFailed")}: ${error.message}`);
     } else {
+      app.lastCloudSaveError = "";
       app.storageMode = "cloud";
       if (show) toast(t("savedOnline"));
     }
@@ -1263,7 +1317,7 @@ function getBrowserBackup() {
 
 function setBrowserBackup() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    const payload = {
       workers: app.workers,
       attendance: app.attendance,
       payments: app.payments,
@@ -1271,8 +1325,14 @@ function setBrowserBackup() {
       payrollLocks: app.payrollLocks,
       dailyBackups: app.dailyBackups,
       logs: app.logs,
+      lastCloudSaveError: app.lastCloudSaveError,
       lastSaved: app.lastSaved,
-    }));
+    };
+    const serialized = JSON.stringify(payload);
+    localStorage.setItem(STORAGE_KEY, serialized);
+    const rolling = JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]");
+    rolling.unshift({ at: new Date().toISOString(), data: payload });
+    localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(rolling.slice(0, 5)));
   } catch {
     // Browser storage can be disabled; cloud storage is primary after login.
   }
@@ -1615,25 +1675,25 @@ function calculateHours(record) {
 
 function attendanceBaseWage(worker, status, date = todayISO()) {
   const daily = wageForDate(worker, date);
-  if (status === "present") return daily;
-  if (status === "halfday") return daily / 2;
+  if (status === "present") return roundMoney(daily);
+  if (status === "halfday") return roundMoney(daily / 2);
   return 0;
 }
 
 function attendanceOvertimeWage(worker, overtimeHours, date = todayISO(), status = "present") {
   if (status !== "present") return 0;
   const hourlyRate = wageForDate(worker, date) / STANDARD_HOURS;
-  return overtimeHours * hourlyRate;
+  return roundMoney(overtimeHours * hourlyRate);
 }
 
 function foodDeduction(record, status) {
   if (!["present", "halfday"].includes(status)) return 0;
-  return Number(normalizeAttendanceRecord(record).foodDeduction || 0);
+  return roundMoney(normalizeAttendanceRecord(record).foodDeduction || 0);
 }
 
 function attendanceWage(worker, record, overtimeHours = 0, date = todayISO()) {
   const status = normalizeAttendanceRecord(record).status;
-  return Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date, status) - foodDeduction(record, status));
+  return roundMoney(Math.max(0, attendanceBaseWage(worker, status, date) + attendanceOvertimeWage(worker, overtimeHours, date, status) - foodDeduction(record, status)));
 }
 
 function paymentKey(workerId, start, end) {
@@ -1894,11 +1954,11 @@ function monthSummary(month, workerId = "all", shift = "all") {
         hours,
         overtime,
         dailyWage: wageForDate(worker, dates[dates.length - 1] || todayISO()),
-        baseWage,
-        overtimeWage,
-        foodDeduction: food,
+        baseWage: roundMoney(baseWage),
+        overtimeWage: roundMoney(overtimeWage),
+        foodDeduction: roundMoney(food),
         paidAmount,
-        wage: Math.max(0, baseWage + overtimeWage - food),
+        wage: roundMoney(Math.max(0, baseWage + overtimeWage - food)),
       };
     });
 }
@@ -1919,6 +1979,7 @@ function renderAll() {
   renderMonthAttendance();
   renderExpenses();
   renderReport();
+  renderCompanyAssistant();
   renderStorage();
   renderLogs();
   renderSafety();
@@ -1934,7 +1995,7 @@ function renderControlCenter() {
   const alerts = payrollAlerts();
   const latestBackup = Object.entries(app.dailyBackups || {})
     .sort((a, b) => b[0].localeCompare(a[0]))[0];
-  const storageLabel = app.storageMode === "cloud" ? t("cloudMode") : t("localMode");
+  const storageLabel = app.lastCloudSaveError ? t("cloudSaveProblem") : (app.storageMode === "cloud" ? t("cloudMode") : t("localMode"));
   const lastSaved = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
 
   if ($("#controlTodayStatus")) $("#controlTodayStatus").textContent = `${presentToday}/${activeCount}`;
@@ -1947,7 +2008,9 @@ function renderControlCenter() {
   }
   if ($("#controlDataSafety")) $("#controlDataSafety").textContent = storageLabel;
   if ($("#controlDataSafetyDetail")) {
-    $("#controlDataSafetyDetail").textContent = `${t("recordsSaved")}: ${lastSaved} · ${t("latestBackup")}: ${latestBackup?.[0] || t("noBackupYet")}`;
+    $("#controlDataSafetyDetail").textContent = app.lastCloudSaveError
+      ? `${app.lastCloudSaveError} · ${t("browserCopySaved")}`
+      : `${t("recordsSaved")}: ${lastSaved} · ${t("latestBackup")}: ${latestBackup?.[0] || t("noBackupYet")}`;
   }
 }
 
@@ -2874,6 +2937,172 @@ function payrollAlerts() {
   return alerts;
 }
 
+function verifyPayrollCalculations(month = monthISO()) {
+  const dates = daysInMonth(month);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const rows = monthSummary(month);
+  const issues = [];
+
+  rows.forEach((row) => {
+    const expectedWage = roundMoney(Math.max(0, Number(row.baseWage || 0) + Number(row.overtimeWage || 0) - Number(row.foodDeduction || 0)));
+    const paid = rowPaidAmount(row, start, end);
+    const expectedUnpaid = roundMoney(Math.max(0, expectedWage - paid));
+    const shownUnpaid = rowUnpaidAmount(row, start, end);
+    const name = displayWorkerName(row.worker);
+
+    if (roundMoney(row.wage) !== expectedWage) issues.push(`${name}: payable wage check failed`);
+    if (shownUnpaid !== expectedUnpaid) issues.push(`${name}: unpaid wage check failed`);
+    if (row.halfday > 0 && row.baseWage < 0) issues.push(`${name}: half day wage invalid`);
+    if (row.overtime < 0 || row.overtimeWage < 0) issues.push(`${name}: overtime cannot be negative`);
+    if (row.foodDeduction > row.baseWage + row.overtimeWage && row.wage > 0) issues.push(`${name}: food deduction check failed`);
+  });
+
+  return {
+    month,
+    rowCount: rows.length,
+    issueCount: issues.length,
+    issues,
+    checkedAt: new Date().toISOString(),
+  };
+}
+
+function assistantMonthContext() {
+  const month = $("#dashboardMonth")?.value || $("#reportMonth")?.value || monthISO();
+  const dates = daysInMonth(month);
+  const rows = monthSummary(month).filter((row) => row.worker.status === "active");
+  const pay = paymentTotals(rows, dates[0], dates[dates.length - 1]);
+  const wages = rows.reduce((sum, row) => sum + Number(row.wage || 0), 0);
+  const expenses = companyExpenseTotal(month);
+  return { month, dates, rows, pay, wages, expenses };
+}
+
+function assistantTodayContext() {
+  const date = $("#todayInput")?.value || todayISO();
+  const records = app.attendance[date] || {};
+  const active = activeWorkers();
+  const present = active.filter((worker) => ["present", "halfday"].includes(getAttendanceRecord(date, worker.id).status));
+  const absent = active.filter((worker) => getAttendanceRecord(date, worker.id).status === "absent");
+  const off = active.filter((worker) => getAttendanceRecord(date, worker.id).status === "off");
+  const unmarked = active.filter((worker) => !records[worker.id]);
+  return { date, active, present, absent, off, unmarked };
+}
+
+function assistantFindWorker(question) {
+  const normalized = question.toLowerCase();
+  return app.workers.find((worker) => [worker.name, worker.namePs, worker.phone, worker.emiratesId]
+    .filter(Boolean)
+    .some((value) => normalized.includes(String(value).toLowerCase())));
+}
+
+function assistantWorkerReport(worker) {
+  const context = assistantMonthContext();
+  const row = monthSummary(context.month, worker.id)[0];
+  if (!row) return `${displayWorkerName(worker)}: ${t("noWageRecords")}`;
+  const paid = rowPaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
+  const unpaid = rowUnpaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
+  return [
+    `${displayWorkerName(worker)} · ${context.month}`,
+    `${t("status")}: ${t(worker.status || "active")} · ${t("shift")}: ${attendanceShiftLabel(workerDefaultShift(worker))}`,
+    `${t("present")}: ${row.present} · ${t("halfday")}: ${row.halfday || 0} · ${t("absent")}: ${row.absent} · ${t("off")}: ${row.off}`,
+    `${t("hours")}: ${formatHours(row.hours)} · ${t("overtime")}: ${formatHours(row.overtime)}`,
+    `${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}`,
+  ].join("\n");
+}
+
+function assistantAnswer(question) {
+  const q = question.trim().toLowerCase();
+  const today = assistantTodayContext();
+  const context = assistantMonthContext();
+  const foundWorker = assistantFindWorker(question);
+  if (foundWorker) return assistantWorkerReport(foundWorker);
+  if (q.includes("today") || q.includes("نن")) {
+    return [
+      `${t("today")}: ${today.date}`,
+      `${t("activeWorkers")}: ${today.active.length}`,
+      `${t("presentToday")}: ${today.present.length}`,
+      `${t("absent")}: ${today.absent.length}`,
+      `${t("off")}: ${today.off.length}`,
+      `${t("notMarked")}: ${today.unmarked.length}`,
+      today.unmarked.length ? `${t("notMarked")}: ${today.unmarked.slice(0, 10).map(displayWorkerName).join(", ")}` : "",
+    ].filter(Boolean).join("\n");
+  }
+  if (q.includes("unpaid") || q.includes("pending") || q.includes("ناادا")) {
+    const rows = context.rows
+      .map((row) => ({ row, unpaid: rowUnpaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]) }))
+      .filter((item) => item.unpaid > 0)
+      .sort((a, b) => b.unpaid - a.unpaid);
+    return rows.length
+      ? [`${t("unpaidWages")} · ${context.month}: ${money(rows.reduce((sum, item) => sum + item.unpaid, 0))}`, ...rows.slice(0, 20).map((item) => `${displayWorkerName(item.row.worker)}: ${money(item.unpaid)}`)].join("\n")
+      : `${t("unpaidWages")} · ${context.month}: ${money(0)}`;
+  }
+  if (q.includes("paid")) return `${t("paidWages")} · ${context.month}: ${money(context.pay.paid)}\n${t("unpaidWages")}: ${money(context.pay.pending)}`;
+  if (q.includes("expense") || q.includes("مصارف")) {
+    const expenses = monthExpenses(context.month);
+    const paid = expenses.reduce((sum, expense) => sum + expenseLedger(expense).paid, 0);
+    const unpaid = expenses.reduce((sum, expense) => sum + expenseLedger(expense).unpaid, 0);
+    return `${t("companyExpenses")} · ${context.month}: ${money(context.expenses)}\n${t("paid")}: ${money(paid)}\n${t("unpaid")}: ${money(unpaid)}`;
+  }
+  if (q.includes("mistake") || q.includes("alert") || q.includes("غلط")) {
+    const alerts = payrollAlerts();
+    return alerts.length ? alerts.slice(0, 25).join("\n") : t("noAlerts");
+  }
+  if (q.includes("verify") || q.includes("check calculation") || q.includes("calculation") || q.includes("حساب")) {
+    const check = verifyPayrollCalculations(context.month);
+    return check.issueCount
+      ? [`${t("payrollVerification")} · ${context.month}: ${t("needsReview")}`, ...check.issues.slice(0, 25)].join("\n")
+      : `${t("payrollVerification")} · ${context.month}: ${t("calculationVerified")} (${check.rowCount} ${t("workers")})`;
+  }
+  if (q.includes("night")) {
+    const workers = activeWorkers().filter((worker) => workerDefaultShift(worker) === "night");
+    return workers.length ? [`${t("nightShift")}: ${workers.length}`, ...workers.map(displayWorkerName)].join("\n") : `${t("nightShift")}: 0`;
+  }
+  if (q.includes("day shift")) {
+    const workers = activeWorkers().filter((worker) => workerDefaultShift(worker) === "day");
+    return workers.length ? [`${t("dayShift")}: ${workers.length}`, ...workers.map(displayWorkerName)].join("\n") : `${t("dayShift")}: 0`;
+  }
+  if (q.includes("summary") || q.includes("month") || q.includes("wage")) {
+    return [
+      `${t("monthlySummary")} · ${context.month}`,
+      `${t("activeWorkers")}: ${activeWorkers().length}`,
+      `${t("monthWages")}: ${money(context.wages)}`,
+      `${t("paidWages")}: ${money(context.pay.paid)}`,
+      `${t("unpaidWages")}: ${money(context.pay.pending)}`,
+      `${t("monthlyExpenses")}: ${money(context.expenses)}`,
+      `${t("grandTotal")}: ${money(context.wages + context.expenses)}`,
+    ].join("\n");
+  }
+  return t("assistantNoAnswer");
+}
+
+function renderCompanyAssistant() {
+  const summary = $("#assistantSummary");
+  const messages = $("#assistantMessages");
+  if (!summary || !messages) return;
+  const context = assistantMonthContext();
+  const today = assistantTodayContext();
+  summary.innerHTML = `
+    <div><span>${t("activeWorkers")}</span><strong>${today.active.length}</strong></div>
+    <div><span>${t("presentToday")}</span><strong>${today.present.length}</strong></div>
+    <div><span>${t("paidWages")}</span><strong>${money(context.pay.paid)}</strong></div>
+    <div><span>${t("unpaidWages")}</span><strong>${money(context.pay.pending)}</strong></div>
+    <div><span>${t("monthlyExpenses")}</span><strong>${money(context.expenses)}</strong></div>
+  `;
+  messages.innerHTML = app.assistantMessages.length
+    ? app.assistantMessages.map((message) => `<div class="assistant-message ${message.role}"><strong>${escapeHTML(message.role === "user" ? "You" : t("companyAssistant"))}</strong><p>${escapeHTML(message.text).replaceAll("\n", "<br>")}</p></div>`).join("")
+    : `<div class="assistant-message assistant"><strong>${t("companyAssistant")}</strong><p>${t("assistantReady")}</p></div>`;
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function askCompanyAssistant(question) {
+  const text = String(question || "").trim();
+  if (!text) return;
+  app.assistantMessages.push({ role: "user", text });
+  app.assistantMessages.push({ role: "assistant", text: assistantAnswer(text) });
+  app.assistantMessages = app.assistantMessages.slice(-20);
+  renderCompanyAssistant();
+}
+
 function workerLifetimeSummary(workerId) {
   const records = summarizeRecords(recordsForRange("2000-01-01", "2099-12-31", workerId))[0];
   if (!records) return { wage: 0, paid: 0, unpaid: 0, present: 0, halfday: 0, overtime: 0 };
@@ -2905,6 +3134,32 @@ function renderSafety() {
   $("#mistakeAlertsList").innerHTML = alerts.length
     ? alerts.slice(0, 30).map((alert) => `<div><span>${t("mistakeAlerts")}</span><strong>${escapeHTML(alert)}</strong></div>`).join("")
     : `<div><span>${t("mistakeAlerts")}</span><strong>${t("noAlerts")}</strong></div>`;
+
+  const verification = verifyPayrollCalculations(month);
+  const latestBackup = backups[0];
+  const verificationItems = [
+    {
+      label: t("payrollVerification"),
+      value: verification.issueCount ? `${t("needsReview")} · ${verification.issueCount}` : `${t("verified")} · ${verification.rowCount} ${t("workers")}`,
+      bad: verification.issueCount > 0,
+    },
+    {
+      label: t("dataSafety"),
+      value: latestBackup ? `${t("backupSnapshotSafe")} · ${latestBackup[0]}` : t("noBackupYet"),
+      bad: !latestBackup,
+    },
+    {
+      label: t("storage"),
+      value: app.lastCloudSaveError ? `${t("cloudSaveProblem")} · ${app.lastCloudSaveError}` : `${app.storageMode === "cloud" ? t("cloudMode") : t("browserCopySaved")}`,
+      bad: Boolean(app.lastCloudSaveError),
+    },
+    ...verification.issues.slice(0, 20).map((issue) => ({ label: t("needsReview"), value: issue, bad: true })),
+  ];
+  if ($("#payrollVerificationList")) {
+    $("#payrollVerificationList").innerHTML = verificationItems
+      .map((item) => `<div class="${item.bad ? "danger-item" : "safe-item"}"><span>${escapeHTML(item.label)}</span><strong>${escapeHTML(item.value)}</strong></div>`)
+      .join("");
+  }
 
   $("#paymentLedgerList").innerHTML = paymentLedgerEntries().slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map((payment) => {
     const worker = app.workers.find((item) => item.id === payment.workerId);
@@ -3789,6 +4044,16 @@ function bindEvents() {
     addLog("Logs cleared", "");
     saveData();
     toast(t("logsCleared"));
+  });
+  $("#assistantForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    askCompanyAssistant($("#assistantQuestion").value);
+    $("#assistantQuestion").value = "";
+  });
+  document.addEventListener("click", (event) => {
+    const promptButton = event.target.closest("[data-assistant-prompt]");
+    if (!promptButton) return;
+    askCompanyAssistant(promptButton.dataset.assistantPrompt);
   });
 }
 

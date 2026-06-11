@@ -2036,6 +2036,24 @@ tbody tr:last-child td {
   backdrop-filter: blur(14px);
 }
 
+.storage-list div.safe-item {
+  border-color: rgba(66, 143, 99, 0.28);
+  background: rgba(237, 252, 243, 0.72);
+}
+
+.storage-list div.danger-item {
+  border-color: rgba(154, 80, 74, 0.32);
+  background: rgba(255, 245, 244, 0.78);
+}
+
+:root[data-theme="dark"] .storage-list div.safe-item {
+  background: rgba(48, 112, 76, 0.2);
+}
+
+:root[data-theme="dark"] .storage-list div.danger-item {
+  background: rgba(154, 80, 74, 0.18);
+}
+
 .summary-strip span,
 .storage-list span {
   display: block;
@@ -2054,6 +2072,84 @@ tbody tr:last-child td {
 .storage-list {
   display: grid;
   gap: 10px;
+}
+
+.assistant-grid {
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
+}
+
+.assistant-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.assistant-summary div,
+.assistant-message {
+  padding: 12px;
+  border: var(--glass-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+:root[data-theme="dark"] .assistant-summary div,
+:root[data-theme="dark"] .assistant-message {
+  background: rgba(20, 35, 45, 0.58);
+}
+
+.assistant-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.assistant-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.assistant-messages {
+  display: grid;
+  max-height: 460px;
+  gap: 10px;
+  margin-bottom: 14px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.assistant-message.user {
+  margin-left: auto;
+  max-width: 88%;
+  background: rgba(25, 169, 220, 0.12);
+}
+
+.assistant-message.assistant {
+  max-width: 94%;
+}
+
+.assistant-message p {
+  margin: 6px 0 0;
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.assistant-form {
+  display: grid;
+  gap: 10px;
+}
+
+.assistant-prompts {
+  display: grid;
+  gap: 8px;
+}
+
+.assistant-prompts button {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 #safety .content-grid {

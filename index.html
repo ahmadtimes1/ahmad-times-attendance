@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=remove-signature-1">
+    <link rel="stylesheet" href="styles.css?v=internal-assistant-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -47,6 +47,7 @@
           <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
           <button class="nav-item" data-view="expenses" data-i18n="expenses">Expenses</button>
           <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
+          <button class="nav-item" data-view="companyAssistant" data-i18n="companyAssistant">Company Assistant</button>
           <button class="nav-item" data-view="safety" data-i18n="safety">Safety</button>
           <button class="nav-item" data-view="logs" data-i18n="logs">Logs</button>
           <button class="nav-item" data-view="backup" data-i18n="backup">Backup</button>
@@ -431,6 +432,38 @@
           <section class="panel report-panel" id="reportOutput"></section>
         </section>
 
+        <section id="companyAssistant" class="view">
+          <div class="content-grid assistant-grid">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="companyAssistant">Company Assistant</h3>
+                  <p class="help-text" data-i18n="companyAssistantHelp">Private internal assistant for company workers, attendance, wages, payments, expenses, and safety checks.</p>
+                </div>
+              </div>
+              <div id="assistantSummary" class="assistant-summary"></div>
+              <div id="assistantMessages" class="assistant-messages"></div>
+              <form id="assistantForm" class="assistant-form">
+                <textarea id="assistantQuestion" rows="3" data-i18n-placeholder="assistantPlaceholder" placeholder="Ask: who is unpaid this month, show absent today, worker Naeem report..."></textarea>
+                <button class="primary" data-i18n="askAssistant">Ask assistant</button>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <h3 data-i18n="quickQuestions">Quick questions</h3>
+              </div>
+              <div class="assistant-prompts">
+                <button type="button" data-assistant-prompt="summary today" data-i18n="askTodaySummary">Today summary</button>
+                <button type="button" data-assistant-prompt="unpaid this month" data-i18n="askUnpaidMonth">Unpaid this month</button>
+                <button type="button" data-assistant-prompt="paid this month" data-i18n="askPaidMonth">Paid this month</button>
+                <button type="button" data-assistant-prompt="expenses this month" data-i18n="askExpensesMonth">Expenses this month</button>
+                <button type="button" data-assistant-prompt="attendance mistakes" data-i18n="askMistakes">Attendance mistakes</button>
+                <button type="button" data-assistant-prompt="night shift workers" data-i18n="askNightShift">Night shift workers</button>
+              </div>
+            </section>
+          </div>
+        </section>
+
         <section id="safety" class="view">
           <div class="content-grid">
             <section class="panel">
@@ -467,6 +500,16 @@
                 </div>
               </div>
               <div id="mistakeAlertsList" class="storage-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3 data-i18n="payrollVerification">Payroll verification</h3>
+                  <p class="help-text" data-i18n="payrollVerificationHelp">Independent checks for wage math, unpaid balances, overtime, and backup safety.</p>
+                </div>
+              </div>
+              <div id="payrollVerificationList" class="storage-list"></div>
             </section>
 
             <section class="panel">
@@ -685,6 +728,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=remove-signature-1"></script>
+    <script src="app.js?v=internal-assistant-1"></script>
   </body>
 </html>
