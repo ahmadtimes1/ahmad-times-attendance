@@ -1935,7 +1935,7 @@ tbody tr:last-child td {
 
 .report-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-end;
   gap: 24px;
   margin-top: 28px;
