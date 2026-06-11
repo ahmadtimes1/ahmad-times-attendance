@@ -474,10 +474,12 @@ Object.assign(translations.en, {
   paidWages: "Paid wages",
   bulkAttendance: "Bulk attendance",
   bulkAttendanceHelp: "Select multiple workers and apply status, shift, in time, and out time in one click.",
+  bulkShiftFilter: "Bulk shift filter",
   selectWorkersForBulk: "Select workers",
   selectAllActive: "Select all active",
   clearSelection: "Clear selection",
   applyBulkAttendance: "Apply attendance",
+  defaultShift: "Default shift",
   nationality: "Nationality",
   nationalityPlaceholder: "Afghan, Pakistani...",
   foodDeduction: "Food deduction (AED)",
@@ -574,10 +576,12 @@ Object.assign(translations.ps, {
   paidWages: "ورکړل شوې مزدوري",
   bulkAttendance: "ډله ییزه حاضري",
   bulkAttendanceHelp: "څو کارکوونکي وټاکئ او حالت، شفټ، د داخل وخت او د وتلو وخت په یوه کلیک ثبت کړئ.",
+  bulkShiftFilter: "د ډلې شفټ فلټر",
   selectWorkersForBulk: "کارکوونکي وټاکئ",
   selectAllActive: "ټول فعال وټاکئ",
   clearSelection: "انتخاب پاک کړئ",
   applyBulkAttendance: "حاضري ثبت کړئ",
+  defaultShift: "اصلي شفټ",
   nationality: "تابعیت",
   nationalityPlaceholder: "افغان، پاکستانی...",
   foodDeduction: "د خوراک کسر (AED)",
@@ -1343,6 +1347,15 @@ function attendanceShiftLabel(shift) {
   return shift === "night" ? t("nightShift") : t("dayShift");
 }
 
+function workerDefaultShift(worker) {
+  return worker?.defaultShift === "night" || worker?.shift === "night" ? "night" : "day";
+}
+
+function workerAssignedShift(worker, date = todayISO()) {
+  const record = getAttendanceRecord(date, worker.id);
+  return record.status ? record.shift : workerDefaultShift(worker);
+}
+
 function effectiveAttendanceShift(record) {
   const selected = selectedAttendanceShift();
   if (!record.status && selected !== "all") return selected;
@@ -1396,11 +1409,14 @@ function selectedBulkAttendanceWorkerIds() {
 function renderBulkAttendanceWorkerPicker() {
   const select = $("#bulkAttendanceWorkers");
   if (!select) return;
+  const date = $("#attendanceDate")?.value || todayISO();
+  const shiftFilter = $("#bulkAttendanceShiftFilter")?.value || "all";
   const selected = new Set(selectedBulkAttendanceWorkerIds());
   if (!selected.size && ($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) === "selected") {
     selectedAttendanceWorkerIds().forEach((id) => selected.add(id));
   }
-  select.innerHTML = activeWorkers().map((worker) => `
+  const workers = activeWorkers().filter((worker) => shiftFilter === "all" || workerAssignedShift(worker, date) === shiftFilter);
+  select.innerHTML = workers.map((worker) => `
     <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
   `).join("");
 }
@@ -2191,7 +2207,7 @@ function renderWorkers() {
   const workers = app.workers.filter((worker) => {
     const filter = app.workerFilter || "active";
     if (filter !== "all" && worker.status !== filter) return false;
-    const haystack = [worker.name, worker.namePs, worker.role, worker.city, worker.nationality, worker.performance, worker.phone, worker.emiratesId, worker.status].join(" ").toLowerCase();
+    const haystack = [worker.name, worker.namePs, worker.role, worker.city, worker.nationality, worker.performance, worker.phone, worker.emiratesId, worker.status, attendanceShiftLabel(workerDefaultShift(worker))].join(" ").toLowerCase();
     return haystack.includes(query);
   });
 
@@ -2203,6 +2219,7 @@ function renderWorkers() {
           ${worker.photo ? `<img class="worker-avatar" src="${worker.photo}" alt="${escapeHTML(displayWorkerName(worker))}">` : `<div class="worker-avatar worker-avatar-fallback">${escapeHTML(workerInitials(worker))}</div>`}
           <h3><span class="worker-number">#${workerIndex + 1}</span> ${escapeHTML(displayWorkerName(worker))}</h3>
           <p>${escapeHTML(worker.role || t("roleWorker"))}</p>
+          <span class="worker-shift-badge">${attendanceShiftLabel(workerDefaultShift(worker))}</span>
         </article>
       `;
     }
@@ -2226,6 +2243,7 @@ function renderWorkers() {
         <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
         <div><span>${t("nationality")}</span><strong>${escapeHTML(worker.nationality || "-")}</strong></div>
         <div><span>${t("performance")}</span><strong>${performanceLabel(worker.performance)}</strong></div>
+        <div><span>${t("defaultShift")}</span><strong>${attendanceShiftLabel(workerDefaultShift(worker))}</strong></div>
         <div><span>${t("phone")}</span><strong>${escapeHTML(worker.phone || "-")}</strong></div>
         <div><span>${t("emiratesId")}</span><strong>${escapeHTML(worker.emiratesId || "-")}</strong></div>
       </div>
@@ -2253,8 +2271,8 @@ function renderDayAttendance() {
     `;
     return;
   }
-  const dayWorkers = workers.filter((worker) => effectiveAttendanceShift(getAttendanceRecord(date, worker.id)) !== "night");
-  const nightWorkers = workers.filter((worker) => effectiveAttendanceShift(getAttendanceRecord(date, worker.id)) === "night");
+  const dayWorkers = workers.filter((worker) => workerAssignedShift(worker, date) !== "night");
+  const nightWorkers = workers.filter((worker) => workerAssignedShift(worker, date) === "night");
   $("#dayAttendanceList").innerHTML = `
     <div class="attendance-group">
       <h4>${t("dayShift")}</h4>
@@ -2971,6 +2989,7 @@ function openWorkerDialog(workerId = "") {
   $("#workerCity").value = worker?.city || "";
   $("#workerNationality").value = worker?.nationality || "";
   $("#workerPerformance").value = worker?.performance || "good";
+  $("#workerDefaultShift").value = workerDefaultShift(worker);
   $("#workerPhone").value = worker?.phone || "";
   $("#workerEmiratesId").value = worker?.emiratesId || "";
   $("#workerDailyWage").value = worker ? currentDailyWage(worker) : "";
@@ -3002,6 +3021,7 @@ function saveWorkerFromForm() {
     city: $("#workerCity").value.trim(),
     nationality: $("#workerNationality").value.trim(),
     performance: $("#workerPerformance").value,
+    defaultShift: $("#workerDefaultShift").value === "night" ? "night" : "day",
     phone: $("#workerPhone").value.trim(),
     emiratesId: $("#workerEmiratesId").value.trim(),
     photo: $("#workerPhoto").value || "",
@@ -3668,6 +3688,7 @@ function bindEvents() {
     app.attendanceShiftFilter = $("#attendanceShiftFilter").value;
     renderAll();
   });
+  $("#bulkAttendanceShiftFilter").addEventListener("change", renderBulkAttendanceWorkerPicker);
   $("#bulkSelectAllWorkers").addEventListener("click", () => {
     const select = $("#bulkAttendanceWorkers");
     Array.from(select.options).forEach((option) => { option.selected = true; });

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=bulk-attendance-1">
+    <link rel="stylesheet" href="styles.css?v=bulk-shift-layout-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -259,6 +259,14 @@
                 <p class="help-text" data-i18n="bulkAttendanceHelp">Select multiple workers and apply status, shift, in time, and out time in one click.</p>
               </div>
               <div class="bulk-attendance-grid">
+                <label>
+                  <span data-i18n="bulkShiftFilter">Bulk shift filter</span>
+                  <select id="bulkAttendanceShiftFilter">
+                    <option value="all" data-i18n="allShifts">All shifts</option>
+                    <option value="day" data-i18n="dayShift">Day shift</option>
+                    <option value="night" data-i18n="nightShift">Night shift</option>
+                  </select>
+                </label>
                 <label class="bulk-worker-picker">
                   <span data-i18n="selectWorkersForBulk">Select workers</span>
                   <select id="bulkAttendanceWorkers" multiple size="6"></select>
@@ -602,6 +610,12 @@
               <option value="needs_improvement" data-i18n="needsImprovement">Needs improvement</option>
             </select>
           </label>
+          <label><span data-i18n="defaultShift">Default shift</span>
+            <select id="workerDefaultShift">
+              <option value="day" data-i18n="dayShift">Day shift</option>
+              <option value="night" data-i18n="nightShift">Night shift</option>
+            </select>
+          </label>
           <label><span data-i18n="phone">Phone</span><input id="workerPhone" placeholder="+971..."></label>
           <label><span data-i18n="emiratesId">Emirates ID</span><input id="workerEmiratesId" data-i18n-placeholder="optional" placeholder="Optional"></label>
           <label><span data-i18n="dailyWageAed">Daily wage (AED)</span><input id="workerDailyWage" type="number" min="0" step="0.01" required></label>
@@ -663,6 +677,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=bulk-attendance-1"></script>
+    <script src="app.js?v=bulk-shift-layout-1"></script>
   </body>
 </html>

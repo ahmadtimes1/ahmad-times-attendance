@@ -376,6 +376,21 @@ textarea:focus-visible {
   flex-wrap: wrap;
 }
 
+.toolbar,
+.report-controls {
+  padding: 14px;
+  border: var(--glass-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
+}
+
+:root[data-theme="dark"] .toolbar,
+:root[data-theme="dark"] .report-controls {
+  background: rgba(20, 35, 45, 0.5);
+}
+
 .history-actions {
   display: inline-flex;
   gap: 6px;
@@ -508,7 +523,7 @@ textarea {
 .panel,
 .worker-card {
   border: var(--glass-border);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--panel);
   box-shadow: var(--shadow);
   backdrop-filter: blur(20px);
@@ -711,7 +726,7 @@ textarea {
 }
 
 .panel {
-  padding: 18px;
+  padding: 20px;
 }
 
 .panel-head {
@@ -720,6 +735,8 @@ textarea {
   gap: 14px;
   align-items: center;
   margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .panel-head input,
@@ -732,12 +749,16 @@ textarea {
   width: 100%;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(142, 163, 177, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.36);
 }
 
 table {
   width: 100%;
   min-width: 680px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .dashboard-wage-wrap {
@@ -793,7 +814,11 @@ tbody tr {
 }
 
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.56);
+  background: rgba(25, 169, 220, 0.055);
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .pill,
@@ -880,10 +905,11 @@ tbody tr:hover {
   display: grid;
   gap: 14px;
   margin-bottom: 18px;
-  padding: 14px;
-  border: 1px solid rgba(25, 169, 220, 0.16);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.48);
+  padding: 16px;
+  border: 1px solid rgba(25, 169, 220, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.42));
+  box-shadow: var(--shadow-soft);
 }
 
 :root[data-theme="dark"] .bulk-attendance-panel {
@@ -898,7 +924,7 @@ tbody tr:hover {
 
 .bulk-attendance-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 1.5fr) repeat(4, minmax(120px, 0.75fr)) minmax(220px, 1fr);
+  grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.5fr) repeat(4, minmax(120px, 0.75fr)) minmax(220px, 1fr);
   gap: 10px;
   align-items: end;
 }
@@ -918,6 +944,10 @@ tbody tr:hover {
 .bulk-attendance-actions {
   display: grid;
   gap: 8px;
+}
+
+.bulk-attendance-actions .primary {
+  min-height: 44px;
 }
 
 #reportWorker {
@@ -1051,6 +1081,25 @@ tbody tr:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.worker-shift-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 5px 9px;
+  border: 1px solid rgba(25, 169, 220, 0.18);
+  border-radius: 999px;
+  color: var(--brand-2);
+  background: rgba(25, 169, 220, 0.08);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+:root[data-theme="dark"] .worker-shift-badge {
+  color: var(--brand-2);
+  background: rgba(93, 184, 209, 0.14);
 }
 
 .worker-view-large .worker-icon-card .worker-avatar {
@@ -1724,8 +1773,8 @@ tbody tr:hover {
   margin-bottom: 14px;
   padding: 14px;
   border: var(--glass-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.64);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);
 }
