@@ -665,10 +665,12 @@ const app = {
   language: localStorage.getItem(LANG_KEY) || "en",
   theme: localStorage.getItem(THEME_KEY) || "light",
   workerFilter: "active",
+  workerShiftFilter: "all",
   workerView: localStorage.getItem(WORKER_VIEW_KEY) || "large",
   selectedWorkerSummaryId: "",
   attendanceWorkerFilter: "all",
   attendanceShiftFilter: "all",
+  bulkAttendanceShiftFilter: "all",
 };
 
 let supabaseClient = null;
@@ -1348,7 +1350,13 @@ function attendanceShiftLabel(shift) {
 }
 
 function workerDefaultShift(worker) {
-  return worker?.defaultShift === "night" || worker?.shift === "night" ? "night" : "day";
+  if (worker?.defaultShift === "night" || worker?.shift === "night") return "night";
+  if (worker?.defaultShift === "day" || worker?.shift === "day") return "day";
+  const datedRecords = Object.entries(app.attendance || {})
+    .map(([date, records]) => ({ date, record: normalizeAttendanceRecord(records?.[worker?.id]) }))
+    .filter((item) => item.record.status)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return datedRecords[0]?.record.shift === "night" ? "night" : "day";
 }
 
 function workerAssignedShift(worker, date = todayISO()) {
@@ -1370,9 +1378,8 @@ function recordMatchesShift(record, shift = "all") {
 function attendanceWorkerMatchesShift(worker, dates = []) {
   const shift = selectedAttendanceShift();
   if (shift === "all") return true;
-  const rawRecords = dates.map((date) => app.attendance[date]?.[worker.id]).filter(Boolean);
-  if (!rawRecords.length) return true;
-  return rawRecords.some((record) => normalizeAttendanceRecord(record).shift === shift);
+  const checkDates = dates.length ? dates : [$("#attendanceDate")?.value || todayISO()];
+  return checkDates.some((date) => workerAssignedShift(worker, date) === shift);
 }
 
 function attendanceWorkers(dates = []) {
@@ -1394,7 +1401,9 @@ function renderAttendanceWorkerPicker() {
   const shiftFilter = $("#attendanceShiftFilter");
   if (shiftFilter) shiftFilter.value = app.attendanceShiftFilter || "all";
   const selected = new Set(selectedAttendanceWorkerIds());
-  select.innerHTML = activeWorkers().map((worker) => `
+  const date = $("#attendanceDate")?.value || todayISO();
+  const workers = activeWorkers().filter((worker) => selectedAttendanceShift() === "all" || workerAssignedShift(worker, date) === selectedAttendanceShift());
+  select.innerHTML = workers.map((worker) => `
     <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
   `).join("");
   select.disabled = filter.value !== "selected";
@@ -1410,7 +1419,9 @@ function renderBulkAttendanceWorkerPicker() {
   const select = $("#bulkAttendanceWorkers");
   if (!select) return;
   const date = $("#attendanceDate")?.value || todayISO();
-  const shiftFilter = $("#bulkAttendanceShiftFilter")?.value || "all";
+  const shiftFilterInput = $("#bulkAttendanceShiftFilter");
+  if (shiftFilterInput) shiftFilterInput.value = app.bulkAttendanceShiftFilter || "all";
+  const shiftFilter = shiftFilterInput?.value || app.bulkAttendanceShiftFilter || "all";
   const selected = new Set(selectedBulkAttendanceWorkerIds());
   if (!selected.size && ($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) === "selected") {
     selectedAttendanceWorkerIds().forEach((id) => selected.add(id));
@@ -1802,6 +1813,17 @@ function daysInMonth(month) {
   const [year, monthIndex] = month.split("-").map(Number);
   const total = new Date(year, monthIndex, 0).getDate();
   return Array.from({ length: total }, (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`);
+}
+
+function datesBetween(start, end) {
+  const dates = [];
+  const current = new Date(`${start}T00:00:00`);
+  const last = new Date(`${end}T00:00:00`);
+  while (current <= last) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
 }
 
 function recordsForRange(start, end, workerId = "all", shift = "all") {
@@ -2204,9 +2226,13 @@ function renderWorkers() {
   $$(".worker-view").forEach((button) => {
     button.classList.toggle("active", button.dataset.workerView === view);
   });
+  const workerShiftFilter = $("#workerShiftFilter");
+  if (workerShiftFilter) workerShiftFilter.value = app.workerShiftFilter || "all";
   const workers = app.workers.filter((worker) => {
     const filter = app.workerFilter || "active";
     if (filter !== "all" && worker.status !== filter) return false;
+    const shiftFilter = app.workerShiftFilter || "all";
+    if (shiftFilter !== "all" && workerDefaultShift(worker) !== shiftFilter) return false;
     const haystack = [worker.name, worker.namePs, worker.role, worker.city, worker.nationality, worker.performance, worker.phone, worker.emiratesId, worker.status, attendanceShiftLabel(workerDefaultShift(worker))].join(" ").toLowerCase();
     return haystack.includes(query);
   });
@@ -2508,7 +2534,12 @@ function renderReport() {
     title = `${t("monthlyReport")} · ${month}`;
   }
 
-  const reportWorkers = app.workers.filter((worker) => worker.status === "active");
+  const reportWorkers = app.workers.filter((worker) => {
+    if (worker.status !== "active") return false;
+    if (reportShift === "all") return true;
+    const reportDates = type === "monthly" ? daysInMonth(month) : datesBetween(start, end);
+    return reportDates.some((date) => workerAssignedShift(worker, date) === reportShift);
+  });
   const validSelectedIds = selectedReportIds.includes("all")
     ? ["all"]
     : selectedReportIds.filter((id) => reportWorkers.some((worker) => worker.id === id));
@@ -3454,6 +3485,10 @@ function bindEvents() {
       renderWorkers();
     });
   });
+  $("#workerShiftFilter").addEventListener("change", () => {
+    app.workerShiftFilter = $("#workerShiftFilter").value || "all";
+    renderWorkers();
+  });
   $$(".worker-view").forEach((button) => {
     button.addEventListener("click", () => {
       app.workerView = button.dataset.workerView || "large";
@@ -3688,7 +3723,10 @@ function bindEvents() {
     app.attendanceShiftFilter = $("#attendanceShiftFilter").value;
     renderAll();
   });
-  $("#bulkAttendanceShiftFilter").addEventListener("change", renderBulkAttendanceWorkerPicker);
+  $("#bulkAttendanceShiftFilter").addEventListener("change", () => {
+    app.bulkAttendanceShiftFilter = $("#bulkAttendanceShiftFilter").value || "all";
+    renderBulkAttendanceWorkerPicker();
+  });
   $("#bulkSelectAllWorkers").addEventListener("click", () => {
     const select = $("#bulkAttendanceWorkers");
     Array.from(select.options).forEach((option) => { option.selected = true; });

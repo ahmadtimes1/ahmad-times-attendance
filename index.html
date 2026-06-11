@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=bulk-shift-layout-1">
+    <link rel="stylesheet" href="styles.css?v=shift-filter-fix-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -191,6 +191,14 @@
               <button class="worker-filter" data-worker-filter="inactive" data-i18n="inactiveLabour">Inactive labour</button>
               <button class="worker-filter" data-worker-filter="all" data-i18n="allLabour">All labour</button>
             </div>
+            <label class="compact-select">
+              <span data-i18n="shiftFilter">Shift filter</span>
+              <select id="workerShiftFilter">
+                <option value="all" data-i18n="allShifts">All shifts</option>
+                <option value="day" data-i18n="dayShift">Day shift</option>
+                <option value="night" data-i18n="nightShift">Night shift</option>
+              </select>
+            </label>
             <div class="view-picker" role="group" aria-label="Worker view">
               <span class="view-picker-label">View</span>
               <button class="worker-view active" data-worker-view="large" title="Large icons" aria-label="Large icons">
@@ -677,6 +685,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=bulk-shift-layout-1"></script>
+    <script src="app.js?v=shift-filter-fix-1"></script>
   </body>
 </html>

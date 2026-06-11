@@ -447,6 +447,7 @@ textarea:focus-visible {
 
 .date-chip,
 .searchbox,
+.compact-select,
 .report-controls label,
 .worker-form label {
   display: grid;
@@ -454,6 +455,10 @@ textarea:focus-visible {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
+}
+
+.compact-select {
+  min-width: 150px;
 }
 
 input,
