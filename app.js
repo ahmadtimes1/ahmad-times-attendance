@@ -531,6 +531,7 @@ Object.assign(translations.en, {
   paidAmount: "Paid amount",
   paidToday: "Paid today",
   manualOvertime: "Manual overtime (hours)",
+  manualOvertimeHelp: "Leave empty for automatic overtime",
   restBreak: "Rest break",
   defaultRest: "Default 1-hour rest",
   noRest: "No rest",
@@ -641,6 +642,7 @@ Object.assign(translations.ps, {
   paidAmount: "ورکړل شوې اندازه",
   paidToday: "نن ورکړل شوې",
   manualOvertime: "لاسي اضافي وخت (ساعتونه)",
+  manualOvertimeHelp: "تش پرېږدئ، سیستم یې پخپله حسابوي",
   restBreak: "د آرام وقفه",
   defaultRest: "اصلي ۱ ساعت آرام",
   noRest: "بې آرامه",
@@ -1714,7 +1716,8 @@ function currentTime() {
 
 function calculateHours(record) {
   const item = normalizeAttendanceRecord(record);
-  if (!item.inTime || !item.outTime) return { total: 0, rest: item.restMinutes / 60, actual: 0, normal: 0, overtime: 0, autoOvertime: 0 };
+  const manualOvertime = item.overtimeHours === "" ? null : Math.max(0, Number(item.overtimeHours || 0));
+  if (!item.inTime || !item.outTime) return { total: 0, rest: item.restMinutes / 60, actual: 0, normal: 0, overtime: manualOvertime ?? 0, autoOvertime: 0 };
   const [inHour, inMinute] = item.inTime.split(":").map(Number);
   const [outHour, outMinute] = item.outTime.split(":").map(Number);
   let start = inHour * 60 + inMinute;
@@ -1730,7 +1733,7 @@ function calculateHours(record) {
     rest,
     actual,
     normal,
-    overtime: autoOvertime,
+    overtime: manualOvertime ?? autoOvertime,
     autoOvertime,
   };
 }
@@ -2500,6 +2503,7 @@ function attendanceRowWithTime(worker, date) {
           <p>${escapeHTML(worker.role || t("roleWorker"))} · ${money(wageForDate(worker, date))}</p>
           <p class="time-summary">${t("shift")}: ${attendanceShiftLabel(rowShift)}</p>
           <p class="time-summary">${t("in")}: ${record.inTime || "-"} · ${t("out")}: ${record.outTime || "-"} · ${t("totalTime")}: ${formatHours(hours.total)} · ${t("restBreak")}: ${formatHours(hours.rest)} · ${t("actualWorkingHours")}: ${formatHours(hours.actual)} · ${t("normalHours")}: ${formatHours(hours.normal)} · ${t("overtime")}: ${formatHours(overtime)}</p>
+          <p class="time-summary">${t("manualOvertimeHelp")} · ${t("overtime")}: ${record.overtimeHours === "" ? `${formatHours(hours.autoOvertime)} auto` : `${formatHours(hours.overtime)} manual`}</p>
           <p class="time-summary">${t("payableWage")}: ${money(payable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}</p>
         </div>
       </div>
@@ -2522,6 +2526,7 @@ function attendanceRowWithTime(worker, date) {
             <option value="custom" ${record.restBreakType === "custom" ? "selected" : ""}>${t("customRest")}</option>
           </select></label>
           <label>${t("customRestMinutes")}<input type="number" min="0" max="360" step="5" data-rest-minutes-field="restMinutes" value="${record.restMinutes}"></label>
+          <label>${t("manualOvertime")}<input type="number" min="0" step="0.25" data-number-field="overtimeHours" value="${record.overtimeHours}" placeholder="${formatHours(hours.autoOvertime)}"></label>
           <label>${t("foodDeduction")}<input type="number" min="0" step="0.01" data-money-field="foodDeduction" value="${record.foodDeduction || 0}"></label>
           <label>${t("paidToday")}<input type="number" min="0" step="0.01" data-money-field="paidAmount" value="${paid || 0}"></label>
           <button class="pay-today-button ${isFullyPaid ? "paid" : ""}" data-pay-today="${payable}" ${payable <= 0 ? "disabled" : ""}>${isFullyPaid ? t("paid") : t("paidToday")}</button>
