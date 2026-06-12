@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=supplier-workers-1">
+    <link rel="stylesheet" href="styles.css?v=mobile-friendly-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -517,6 +517,36 @@
             <button id="printSelectedWage" data-i18n="printSelectedWage">Print selected wage</button>
             <button id="exportReport" data-i18n="exportCsv">Export CSV</button>
           </div>
+          <details class="panel payment-entry-panel" open>
+            <summary data-i18n="addPaymentEntry">Add payment entry</summary>
+            <div class="payment-entry-grid">
+              <label>
+                <span data-i18n="paymentFor">Payment for</span>
+                <select id="paymentEntryType">
+                  <option value="worker" data-i18n="directWorker">Direct worker</option>
+                  <option value="supplier" data-i18n="supplierWorkers">Supplier Workers</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="worker">Worker</span>
+                <select id="paymentEntryPerson"></select>
+              </label>
+              <label><span data-i18n="paymentDate">Payment date</span><input id="paymentEntryDate" type="date"></label>
+              <label><span data-i18n="paidAmount">Paid amount</span><input id="paymentEntryAmount" type="number" min="0" step="0.01"></label>
+              <label>
+                <span data-i18n="paymentMethod">Payment method</span>
+                <select id="paymentEntryMethod">
+                  <option value="cash" data-i18n="cash">Cash</option>
+                  <option value="bank" data-i18n="bank">Bank transfer</option>
+                  <option value="exchange" data-i18n="exchange">Exchange</option>
+                  <option value="other" data-i18n="other">Other</option>
+                </select>
+              </label>
+              <label><span data-i18n="paymentNote">Payment note</span><input id="paymentEntryNote"></label>
+              <button type="button" class="primary" id="addPaymentEntry" data-i18n="savePayment">Save payment</button>
+            </div>
+            <div id="paymentEntrySummary" class="storage-list payment-entry-summary"></div>
+          </details>
           <section class="panel report-panel" id="reportOutput"></section>
         </section>
 
@@ -816,6 +846,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=supplier-workers-1"></script>
+    <script src="app.js?v=mobile-friendly-1"></script>
   </body>
 </html>
