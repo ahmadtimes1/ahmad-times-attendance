@@ -4699,6 +4699,12 @@ function renderDashboard() {
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthExpensesTotal = companyExpenseTotal(month);
+  const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
+    const ledger = expenseLedger(expense);
+    acc.paid = roundMoney(acc.paid + ledger.paid);
+    acc.unpaid = roundMoney(acc.unpaid + ledger.unpaid);
+    return acc;
+  }, { paid: 0, unpaid: 0 });
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
@@ -4719,8 +4725,6 @@ function renderDashboard() {
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
-  if ($("#statGrandPaid")) $("#statGrandPaid").textContent = money(directPaid + supplierDashboardTotals.paid + monthExpenseLedger.paid);
-  if ($("#statGrandUnpaid")) $("#statGrandUnpaid").textContent = money(directUnpaid + supplierDashboardTotals.unpaid + monthExpenseLedger.unpaid);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
