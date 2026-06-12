@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=mobile-friendly-1">
+    <link rel="stylesheet" href="styles.css?v=payment-dropdown-fix-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -528,10 +528,10 @@
                 </select>
               </label>
               <label>
-                <span data-i18n="worker">Worker</span>
+                <span data-i18n="paymentPerson">Worker / supplier</span>
                 <select id="paymentEntryPerson"></select>
               </label>
-              <label><span data-i18n="paymentDate">Payment date</span><input id="paymentEntryDate" type="date"></label>
+              <label><span data-i18n="paymentDate">Payment date</span><input id="paymentEntryDate" type="date"><small data-i18n="paymentDateHelp">Use the real date when you give this payment.</small></label>
               <label><span data-i18n="paidAmount">Paid amount</span><input id="paymentEntryAmount" type="number" min="0" step="0.01"></label>
               <label>
                 <span data-i18n="paymentMethod">Payment method</span>
@@ -846,6 +846,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=mobile-friendly-1"></script>
+    <script src="app.js?v=payment-dropdown-fix-1"></script>
   </body>
 </html>

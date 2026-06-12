@@ -557,6 +557,17 @@ Object.assign(translations.en, {
   exchange: "Exchange",
   other: "Other",
   paymentSaved: "Payment saved",
+  addPaymentEntry: "Add payment entry",
+  paymentFor: "Payment for",
+  directWorker: "Direct worker",
+  paymentPerson: "Worker / supplier",
+  paymentDateHelp: "Use the real date when you give this payment. It can be today or any future payment date.",
+  totalWageAmount: "Total wage amount",
+  remainingUnpaidBalance: "Remaining unpaid balance",
+  paymentHistory: "Payment history",
+  noPaymentHistory: "No payment history yet.",
+  noPaymentTarget: "No worker or supplier selected.",
+  addPaymentAmountFirst: "Enter a paid amount first.",
   currentDailyWage: "Current daily wage",
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
@@ -691,6 +702,17 @@ Object.assign(translations.ps, {
   exchange: "صرافۍ",
   other: "نور",
   paymentSaved: "تادیه ذخیره شوه",
+  addPaymentEntry: "د تادیې ریکارډ اضافه کړئ",
+  paymentFor: "تادیه د چا لپاره",
+  directWorker: "مستقیم کارکوونکی",
+  paymentPerson: "کارکوونکی / سپلایر",
+  paymentDateHelp: "هغه اصلي نېټه وټاکئ چې پیسې ورکوئ. نن یا د راتلونکې هره نېټه کېدای شي.",
+  totalWageAmount: "ټوله مزدوري",
+  remainingUnpaidBalance: "پاتې ناادا",
+  paymentHistory: "د تادیاتو تاریخچه",
+  noPaymentHistory: "تر اوسه تادیه نشته.",
+  noPaymentTarget: "کارکوونکی یا سپلایر نه دی ټاکل شوی.",
+  addPaymentAmountFirst: "لومړی د تادیې اندازه ولیکئ.",
 });
 
 Object.assign(translations.ps, {
@@ -767,6 +789,7 @@ const app = {
   payments: {},
   expenses: [],
   supplierEntries: [],
+  supplierPayments: [],
   logs: [],
   payrollLocks: {},
   dailyBackups: {},
@@ -818,6 +841,7 @@ function snapshotAppData() {
     payments: app.payments || {},
     expenses: app.expenses || [],
     supplierEntries: app.supplierEntries || [],
+    supplierPayments: app.supplierPayments || [],
     payrollLocks: app.payrollLocks || {},
     dailyBackups: app.dailyBackups || {},
   });
@@ -829,6 +853,7 @@ function normalizeAppCollections() {
   app.payments ||= [];
   app.expenses ||= [];
   app.supplierEntries ||= [];
+  app.supplierPayments ||= [];
   app.logs ||= [];
   app.payrollLocks ||= {};
   app.dailyBackups ||= {};
@@ -867,6 +892,7 @@ function restoreSnapshot(snapshot) {
   app.payments = data.payments || {};
   app.expenses = data.expenses || [];
   app.supplierEntries = data.supplierEntries || [];
+  app.supplierPayments = data.supplierPayments || [];
   normalizeAppCollections();
 }
 
@@ -987,6 +1013,7 @@ function createDailyBackup() {
     payments: cloneData(app.payments),
     expenses: cloneData(app.expenses),
     supplierEntries: cloneData(app.supplierEntries),
+    supplierPayments: cloneData(app.supplierPayments),
     payrollLocks: cloneData(app.payrollLocks),
   };
   const dates = Object.keys(app.dailyBackups).sort();
@@ -1131,8 +1158,25 @@ function normalizePaymentLedger() {
 
 function paymentLedgerTotal(workerId, start, end) {
   return roundMoney(paymentLedgerEntries()
-    .filter((payment) => payment.workerId === workerId && payment.date >= start && payment.date <= end)
+    .filter((payment) => payment.workerId === workerId && paymentAppliesToRange(payment, start, end))
     .reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
+}
+
+function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+  return String(aStart || "") <= String(bEnd || "") && String(aEnd || "") >= String(bStart || "");
+}
+
+function paymentAppliesToRange(payment, start, end) {
+  const paymentStart = payment.start || payment.date || start;
+  const paymentEnd = payment.end || payment.date || end;
+  return rangesOverlap(paymentStart, paymentEnd, start, end)
+    || (String(payment.date || "") >= String(start) && String(payment.date || "") <= String(end));
+}
+
+function workerPaymentHistory(workerId, start, end) {
+  return paymentLedgerEntries()
+    .filter((payment) => payment.workerId === workerId && paymentAppliesToRange(payment, start, end))
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
 }
 
 function rowPaidAmount(row, start, end) {
@@ -1339,6 +1383,7 @@ async function loadData() {
   app.payments = {};
   app.expenses = [];
   app.supplierEntries = [];
+  app.supplierPayments = [];
   app.logs = [];
   resetHistory();
   saveData(false);
@@ -1357,6 +1402,7 @@ async function saveData(show = true) {
       payments: app.payments,
       expenses: app.expenses,
       supplierEntries: app.supplierEntries,
+      supplierPayments: app.supplierPayments,
       payrollLocks: app.payrollLocks,
       dailyBackups: app.dailyBackups,
       logs: app.logs,
@@ -1398,6 +1444,7 @@ function setBrowserBackup() {
       payments: app.payments,
       expenses: app.expenses,
       supplierEntries: app.supplierEntries,
+      supplierPayments: app.supplierPayments,
       payrollLocks: app.payrollLocks,
       dailyBackups: app.dailyBackups,
       logs: app.logs,
@@ -1852,17 +1899,173 @@ function paymentTotals(rows, start, end) {
   }, { paid: 0, pending: 0 });
 }
 
+function currentReportPeriod() {
+  const type = $("#reportType")?.value || "monthly";
+  const month = $("#reportMonth")?.value || monthISO();
+  const reportDate = $("#reportDate")?.value || todayISO();
+  let start = reportDate;
+  let end = reportDate;
+  let title = `${t("dailyReport")} · ${reportDate}`;
+  if (type === "weekly") {
+    const date = new Date(`${reportDate}T00:00:00`);
+    const day = date.getDay();
+    date.setDate(date.getDate() - day);
+    start = date.toISOString().slice(0, 10);
+    date.setDate(date.getDate() + 6);
+    end = date.toISOString().slice(0, 10);
+    title = `${t("weeklyReport")} · ${start} ${t("to")} ${end}`;
+  }
+  if (type === "monthly") {
+    const dates = daysInMonth(month);
+    start = dates[0];
+    end = dates[dates.length - 1];
+    title = `${t("monthlyReport")} · ${month}`;
+  }
+  return { type, month, reportDate, start, end, title };
+}
+
+function supplierEntriesForRange(start, end, supplierName = "") {
+  const name = String(supplierName || "").trim().toLowerCase();
+  return (app.supplierEntries || []).filter((entry) => {
+    if (!entry.date || entry.date < start || entry.date > end) return false;
+    if (name && String(entry.supplierName || "").trim().toLowerCase() !== name) return false;
+    return true;
+  });
+}
+
+function renderPaymentHistory(history = []) {
+  if (!history.length) return `<p class="help-text">${t("noPaymentHistory")}</p>`;
+  return `<div class="payment-history-list">${history.map((payment) => `
+    <div>
+      <strong>${money(payment.amount)}</strong>
+      <span>${escapeHTML(payment.date || "-")} · ${escapeHTML(payment.method || "cash")} · ${escapeHTML(payment.note || "-")}</span>
+    </div>
+  `).join("")}</div>`;
+}
+
+function renderPaymentEntryPanel() {
+  const typeSelect = $("#paymentEntryType");
+  const personSelect = $("#paymentEntryPerson");
+  const summary = $("#paymentEntrySummary");
+  if (!typeSelect || !personSelect || !summary) return;
+  const type = typeSelect.value || "worker";
+  const previousValue = personSelect.value;
+  const reportWorkerOptions = Array.from($("#reportWorker")?.options || [])
+    .filter((option) => option.value && option.value !== "all")
+    .map((option) => ({ value: option.value, label: option.textContent || option.value }));
+  const workerOptions = app.workers.length
+    ? app.workers
+      .slice()
+      .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0) || displayWorkerName(a).localeCompare(displayWorkerName(b)))
+      .map((worker) => ({
+        value: worker.id,
+        label: `${displayWorkerName(worker)}${worker.status === "inactive" ? ` (${t("inactive")})` : ""}`,
+      }))
+    : reportWorkerOptions;
+  const options = type === "supplier"
+    ? supplierNamesFromEntries().map((name) => ({ value: name, label: name }))
+    : workerOptions;
+  personSelect.innerHTML = options.map((option) => `<option value="${escapeHTML(option.value)}">${escapeHTML(option.label)}</option>`).join("");
+  if (options.some((option) => option.value === previousValue)) personSelect.value = previousValue;
+  if (!personSelect.value && options[0]) personSelect.value = options[0].value;
+  const paymentDate = $("#paymentEntryDate");
+  if (paymentDate && !paymentDate.value) paymentDate.value = $("#todayInput")?.value || todayISO();
+  const { start, end, month } = currentReportPeriod();
+  let total = 0;
+  let paid = 0;
+  let history = [];
+  if (type === "supplier") {
+    const supplierName = personSelect.value;
+    const entries = supplierEntriesForRange(start, end, supplierName);
+    const totals = supplierTotals(entries, start, end);
+    total = totals.total;
+    paid = totals.paid;
+    history = supplierPaymentHistory(supplierName, start, end);
+  } else {
+    const worker = app.workers.find((item) => item.id === personSelect.value);
+    if (worker) {
+      const reportShift = selectedReportShift();
+      const rows = currentReportPeriod().type === "monthly"
+        ? monthSummary(month, [worker.id], reportShift)
+        : summarizeRecords(recordsForRange(start, end, [worker.id], reportShift));
+      const row = rows[0];
+      total = roundMoney(row?.wage || 0);
+      paid = paymentLedgerTotal(worker.id, start, end);
+      history = workerPaymentHistory(worker.id, start, end);
+    }
+  }
+  const unpaid = roundMoney(Math.max(0, total - paid));
+  if (!options.length) {
+    summary.innerHTML = `<div><span>${t("paymentFor")}</span><strong>${type === "supplier" ? t("noSupplierEntries") : t("noPaymentTarget")}</strong></div>`;
+    return;
+  }
+  summary.innerHTML = `
+    <div><span>${t("totalWageAmount")}</span><strong>${money(total)}</strong></div>
+    <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
+    <div><span>${t("remainingUnpaidBalance")}</span><strong>${money(unpaid)}</strong></div>
+    <div class="wide"><span>${t("paymentHistory")}</span>${renderPaymentHistory(history)}</div>
+  `;
+}
+
+function saveSupplierPayment(supplierName, start, end, paidAmount, paymentDate, method, note) {
+  const name = String(supplierName || "").trim();
+  const amount = roundMoney(paidAmount || 0);
+  const date = paymentDate || end || todayISO();
+  if (!name) {
+    toast(t("noPaymentTarget"));
+    return;
+  }
+  if (amount <= 0) {
+    toast(t("addPaymentAmountFirst"));
+    return;
+  }
+  app.supplierPayments ||= [];
+  app.supplierPayments.push({
+    id: `supplier_payment__${date}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
+    supplierName: name,
+    date,
+    start,
+    end,
+    amount,
+    method: method || "cash",
+    note: note || "",
+    source: "supplier-payment",
+    user: currentUserLabel(),
+    updatedAt: new Date().toISOString(),
+  });
+  addLog("Supplier payment saved", `${name} · ${start} to ${end} · ${money(amount)}`);
+  saveData();
+  toast(t("paymentSaved"));
+}
+
+function addPaymentEntryFromPanel() {
+  const type = $("#paymentEntryType")?.value || "worker";
+  const person = $("#paymentEntryPerson")?.value || "";
+  const amount = $("#paymentEntryAmount")?.value || 0;
+  const date = $("#paymentEntryDate")?.value || todayISO();
+  const method = $("#paymentEntryMethod")?.value || "cash";
+  const note = $("#paymentEntryNote")?.value || "";
+  const { start, end } = currentReportPeriod();
+  if (type === "supplier") saveSupplierPayment(person, start, end, amount, date, method, note);
+  else savePayment(person, start, end, amount, date, method, note);
+  if ($("#paymentEntryAmount")) $("#paymentEntryAmount").value = "";
+  if ($("#paymentEntryNote")) $("#paymentEntryNote").value = "";
+  renderAll();
+}
+
 function savePayment(workerId, start, end, paidAmount, paymentDate, method, note) {
   if (!canChangePayrollDate(paymentDate || end, "Payment")) return;
   const worker = app.workers.find((item) => item.id === workerId);
   const date = paymentDate || end || todayISO();
-  const id = `report__${workerId}__${start}__${end}`;
   normalizePaymentLedger();
-  app.payments = paymentLedgerEntries().filter((payment) => payment.id !== id);
   const amount = Math.max(0, Number(paidAmount || 0));
+  if (amount <= 0) {
+    toast(t("addPaymentAmountFirst"));
+    return;
+  }
   if (amount > 0) {
     app.payments.push({
-      id,
+      id: `payment__${workerId}__${date}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
       workerId,
       date,
       start,
@@ -2114,6 +2317,7 @@ function renderAll() {
   renderSupplierWorkers();
   renderExpenses();
   renderReport();
+  renderPaymentEntryPanel();
   renderCompanyAssistant();
   renderStorage();
   renderLogs();
@@ -2220,6 +2424,12 @@ function renderDashboardLegacyUnused() {
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthExpensesTotal = companyExpenseTotal(month);
+  const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
+    const ledger = expenseLedger(expense);
+    acc.paid = roundMoney(acc.paid + ledger.paid);
+    acc.unpaid = roundMoney(acc.unpaid + ledger.unpaid);
+    return acc;
+  }, { paid: 0, unpaid: 0 });
   const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month));
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
@@ -2813,28 +3023,29 @@ function renderReport() {
     <div class="payment-list">
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
-        const payment = paymentRecord(row.worker.id, start, end);
         const paid = rowPaidAmount(row, start, end);
         const pending = Math.max(0, Number(row.wage || 0) - paid);
         const serial = reportSerial(row.worker, start, end);
+        const history = workerPaymentHistory(row.worker.id, start, end);
         return `
           <div class="payment-row" data-payment-worker="${row.worker.id}" data-payment-start="${start}" data-payment-end="${end}">
             <div>
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
               <p>${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
+              <div class="payment-row-history">${renderPaymentHistory(history)}</div>
             </div>
-            <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value="${payment.paidAmount || 0}"></label>
-            <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${payment.paymentDate || ""}"></label>
+            <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
+            <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${$("#todayInput")?.value || todayISO()}"></label>
             <label>${t("paymentMethod")}
               <select data-payment-field="method">
-                <option value="cash" ${payment.method === "cash" ? "selected" : ""}>${t("cash")}</option>
-                <option value="bank" ${payment.method === "bank" ? "selected" : ""}>${t("bank")}</option>
-                <option value="exchange" ${payment.method === "exchange" ? "selected" : ""}>${t("exchange")}</option>
-                <option value="other" ${payment.method === "other" ? "selected" : ""}>${t("other")}</option>
+                <option value="cash" selected>${t("cash")}</option>
+                <option value="bank">${t("bank")}</option>
+                <option value="exchange">${t("exchange")}</option>
+                <option value="other">${t("other")}</option>
               </select>
             </label>
-            <label>${t("paymentNote")}<input data-payment-field="note" value="${escapeHTML(payment.note || "")}"></label>
+            <label>${t("paymentNote")}<input data-payment-field="note" value=""></label>
             <button data-save-payment>${t("savePayment")}</button>
             <button class="whatsapp-button" data-whatsapp-worker="${row.worker.id}" data-whatsapp-start="${start}" data-whatsapp-end="${end}" data-whatsapp-title="${escapeHTML(title)}">${t("sendWhatsapp")}</button>
           </div>
@@ -2964,17 +3175,64 @@ function monthSupplierEntries(month = monthISO()) {
   return app.supplierEntries.filter((entry) => String(entry.date || "").startsWith(month));
 }
 
-function supplierTotals(entries = []) {
-  return entries.reduce((acc, entry) => {
+function supplierPaymentEntries() {
+  app.supplierPayments ||= [];
+  app.supplierPayments = app.supplierPayments
+    .map((payment) => ({
+      id: payment.id || makeId(),
+      supplierName: String(payment.supplierName || "").trim(),
+      date: payment.date || payment.paymentDate || payment.end || payment.start || todayISO(),
+      start: payment.start || payment.date || payment.paymentDate || todayISO(),
+      end: payment.end || payment.date || payment.paymentDate || todayISO(),
+      amount: roundMoney(payment.amount || payment.paidAmount || 0),
+      method: payment.method || "cash",
+      note: payment.note || "",
+      source: payment.source || "supplier-payment",
+      user: payment.user || currentUserLabel(),
+      updatedAt: payment.updatedAt || new Date().toISOString(),
+    }))
+    .filter((payment) => payment.supplierName && payment.amount > 0);
+  return app.supplierPayments;
+}
+
+function supplierPaymentHistory(supplierName, start, end) {
+  const name = String(supplierName || "").trim().toLowerCase();
+  return supplierPaymentEntries()
+    .filter((payment) => payment.supplierName.toLowerCase() === name && paymentAppliesToRange(payment, start, end))
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+}
+
+function supplierPaymentTotal(supplierName, start, end) {
+  return roundMoney(supplierPaymentHistory(supplierName, start, end)
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
+}
+
+function supplierNamesFromEntries(entries = app.supplierEntries || []) {
+  const names = [
+    ...entries.map((entry) => String(entry.supplierName || "").trim()),
+    ...(app.supplierPayments || []).map((payment) => String(payment.supplierName || "").trim()),
+  ];
+  return Array.from(new Set(names.filter(Boolean))).sort();
+}
+
+function supplierTotals(entries = [], start = "", end = "") {
+  const totals = entries.reduce((acc, entry) => {
     const totals = supplierEntryTotals(entry);
     acc.total = roundMoney(acc.total + totals.total);
     acc.paid = roundMoney(acc.paid + totals.paid);
-    acc.unpaid = roundMoney(acc.unpaid + totals.unpaid);
     acc.normal = roundMoney(acc.normal + totals.normalAmount);
     acc.overtime = roundMoney(acc.overtime + totals.overtimeAmount);
     acc.workers += totals.workers;
     return acc;
   }, { total: 0, paid: 0, unpaid: 0, normal: 0, overtime: 0, workers: 0 });
+  const entryDates = entries.map((entry) => entry.date).filter(Boolean).sort();
+  const rangeStart = start || entryDates[0] || todayISO();
+  const rangeEnd = end || entryDates[entryDates.length - 1] || rangeStart;
+  const ledgerPaid = supplierNamesFromEntries(entries)
+    .reduce((sum, supplierName) => sum + supplierPaymentTotal(supplierName, rangeStart, rangeEnd), 0);
+  totals.paid = roundMoney(totals.paid + ledgerPaid);
+  totals.unpaid = roundMoney(Math.max(0, totals.total - totals.paid));
+  return totals;
 }
 
 function filteredSupplierEntries() {
@@ -2995,6 +3253,9 @@ function filteredSupplierEntries() {
 function supplierReportRows(entries = filteredSupplierEntries()) {
   return entries.map((entry) => {
     const totals = supplierEntryTotals(entry);
+    const ledgerPaid = supplierPaymentTotal(entry.supplierName, entry.date || todayISO(), entry.date || todayISO());
+    const paid = roundMoney(totals.paid + ledgerPaid);
+    const unpaid = roundMoney(Math.max(0, totals.total - paid));
     return [
       entry.date || "",
       entry.supplierName || "",
@@ -3004,8 +3265,8 @@ function supplierReportRows(entries = filteredSupplierEntries()) {
       money(totals.normalAmount),
       money(totals.overtimeAmount),
       money(totals.total),
-      money(totals.paid),
-      money(totals.unpaid),
+      money(paid),
+      money(unpaid),
       entry.notes || "",
     ];
   });
@@ -3024,7 +3285,8 @@ function renderSupplierWorkers() {
   const month = $("#supplierMonth")?.value || monthISO();
   const allMonthEntries = monthSupplierEntries(month);
   const filtered = filteredSupplierEntries();
-  const totals = supplierTotals(allMonthEntries);
+  const monthDates = daysInMonth(month);
+  const totals = supplierTotals(allMonthEntries, monthDates[0], monthDates[monthDates.length - 1]);
   const names = Array.from(new Set((app.supplierEntries || []).map((entry) => String(entry.supplierName || "").trim()).filter(Boolean))).sort();
   $("#supplierNameOptions").innerHTML = names.map((name) => `<option value="${escapeHTML(name)}"></option>`).join("");
   $("#supplierSummary").innerHTML = `
@@ -3037,6 +3299,9 @@ function renderSupplierWorkers() {
   `;
   $("#supplierEntriesList").innerHTML = filtered.map((entry) => {
     const totals = supplierEntryTotals(entry);
+    const ledgerPaid = supplierPaymentTotal(entry.supplierName, entry.date || todayISO(), entry.date || todayISO());
+    const paid = roundMoney(totals.paid + ledgerPaid);
+    const unpaid = roundMoney(Math.max(0, totals.total - paid));
     return `<tr>
       <td>${entry.date || "-"}</td>
       <td>${escapeHTML(entry.supplierName || "-")}</td>
@@ -3046,8 +3311,8 @@ function renderSupplierWorkers() {
       <td>${money(totals.normalAmount)}</td>
       <td>${money(totals.overtimeAmount)}</td>
       <td><strong>${money(totals.total)}</strong></td>
-      <td>${money(totals.paid)}</td>
-      <td><strong>${money(totals.unpaid)}</strong></td>
+      <td>${money(paid)}</td>
+      <td><strong>${money(unpaid)}</strong></td>
       <td>${escapeHTML(entry.notes || "-")}</td>
       <td><button class="danger ghost" data-remove-supplier="${entry.id}">${t("remove")}</button></td>
     </tr>`;
@@ -3825,6 +4090,7 @@ function importBackup(file) {
       app.payments = parsed.payments || {};
       app.expenses = parsed.expenses || [];
       app.supplierEntries = parsed.supplierEntries || [];
+      app.supplierPayments = parsed.supplierPayments || [];
       app.payrollLocks = parsed.payrollLocks || {};
       app.dailyBackups = parsed.dailyBackups || {};
       app.logs = parsed.logs || app.logs || [];
@@ -4173,6 +4439,7 @@ function bindEvents() {
         getField("method"),
         getField("note"),
       );
+      renderAll();
     }
 
     const whatsappButton = event.target.closest("[data-whatsapp-worker]");
@@ -4282,6 +4549,13 @@ function bindEvents() {
   ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
+  ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
+    $(`#${id}`)?.addEventListener("change", renderPaymentEntryPanel);
+    $(`#${id}`)?.addEventListener("focus", renderPaymentEntryPanel);
+    $(`#${id}`)?.addEventListener("pointerdown", renderPaymentEntryPanel);
+  });
+  $(".payment-entry-panel")?.addEventListener("toggle", renderPaymentEntryPanel);
+  $("#addPaymentEntry")?.addEventListener("click", addPaymentEntryFromPanel);
   $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
 
   $("#attendanceWorkerFilter").addEventListener("change", () => {
@@ -4428,17 +4702,25 @@ function renderDashboard() {
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
+  const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month), monthDates[0], monthDates[monthDates.length - 1]);
+  const directPaid = dashboardPayTotals.paid;
+  const directUnpaid = dashboardPayTotals.pending;
 
   $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
+  if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(monthExpensesTotal);
-  $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
+  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
-  $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
-  if ($("#statPaidWages")) $("#statPaidWages").textContent = money(dashboardPayTotals.paid);
+  $("#statUnpaidWages").textContent = money(directUnpaid);
+  if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
+  if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
+  if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
+  if ($("#statGrandPaid")) $("#statGrandPaid").textContent = money(directPaid + supplierDashboardTotals.paid + monthExpenseLedger.paid);
+  if ($("#statGrandUnpaid")) $("#statGrandUnpaid").textContent = money(directUnpaid + supplierDashboardTotals.unpaid + monthExpenseLedger.unpaid);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
