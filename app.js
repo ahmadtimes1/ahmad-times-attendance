@@ -1167,10 +1167,13 @@ function rangesOverlap(aStart, aEnd, bStart, bEnd) {
 }
 
 function paymentAppliesToRange(payment, start, end) {
+  const hasAssignedPeriod = Boolean(payment.start || payment.end);
   const paymentStart = payment.start || payment.date || start;
-  const paymentEnd = payment.end || payment.date || end;
-  return rangesOverlap(paymentStart, paymentEnd, start, end)
-    || (String(payment.date || "") >= String(start) && String(payment.date || "") <= String(end));
+  const paymentEnd = payment.end || payment.date || paymentStart;
+  if (hasAssignedPeriod) {
+    return String(paymentStart) >= String(start) && String(paymentEnd) <= String(end);
+  }
+  return String(payment.date || "") >= String(start) && String(payment.date || "") <= String(end);
 }
 
 function workerPaymentHistory(workerId, start, end) {
@@ -2192,8 +2195,9 @@ function openPdfReport() {
 
 function formatHours(value) {
   if (!value) return "0h";
-  const hours = Math.floor(value);
-  const minutes = Math.round((value - hours) * 60);
+  const totalMinutes = Math.round(Number(value || 0) * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (!hours) return `${minutes}m`;
   if (!minutes) return `${hours}h`;
   return `${hours}h ${minutes}m`;
