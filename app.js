@@ -67,6 +67,7 @@ const translations = {
     noWorkers: "No workers added yet.",
     noActiveWorkers: "No active workers. Add or reactivate a worker first.",
     noWageRecords: "No wage records for this month.",
+    notAvailable: "Not available on this date",
     cloudReady: "Cloud ready",
     localMode: "Local mode",
     setupLogin: "Setup login",
@@ -164,8 +165,11 @@ const translations = {
     daily: "Daily",
     weekly: "Weekly",
     monthly: "Monthly",
+    customRange: "Custom range",
     date: "Date",
     month: "Month",
+    fromDate: "From date",
+    toDate: "To date",
     print: "Download report",
     pdfReport: "PDF / print file",
     reportLanguage: "Report language",
@@ -290,6 +294,7 @@ const translations = {
     noWorkers: "تر اوسه کارکوونکی نشته.",
     noActiveWorkers: "فعال کارکوونکی نشته. کارکوونکی اضافه يا فعال کړئ.",
     noWageRecords: "د دې میاشتې لپاره د مزدورۍ ریکارډ نشته.",
+    notAvailable: "په دې نېټه شتون نه لري",
     cloudReady: "کلاوډ چمتو دی",
     localMode: "محلي حالت",
     setupLogin: "ننوتل تنظیم کړئ",
@@ -401,8 +406,11 @@ const translations = {
     daily: "ورځنی",
     weekly: "اونیز",
     monthly: "میاشتنی",
+    customRange: "ځانګړې نېټې",
     date: "نېټه",
     month: "میاشت",
+    fromDate: "له نېټې",
+    toDate: "تر نېټې",
     print: "راپور ښکته کړئ",
     pdfReport: "PDF / چاپ فایل",
     reportLanguage: "د راپور ژبه",
@@ -1244,7 +1252,7 @@ function openWhatsAppReport(workerId, start, end, title) {
   return withLanguage(reportLanguage(), () => {
   const type = $("#reportType").value;
   const month = $("#reportMonth").value || monthISO();
-  const rows = type === "monthly" ? monthSummary(month, workerId) : summarizeRecords(recordsForRange(start, end, workerId));
+  const rows = type === "monthly" ? monthSummary(month, workerId, selectedReportShift()) : summarizeRecords(recordsForRange(start, end, workerId, selectedReportShift()));
   const row = rows.find((item) => item.worker.id === workerId);
   if (!row) {
     toast(t("noRecordsReport"));
@@ -1495,6 +1503,8 @@ function setDefaults() {
   $("#expenseDate").value = today;
   if ($("#supplierDate")) $("#supplierDate").value = today;
   $("#reportDate").value = today;
+  if ($("#reportStartDate")) $("#reportStartDate").value = today;
+  if ($("#reportEndDate")) $("#reportEndDate").value = today;
   $("#dashboardMonth").value = month;
   $("#lockMonth").value = month;
   $("#attendanceMonth").value = month;
@@ -1509,6 +1519,21 @@ function setDefaults() {
 
 function activeWorkers() {
   return app.workers.filter((worker) => worker.status === "active");
+}
+
+function workerJoinedByDate(worker, date = todayISO()) {
+  return !worker?.joinDate || String(worker.joinDate) <= String(date);
+}
+
+function workerAvailableForAttendance(worker, date = todayISO()) {
+  return worker?.status === "active" && workerJoinedByDate(worker, date);
+}
+
+function workerHasRecordInRange(worker, start, end, shift = "all") {
+  return datesBetween(start, end).some((date) => {
+    const record = getAttendanceRecord(date, worker.id);
+    return Boolean(record.status && recordMatchesShift(record, shift));
+  });
 }
 
 function selectedAttendanceWorkerIds() {
@@ -1577,7 +1602,8 @@ function attendanceWorkerMatchesShift(worker, dates = []) {
 }
 
 function attendanceWorkers(dates = []) {
-  const workers = activeWorkers();
+  const checkDates = dates.length ? dates : [$("#attendanceDate")?.value || todayISO()];
+  const workers = activeWorkers().filter((worker) => checkDates.some((date) => workerAvailableForAttendance(worker, date)));
   const base = (() => {
     if (($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) !== "selected") return workers;
   const selected = new Set(selectedAttendanceWorkerIds());
@@ -1596,7 +1622,9 @@ function renderAttendanceWorkerPicker() {
   if (shiftFilter) shiftFilter.value = app.attendanceShiftFilter || "all";
   const selected = new Set(selectedAttendanceWorkerIds());
   const date = $("#attendanceDate")?.value || todayISO();
-  const workers = activeWorkers().filter((worker) => selectedAttendanceShift() === "all" || workerAssignedShift(worker, date) === selectedAttendanceShift());
+  const workers = activeWorkers()
+    .filter((worker) => workerAvailableForAttendance(worker, date))
+    .filter((worker) => selectedAttendanceShift() === "all" || workerAssignedShift(worker, date) === selectedAttendanceShift());
   select.innerHTML = workers.map((worker) => `
     <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
   `).join("");
@@ -1620,7 +1648,9 @@ function renderBulkAttendanceWorkerPicker() {
   if (!selected.size && ($("#attendanceWorkerFilter")?.value || app.attendanceWorkerFilter) === "selected") {
     selectedAttendanceWorkerIds().forEach((id) => selected.add(id));
   }
-  const workers = activeWorkers().filter((worker) => shiftFilter === "all" || workerAssignedShift(worker, date) === shiftFilter);
+  const workers = activeWorkers()
+    .filter((worker) => workerAvailableForAttendance(worker, date))
+    .filter((worker) => shiftFilter === "all" || workerAssignedShift(worker, date) === shiftFilter);
   select.innerHTML = workers.map((worker) => `
     <option value="${worker.id}" ${selected.has(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>
   `).join("");
@@ -1678,6 +1708,11 @@ function setAttendance(date, workerId, status, autoTime = true) {
   app.attendance[date] ||= {};
   const current = getAttendanceRecord(date, workerId);
   const worker = app.workers.find((item) => item.id === workerId);
+  if (status && worker && !workerAvailableForAttendance(worker, date)) {
+    toast(t("noActiveWorkers"));
+    if (Object.keys(app.attendance[date]).length === 0) delete app.attendance[date];
+    return;
+  }
   if (status) {
     const now = autoTime ? currentTime() : "";
     app.attendance[date][workerId] = {
@@ -1910,6 +1945,8 @@ function currentReportPeriod() {
   const type = $("#reportType")?.value || "monthly";
   const month = $("#reportMonth")?.value || monthISO();
   const reportDate = $("#reportDate")?.value || todayISO();
+  const customStart = $("#reportStartDate")?.value || reportDate;
+  const customEnd = $("#reportEndDate")?.value || customStart;
   let start = reportDate;
   let end = reportDate;
   let title = `${t("dailyReport")} · ${reportDate}`;
@@ -1927,6 +1964,11 @@ function currentReportPeriod() {
     start = dates[0];
     end = dates[dates.length - 1];
     title = `${t("monthlyReport")} · ${month}`;
+  }
+  if (type === "custom") {
+    start = customStart <= customEnd ? customStart : customEnd;
+    end = customStart <= customEnd ? customEnd : customStart;
+    title = `${t("customRange")} · ${start} ${t("to")} ${end}`;
   }
   return { type, month, reportDate, start, end, title };
 }
@@ -2869,6 +2911,13 @@ function renderMonthAttendance() {
       </td>
       ${dates.map((date) => {
         const status = getAttendance(date, worker.id);
+        if (!workerAvailableForAttendance(worker, date)) {
+          return `
+        <td class="month-day unavailable-day">
+          <span class="mini-select mini-select-disabled" title="${escapeHTML(t("notAvailable"))}">-</span>
+        </td>
+      `;
+        }
         return `
         <td class="month-day">
           <select class="mini-select status-${status || "empty"}" data-month-worker="${worker.id}" data-month-date="${date}" aria-label="${escapeHTML(displayWorkerName(worker))} ${date}">
@@ -2935,34 +2984,15 @@ function renderReport() {
   const type = $("#reportType").value;
   const selectedReportIds = selectedReportWorkerIds();
   const reportShift = selectedReportShift();
-  const month = $("#reportMonth").value || monthISO();
-  const reportDate = $("#reportDate").value || todayISO();
-  let start = reportDate;
-  let end = reportDate;
-  let title = `${t("dailyReport")} · ${reportDate}`;
-
-  if (type === "weekly") {
-    const date = new Date(`${reportDate}T00:00:00`);
-    const day = date.getDay();
-    date.setDate(date.getDate() - day);
-    start = date.toISOString().slice(0, 10);
-    date.setDate(date.getDate() + 6);
-    end = date.toISOString().slice(0, 10);
-    title = `${t("weeklyReport")} · ${start} ${t("to")} ${end}`;
-  }
-
-  if (type === "monthly") {
-    const dates = daysInMonth(month);
-    start = dates[0];
-    end = dates[dates.length - 1];
-    title = `${t("monthlyReport")} · ${month}`;
-  }
+  const { month, start, end, title } = currentReportPeriod();
+  const reportDates = datesBetween(start, end);
 
   const reportWorkers = app.workers.filter((worker) => {
-    if (worker.status !== "active") return false;
-    if (reportShift === "all") return true;
-    const reportDates = type === "monthly" ? daysInMonth(month) : datesBetween(start, end);
-    return reportDates.some((date) => workerAssignedShift(worker, date) === reportShift);
+    const hasRecord = workerHasRecordInRange(worker, start, end, reportShift);
+    const canWorkInRange = worker.status === "active"
+      && reportDates.some((date) => workerJoinedByDate(worker, date))
+      && (reportShift === "all" || reportDates.some((date) => workerAssignedShift(worker, date) === reportShift));
+    return hasRecord || canWorkInRange;
   });
   const validSelectedIds = selectedReportIds.includes("all")
     ? ["all"]
@@ -2975,8 +3005,8 @@ function renderReport() {
 
   const reportSelection = selectedWorkerIds.includes("all") ? ["all"] : selectedWorkerIds;
   const reportRows = type === "monthly" ? monthSummary(month, reportSelection, reportShift) : summarizeRecords(recordsForRange(start, end, reportSelection, reportShift));
-  const rows = (selectedWorkerIds.includes("all") ? reportRows.filter((row) => row.worker.status === "active") : reportRows)
-    .filter((row) => reportShift === "all" || row.present || row.halfday || row.absent || row.off);
+  const rows = reportRows
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end));
   const totals = rows.reduce((acc, row) => {
     acc.present += row.present;
     acc.halfday += row.halfday || 0;
@@ -4568,7 +4598,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
@@ -4691,13 +4721,16 @@ function bindEvents() {
 
 function bulkSetMonth(status) {
   const month = $("#attendanceMonth").value || monthISO();
+  const dates = daysInMonth(month);
   if (isMonthLocked(month)) {
     toast(t("monthLocked"));
     return;
   }
   if (month < monthISO() && !confirm(t("oldChangeWarning"))) return;
-  daysInMonth(month).forEach((date) => {
-    attendanceWorkers().forEach((worker) => {
+  const workers = attendanceWorkers(dates);
+  dates.forEach((date) => {
+    workers.forEach((worker) => {
+      if (status && !workerAvailableForAttendance(worker, date)) return;
       app.attendance[date] ||= {};
       if (status) {
         const current = getAttendanceRecord(date, worker.id);
@@ -4750,7 +4783,7 @@ function renderDashboard() {
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
-    .filter((row) => row.worker.status === "active" && (row.present || row.halfday || row.worker.status === "active"))
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]))
     .map((row) => {
       const paid = rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
       const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);

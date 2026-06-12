@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=supplier-charges-1">
+    <link rel="stylesheet" href="styles.css?v=custom-report-join-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -478,6 +478,7 @@
                 <option value="daily" data-i18n="daily">Daily</option>
                 <option value="weekly" data-i18n="weekly">Weekly</option>
                 <option value="monthly" data-i18n="monthly" selected>Monthly</option>
+                <option value="custom" data-i18n="customRange">Custom range</option>
               </select>
             </label>
             <label>
@@ -487,6 +488,14 @@
             <label>
               <span data-i18n="month">Month</span>
               <input id="reportMonth" type="month">
+            </label>
+            <label>
+              <span data-i18n="fromDate">From date</span>
+              <input id="reportStartDate" type="date">
+            </label>
+            <label>
+              <span data-i18n="toDate">To date</span>
+              <input id="reportEndDate" type="date">
             </label>
             <label>
               <span data-i18n="workers">Workers</span>
@@ -842,6 +851,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=supplier-charges-1"></script>
+    <script src="app.js?v=custom-report-join-1"></script>
   </body>
 </html>

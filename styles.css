@@ -1781,6 +1781,21 @@ tbody tr:last-child td {
   text-align: center;
 }
 
+.mini-select-disabled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  color: var(--muted);
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px dashed rgba(100, 116, 139, 0.35);
+  border-radius: 10px;
+}
+
+.unavailable-day {
+  opacity: 0.72;
+}
+
 .report-controls {
   margin-bottom: 14px;
   padding: 14px;
