@@ -1552,6 +1552,13 @@ function restBreakLabel(record) {
   return t("defaultRest");
 }
 
+function shiftFromInTime(inTime, fallback = "day") {
+  if (!inTime) return fallback === "night" ? "night" : "day";
+  const [hour, minute] = inTime.split(":").map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return fallback === "night" ? "night" : "day";
+  return (hour * 60 + minute) >= (15 * 60) ? "night" : "day";
+}
+
 function setAttendance(date, workerId, status, autoTime = true) {
   if (!canChangePayrollDate(date, "Attendance status")) return;
   app.attendance[date] ||= {};
@@ -1562,7 +1569,7 @@ function setAttendance(date, workerId, status, autoTime = true) {
     app.attendance[date][workerId] = {
       ...current,
       status,
-      shift: selectedAttendanceShift() === "all" ? (current.shift || "day") : selectedAttendanceShift(),
+      shift: ["present", "halfday"].includes(status) ? shiftFromInTime(current.inTime || now, selectedAttendanceShift() === "all" ? (current.shift || "day") : selectedAttendanceShift()) : "day",
       inTime: ["present", "halfday"].includes(status) ? (current.inTime || now) : "",
       outTime: ["present", "halfday"].includes(status) ? current.outTime : "",
       restBreakType: ["present", "halfday"].includes(status) ? current.restBreakType : "default",
@@ -1587,12 +1594,13 @@ function applyBulkAttendance() {
     return;
   }
   const status = $("#bulkAttendanceStatus")?.value || "present";
-  const shift = $("#bulkAttendanceShift")?.value === "night" ? "night" : "day";
+  const isWorkingStatus = ["present", "halfday"].includes(status);
+  const selectedShift = $("#bulkAttendanceShift")?.value === "night" ? "night" : "day";
   const inTime = $("#bulkAttendanceIn")?.value || "";
+  const shift = isWorkingStatus && inTime ? shiftFromInTime(inTime, selectedShift) : selectedShift;
   const outTime = $("#bulkAttendanceOut")?.value || "";
   const restBreakType = ["none", "custom"].includes($("#bulkAttendanceRestType")?.value) ? $("#bulkAttendanceRestType").value : "default";
   const restMinutes = restBreakType === "none" ? 0 : restBreakType === "custom" ? Math.max(0, Number($("#bulkAttendanceRestMinutes")?.value || 0)) : 60;
-  const isWorkingStatus = ["present", "halfday"].includes(status);
 
   app.attendance[date] ||= {};
   workerIds.forEach((workerId) => {
@@ -1644,6 +1652,7 @@ function setAttendanceTime(date, workerId, field, value) {
     status: current.status || "",
     [field]: value,
   };
+  if (field === "inTime") app.attendance[date][workerId].shift = shiftFromInTime(value, current.shift);
   if (field === "inTime" && value && !current.outTime) app.attendance[date][workerId].outTime = "";
   const worker = app.workers.find((item) => item.id === workerId);
   addLog("Attendance time changed", `${worker?.name || workerId} · ${date} · ${field}: ${value || "-"}`);
@@ -2774,7 +2783,6 @@ function renderReport() {
             <th>${t("halfday")}</th>
             <th>${t("absent")}</th>
             <th>${t("off")}</th>
-            <th>${t("hours")}</th>
             <th>${t("overtime")}</th>
             <th>${t("dailyWage")}</th>
             <th>${t("baseWage")}</th>
@@ -2795,7 +2803,6 @@ function renderReport() {
               <td>${row.halfday || 0}</td>
               <td>${row.absent}</td>
               <td>${row.off}</td>
-              <td>${formatHours(row.hours || 0)}</td>
               <td>${formatHours(row.overtime || 0)}</td>
               <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
               <td>${money(row.baseWage || 0)}</td>
@@ -2805,7 +2812,7 @@ function renderReport() {
               <td>${money(rowPaidAmount(row, start, end))}</td>
               <td><strong>${money(rowUnpaidAmount(row, start, end))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="16">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="15">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
