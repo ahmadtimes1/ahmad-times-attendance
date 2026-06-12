@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=dashboard-worker-fix-1">
+    <link rel="stylesheet" href="styles.css?v=supplier-charges-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -368,6 +368,8 @@
               <label><span data-i18n="supplierWorkerCount">Workers provided today</span><input id="supplierWorkerCount" type="number" min="0" step="1" required></label>
               <label><span data-i18n="supplierDailyWage">Daily wage per worker</span><input id="supplierDailyWage" type="number" min="0" step="0.01" required></label>
               <label><span data-i18n="supplierOvertimeHours">Overtime hours per worker</span><input id="supplierOvertimeHours" type="number" min="0" step="0.25" value="0"></label>
+              <label><span data-i18n="transportationCharges">Transportation charges</span><input id="supplierTransportationCharges" type="number" min="0" step="0.01" value="0"></label>
+              <label><span data-i18n="previousLoan">Previous loan</span><input id="supplierPreviousLoan" type="number" min="0" step="0.01" value="0"></label>
               <label><span data-i18n="paidAmount">Paid amount</span><input id="supplierPaidAmount" type="number" min="0" step="0.01" value="0"></label>
               <label><span data-i18n="paymentNote">Notes</span><input id="supplierNotes"></label>
               <button class="primary" data-i18n="addSupplierEntry">Add supplier entry</button>
@@ -397,6 +399,8 @@
                     <th data-i18n="supplierOvertimeHours">Overtime hours</th>
                     <th data-i18n="normalAmount">Normal amount</th>
                     <th data-i18n="overtimeAmount">Overtime amount</th>
+                    <th data-i18n="transportationCharges">Transportation charges</th>
+                    <th data-i18n="previousLoan">Previous loan</th>
                     <th data-i18n="totalSupplierAmount">Total supplier amount</th>
                     <th data-i18n="paidAmount">Paid amount</th>
                     <th data-i18n="unpaidAmount">Unpaid amount</th>
@@ -838,6 +842,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=dashboard-worker-fix-1"></script>
+    <script src="app.js?v=supplier-charges-1"></script>
   </body>
 </html>

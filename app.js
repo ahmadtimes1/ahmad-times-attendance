@@ -617,6 +617,8 @@ Object.assign(translations.en, {
   supplierWorkerCount: "Workers provided today",
   supplierDailyWage: "Daily wage per worker",
   supplierOvertimeHours: "Overtime hours per worker",
+  transportationCharges: "Transportation charges",
+  previousLoan: "Previous loan",
   normalAmount: "Normal amount",
   overtimeAmount: "Overtime amount",
   totalSupplierAmount: "Total supplier amount",
@@ -760,6 +762,8 @@ Object.assign(translations.ps, {
   supplierWorkerCount: "نن ورکړل شوي کارکوونکي",
   supplierDailyWage: "د هر کارکوونکي ورځنۍ مزدوري",
   supplierOvertimeHours: "د هر کارکوونکي اضافي ساعتونه",
+  transportationCharges: "د ټرانسپورټ خرچه",
+  previousLoan: "پخوانی قرض",
   normalAmount: "عادي اندازه",
   overtimeAmount: "د اضافي وخت اندازه",
   totalSupplierAmount: "د سپلایر ټول مبلغ",
@@ -3165,13 +3169,15 @@ function supplierEntryTotals(entry) {
   const workers = Math.max(0, Number(entry.workerCount || 0));
   const dailyWage = roundMoney(entry.dailyWage || 0);
   const overtimeHours = Math.max(0, Number(entry.overtimeHours || 0));
+  const transportationCharges = roundMoney(entry.transportationCharges || 0);
+  const previousLoan = roundMoney(entry.previousLoan || 0);
   const paid = roundMoney(entry.paidAmount || 0);
   const hourlyRate = roundMoney(dailyWage / STANDARD_HOURS);
   const normalAmount = roundMoney(workers * dailyWage);
   const overtimeAmount = roundMoney(workers * overtimeHours * hourlyRate);
-  const total = roundMoney(normalAmount + overtimeAmount);
+  const total = roundMoney(normalAmount + overtimeAmount + transportationCharges + previousLoan);
   const unpaid = roundMoney(Math.max(0, total - paid));
-  return { workers, dailyWage, overtimeHours, hourlyRate, normalAmount, overtimeAmount, total, paid, unpaid };
+  return { workers, dailyWage, overtimeHours, hourlyRate, normalAmount, overtimeAmount, transportationCharges, previousLoan, total, paid, unpaid };
 }
 
 function monthSupplierEntries(month = monthISO()) {
@@ -3226,9 +3232,11 @@ function supplierTotals(entries = [], start = "", end = "") {
     acc.paid = roundMoney(acc.paid + totals.paid);
     acc.normal = roundMoney(acc.normal + totals.normalAmount);
     acc.overtime = roundMoney(acc.overtime + totals.overtimeAmount);
+    acc.transportationCharges = roundMoney(acc.transportationCharges + totals.transportationCharges);
+    acc.previousLoan = roundMoney(acc.previousLoan + totals.previousLoan);
     acc.workers += totals.workers;
     return acc;
-  }, { total: 0, paid: 0, unpaid: 0, normal: 0, overtime: 0, workers: 0 });
+  }, { total: 0, paid: 0, unpaid: 0, normal: 0, overtime: 0, transportationCharges: 0, previousLoan: 0, workers: 0 });
   const entryDates = entries.map((entry) => entry.date).filter(Boolean).sort();
   const rangeStart = start || entryDates[0] || todayISO();
   const rangeEnd = end || entryDates[entryDates.length - 1] || rangeStart;
@@ -3268,6 +3276,8 @@ function supplierReportRows(entries = filteredSupplierEntries()) {
       formatHours(totals.overtimeHours),
       money(totals.normalAmount),
       money(totals.overtimeAmount),
+      money(totals.transportationCharges),
+      money(totals.previousLoan),
       money(totals.total),
       money(paid),
       money(unpaid),
@@ -3297,6 +3307,8 @@ function renderSupplierWorkers() {
     <article><span>${t("supplierWorkerCount")}</span><strong>${totals.workers}</strong></article>
     <article><span>${t("normalAmount")}</span><strong>${money(totals.normal)}</strong></article>
     <article><span>${t("overtimeAmount")}</span><strong>${money(totals.overtime)}</strong></article>
+    <article><span>${t("transportationCharges")}</span><strong>${money(totals.transportationCharges)}</strong></article>
+    <article><span>${t("previousLoan")}</span><strong>${money(totals.previousLoan)}</strong></article>
     <article><span>${t("totalSupplierAmount")}</span><strong>${money(totals.total)}</strong></article>
     <article><span>${t("paid")}</span><strong>${money(totals.paid)}</strong></article>
     <article><span>${t("unpaid")}</span><strong>${money(totals.unpaid)}</strong></article>
@@ -3314,13 +3326,15 @@ function renderSupplierWorkers() {
       <td>${formatHours(totals.overtimeHours)}</td>
       <td>${money(totals.normalAmount)}</td>
       <td>${money(totals.overtimeAmount)}</td>
+      <td>${money(totals.transportationCharges)}</td>
+      <td>${money(totals.previousLoan)}</td>
       <td><strong>${money(totals.total)}</strong></td>
       <td>${money(paid)}</td>
       <td><strong>${money(unpaid)}</strong></td>
       <td>${escapeHTML(entry.notes || "-")}</td>
       <td><button class="danger ghost" data-remove-supplier="${entry.id}">${t("remove")}</button></td>
     </tr>`;
-  }).join("") || `<tr><td colspan="12">${t("noSupplierEntries")}</td></tr>`;
+  }).join("") || `<tr><td colspan="14">${t("noSupplierEntries")}</td></tr>`;
 }
 
 function addSupplierEntryFromForm() {
@@ -3339,6 +3353,8 @@ function addSupplierEntryFromForm() {
     workerCount,
     dailyWage,
     overtimeHours: Math.max(0, Number($("#supplierOvertimeHours").value || 0)),
+    transportationCharges: roundMoney($("#supplierTransportationCharges").value || 0),
+    previousLoan: roundMoney($("#supplierPreviousLoan").value || 0),
     paidAmount: roundMoney($("#supplierPaidAmount").value || 0),
     notes: $("#supplierNotes").value.trim(),
     createdAt: new Date().toISOString(),
@@ -3349,6 +3365,8 @@ function addSupplierEntryFromForm() {
   $("#supplierForm").reset();
   $("#supplierDate").value = date;
   $("#supplierOvertimeHours").value = 0;
+  $("#supplierTransportationCharges").value = 0;
+  $("#supplierPreviousLoan").value = 0;
   $("#supplierPaidAmount").value = 0;
   saveData();
   toast(t("supplierEntrySaved"));
@@ -3366,7 +3384,7 @@ function printSupplierReport() {
   const entries = filteredSupplierEntries();
   const rows = supplierReportRows(entries);
   const totals = supplierTotals(entries);
-  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
+  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("transportationCharges"), t("previousLoan"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
   const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   printPlainReport(t("supplierWorkers"), `
     <div class="row"><span>${t("totalSupplierAmount")}</span><strong>${money(totals.total)}</strong></div>
@@ -3378,7 +3396,7 @@ function printSupplierReport() {
 }
 
 function exportSupplierCSV() {
-  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
+  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("transportationCharges"), t("previousLoan"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
   const rows = [headers, ...supplierReportRows()];
   downloadFile(`supplier-workers-report-${todayISO()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
   addLog("Supplier CSV exported", `${rows.length - 1} rows`);
