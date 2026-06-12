@@ -142,6 +142,7 @@ const translations = {
     oldChangeWarning: "You are changing an old record. Continue?",
     mainNavigation: "Main navigation",
     search: "Search",
+    all: "All",
     searchPlaceholder: "Name, role, phone, Emirates ID",
   markVisiblePresent: "Mark visible days present",
   markVisibleOff: "Mark visible days off",
@@ -214,6 +215,7 @@ const translations = {
     noRecordsReport: "No records for this report.",
     noWorkerSearch: "No workers match this search.",
     workerNameRequired: "Worker name is required",
+    requiredFields: "Please fill the required fields",
     workerAdded: "Worker added",
     workerUpdated: "Worker updated",
     saved: "Saved",
@@ -377,6 +379,7 @@ const translations = {
     oldChangeWarning: "تاسو پخوانی ریکارډ بدلوئ. دوام؟",
     mainNavigation: "اصلي مینو",
     search: "لټون",
+    all: "ټول",
     searchPlaceholder: "نوم، کار، تلیفون، امارات ID",
   markVisiblePresent: "ښکاره ورځې حاضر کړئ",
   markVisibleOff: "ښکاره ورځې رخصت کړئ",
@@ -449,6 +452,7 @@ const translations = {
     noRecordsReport: "د دې راپور لپاره ریکارډ نشته.",
     noWorkerSearch: "د دې لټون لپاره کارکوونکی ونه موندل شو.",
     workerNameRequired: "د کارکوونکي نوم اړین دی",
+    requiredFields: "مهرباني وکړئ اړین ځایونه ډک کړئ",
     workerAdded: "کارکوونکی اضافه شو",
     workerUpdated: "کارکوونکی تازه شو",
     saved: "ذخیره شو",
@@ -596,6 +600,29 @@ Object.assign(translations.en, {
   pashtoName: "Pashto name",
   pashtoNamePlaceholder: "Worker name in Pashto",
   remove: "Remove",
+  supplierWorkers: "Supplier Workers",
+  supplierWorkersHelp: "Simple count-based supplier labour entry, separate from direct company workers.",
+  supplierName: "Supplier name",
+  supplierWorkerCount: "Workers provided today",
+  supplierDailyWage: "Daily wage per worker",
+  supplierOvertimeHours: "Overtime hours per worker",
+  normalAmount: "Normal amount",
+  overtimeAmount: "Overtime amount",
+  totalSupplierAmount: "Total supplier amount",
+  unpaidAmount: "Unpaid amount",
+  addSupplierEntry: "Add supplier entry",
+  supplierEntrySaved: "Supplier entry saved",
+  supplierEntryRemoved: "Supplier entry removed",
+  supplierWorkersTotalAmount: "Supplier workers total",
+  supplierWorkersPaidAmount: "Supplier workers paid",
+  supplierWorkersUnpaidAmount: "Supplier workers unpaid",
+  directWorkersTotalAmount: "Direct workers total",
+  directWorkersPaidAmount: "Direct workers paid",
+  directWorkersUnpaidAmount: "Direct workers unpaid",
+  grandTotalAmount: "Grand total amount",
+  grandTotalPaid: "Grand total paid",
+  grandTotalUnpaid: "Grand total unpaid",
+  noSupplierEntries: "No supplier worker entries.",
 });
 
 Object.assign(translations.ps, {
@@ -705,6 +732,29 @@ Object.assign(translations.ps, {
   noExpenses: "د شرکت مصرف نشته.",
   expenseSaved: "مصرف ذخیره شو",
   expenseRemoved: "مصرف لرې شو",
+  supplierWorkers: "د سپلایر کارکوونکي",
+  supplierWorkersHelp: "د سپلایر مزدورانو ساده حساب، د مستقیمو کارکوونکو څخه جلا.",
+  supplierName: "د سپلایر نوم",
+  supplierWorkerCount: "نن ورکړل شوي کارکوونکي",
+  supplierDailyWage: "د هر کارکوونکي ورځنۍ مزدوري",
+  supplierOvertimeHours: "د هر کارکوونکي اضافي ساعتونه",
+  normalAmount: "عادي اندازه",
+  overtimeAmount: "د اضافي وخت اندازه",
+  totalSupplierAmount: "د سپلایر ټول مبلغ",
+  unpaidAmount: "ناادا مبلغ",
+  addSupplierEntry: "د سپلایر ریکارډ اضافه کړئ",
+  supplierEntrySaved: "د سپلایر ریکارډ ذخیره شو",
+  supplierEntryRemoved: "د سپلایر ریکارډ لرې شو",
+  supplierWorkersTotalAmount: "د سپلایر ټول مبلغ",
+  supplierWorkersPaidAmount: "د سپلایر ادا شوی",
+  supplierWorkersUnpaidAmount: "د سپلایر ناادا",
+  directWorkersTotalAmount: "د مستقیمو کارکوونکو ټول",
+  directWorkersPaidAmount: "د مستقیمو کارکوونکو ادا شوی",
+  directWorkersUnpaidAmount: "د مستقیمو کارکوونکو ناادا",
+  grandTotalAmount: "ټول مجموعه",
+  grandTotalPaid: "ټول ادا شوی",
+  grandTotalUnpaid: "ټول ناادا",
+  noSupplierEntries: "د سپلایر کارکوونکو ریکارډ نشته.",
   monthlyExpenses: "د شرکت میاشتني مصارف",
   grandTotal: "ټول مجموعه",
   pashtoName: "پښتو نوم",
@@ -716,6 +766,7 @@ const app = {
   attendance: {},
   payments: {},
   expenses: [],
+  supplierEntries: [],
   logs: [],
   payrollLocks: {},
   dailyBackups: {},
@@ -766,6 +817,7 @@ function snapshotAppData() {
     attendance: app.attendance || {},
     payments: app.payments || {},
     expenses: app.expenses || [],
+    supplierEntries: app.supplierEntries || [],
     payrollLocks: app.payrollLocks || {},
     dailyBackups: app.dailyBackups || {},
   });
@@ -776,6 +828,7 @@ function normalizeAppCollections() {
   app.attendance ||= {};
   app.payments ||= [];
   app.expenses ||= [];
+  app.supplierEntries ||= [];
   app.logs ||= [];
   app.payrollLocks ||= {};
   app.dailyBackups ||= {};
@@ -813,6 +866,7 @@ function restoreSnapshot(snapshot) {
   app.attendance = data.attendance || {};
   app.payments = data.payments || {};
   app.expenses = data.expenses || [];
+  app.supplierEntries = data.supplierEntries || [];
   normalizeAppCollections();
 }
 
@@ -932,6 +986,7 @@ function createDailyBackup() {
     attendance: cloneData(app.attendance),
     payments: cloneData(app.payments),
     expenses: cloneData(app.expenses),
+    supplierEntries: cloneData(app.supplierEntries),
     payrollLocks: cloneData(app.payrollLocks),
   };
   const dates = Object.keys(app.dailyBackups).sort();
@@ -1283,6 +1338,7 @@ async function loadData() {
   app.workers = [];
   app.payments = {};
   app.expenses = [];
+  app.supplierEntries = [];
   app.logs = [];
   resetHistory();
   saveData(false);
@@ -1300,6 +1356,7 @@ async function saveData(show = true) {
       attendance: app.attendance,
       payments: app.payments,
       expenses: app.expenses,
+      supplierEntries: app.supplierEntries,
       payrollLocks: app.payrollLocks,
       dailyBackups: app.dailyBackups,
       logs: app.logs,
@@ -1340,6 +1397,7 @@ function setBrowserBackup() {
       attendance: app.attendance,
       payments: app.payments,
       expenses: app.expenses,
+      supplierEntries: app.supplierEntries,
       payrollLocks: app.payrollLocks,
       dailyBackups: app.dailyBackups,
       logs: app.logs,
@@ -1381,11 +1439,13 @@ function setDefaults() {
   $("#attendanceWeekDate").value = today;
   $("#quickAttendanceDate").value = today;
   $("#expenseDate").value = today;
+  if ($("#supplierDate")) $("#supplierDate").value = today;
   $("#reportDate").value = today;
   $("#dashboardMonth").value = month;
   $("#lockMonth").value = month;
   $("#attendanceMonth").value = month;
   $("#expenseMonth").value = month;
+  if ($("#supplierMonth")) $("#supplierMonth").value = month;
   $("#reportMonth").value = month;
   if ($("#bulkAttendanceRestType")) $("#bulkAttendanceRestType").value = "default";
   if ($("#bulkAttendanceRestMinutes")) $("#bulkAttendanceRestMinutes").value = 60;
@@ -2051,6 +2111,7 @@ function renderAll() {
   renderDayAttendance();
   renderWeekAttendance();
   renderMonthAttendance();
+  renderSupplierWorkers();
   renderExpenses();
   renderReport();
   renderCompanyAssistant();
@@ -2159,20 +2220,28 @@ function renderDashboardLegacyUnused() {
   const todayRecords = app.attendance[date] || {};
   const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthExpensesTotal = companyExpenseTotal(month);
+  const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month));
   const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
+  const directPaid = dashboardPayTotals.paid;
+  const directUnpaid = dashboardPayTotals.pending;
 
   $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
+  if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(monthExpensesTotal);
-  $("#statGrandTotal").textContent = money(monthWages + monthExpensesTotal);
+  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
-  $("#statUnpaidWages").textContent = money(dashboardPayTotals.pending);
-  if ($("#statPaidWages")) $("#statPaidWages").textContent = money(dashboardPayTotals.paid);
+  $("#statUnpaidWages").textContent = money(directUnpaid);
+  if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
+  if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
+  if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
+  if ($("#statGrandPaid")) $("#statGrandPaid").textContent = money(directPaid + supplierDashboardTotals.paid);
+  if ($("#statGrandUnpaid")) $("#statGrandUnpaid").textContent = money(directUnpaid + supplierDashboardTotals.unpaid);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
@@ -2877,12 +2946,174 @@ function expenseBuyerName(expense) {
   return String(expense.buyer || "").trim() || "-";
 }
 
+function supplierEntryTotals(entry) {
+  const workers = Math.max(0, Number(entry.workerCount || 0));
+  const dailyWage = roundMoney(entry.dailyWage || 0);
+  const overtimeHours = Math.max(0, Number(entry.overtimeHours || 0));
+  const paid = roundMoney(entry.paidAmount || 0);
+  const hourlyRate = roundMoney(dailyWage / STANDARD_HOURS);
+  const normalAmount = roundMoney(workers * dailyWage);
+  const overtimeAmount = roundMoney(workers * overtimeHours * hourlyRate);
+  const total = roundMoney(normalAmount + overtimeAmount);
+  const unpaid = roundMoney(Math.max(0, total - paid));
+  return { workers, dailyWage, overtimeHours, hourlyRate, normalAmount, overtimeAmount, total, paid, unpaid };
+}
+
+function monthSupplierEntries(month = monthISO()) {
+  app.supplierEntries ||= [];
+  return app.supplierEntries.filter((entry) => String(entry.date || "").startsWith(month));
+}
+
+function supplierTotals(entries = []) {
+  return entries.reduce((acc, entry) => {
+    const totals = supplierEntryTotals(entry);
+    acc.total = roundMoney(acc.total + totals.total);
+    acc.paid = roundMoney(acc.paid + totals.paid);
+    acc.unpaid = roundMoney(acc.unpaid + totals.unpaid);
+    acc.normal = roundMoney(acc.normal + totals.normalAmount);
+    acc.overtime = roundMoney(acc.overtime + totals.overtimeAmount);
+    acc.workers += totals.workers;
+    return acc;
+  }, { total: 0, paid: 0, unpaid: 0, normal: 0, overtime: 0, workers: 0 });
+}
+
+function filteredSupplierEntries() {
+  const month = $("#supplierMonth")?.value || monthISO();
+  const date = $("#supplierFilterDate")?.value || "";
+  const name = String($("#supplierFilterName")?.value || "").trim().toLowerCase();
+  const status = $("#supplierFilterStatus")?.value || "all";
+  return monthSupplierEntries(month).filter((entry) => {
+    const totals = supplierEntryTotals(entry);
+    if (date && entry.date !== date) return false;
+    if (name && !String(entry.supplierName || "").toLowerCase().includes(name)) return false;
+    if (status === "paid" && totals.unpaid > 0) return false;
+    if (status === "unpaid" && totals.unpaid <= 0) return false;
+    return true;
+  });
+}
+
+function supplierReportRows(entries = filteredSupplierEntries()) {
+  return entries.map((entry) => {
+    const totals = supplierEntryTotals(entry);
+    return [
+      entry.date || "",
+      entry.supplierName || "",
+      totals.workers,
+      money(totals.dailyWage),
+      formatHours(totals.overtimeHours),
+      money(totals.normalAmount),
+      money(totals.overtimeAmount),
+      money(totals.total),
+      money(totals.paid),
+      money(totals.unpaid),
+      entry.notes || "",
+    ];
+  });
+}
+
 function filteredMonthExpenses(month = monthISO()) {
   const buyer = ($("#expenseBuyerFilter")?.value || "").trim().toLowerCase();
   return monthExpenses(month).filter((expense) => {
     if (!buyer) return true;
     return expenseBuyerName(expense).toLowerCase() === buyer;
   });
+}
+
+function renderSupplierWorkers() {
+  if (!$("#supplierEntriesList")) return;
+  const month = $("#supplierMonth")?.value || monthISO();
+  const allMonthEntries = monthSupplierEntries(month);
+  const filtered = filteredSupplierEntries();
+  const totals = supplierTotals(allMonthEntries);
+  const names = Array.from(new Set((app.supplierEntries || []).map((entry) => String(entry.supplierName || "").trim()).filter(Boolean))).sort();
+  $("#supplierNameOptions").innerHTML = names.map((name) => `<option value="${escapeHTML(name)}"></option>`).join("");
+  $("#supplierSummary").innerHTML = `
+    <article><span>${t("supplierWorkerCount")}</span><strong>${totals.workers}</strong></article>
+    <article><span>${t("normalAmount")}</span><strong>${money(totals.normal)}</strong></article>
+    <article><span>${t("overtimeAmount")}</span><strong>${money(totals.overtime)}</strong></article>
+    <article><span>${t("totalSupplierAmount")}</span><strong>${money(totals.total)}</strong></article>
+    <article><span>${t("paid")}</span><strong>${money(totals.paid)}</strong></article>
+    <article><span>${t("unpaid")}</span><strong>${money(totals.unpaid)}</strong></article>
+  `;
+  $("#supplierEntriesList").innerHTML = filtered.map((entry) => {
+    const totals = supplierEntryTotals(entry);
+    return `<tr>
+      <td>${entry.date || "-"}</td>
+      <td>${escapeHTML(entry.supplierName || "-")}</td>
+      <td>${totals.workers}</td>
+      <td>${money(totals.dailyWage)}</td>
+      <td>${formatHours(totals.overtimeHours)}</td>
+      <td>${money(totals.normalAmount)}</td>
+      <td>${money(totals.overtimeAmount)}</td>
+      <td><strong>${money(totals.total)}</strong></td>
+      <td>${money(totals.paid)}</td>
+      <td><strong>${money(totals.unpaid)}</strong></td>
+      <td>${escapeHTML(entry.notes || "-")}</td>
+      <td><button class="danger ghost" data-remove-supplier="${entry.id}">${t("remove")}</button></td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="12">${t("noSupplierEntries")}</td></tr>`;
+}
+
+function addSupplierEntryFromForm() {
+  const date = $("#supplierDate").value || todayISO();
+  const supplierName = $("#supplierName").value.trim();
+  const workerCount = Math.max(0, Number($("#supplierWorkerCount").value || 0));
+  const dailyWage = roundMoney($("#supplierDailyWage").value || 0);
+  if (!supplierName || workerCount <= 0 || dailyWage <= 0) {
+    toast(t("requiredFields"));
+    return;
+  }
+  const entry = {
+    id: makeId(),
+    date,
+    supplierName,
+    workerCount,
+    dailyWage,
+    overtimeHours: Math.max(0, Number($("#supplierOvertimeHours").value || 0)),
+    paidAmount: roundMoney($("#supplierPaidAmount").value || 0),
+    notes: $("#supplierNotes").value.trim(),
+    createdAt: new Date().toISOString(),
+    user: currentUserLabel(),
+  };
+  app.supplierEntries.unshift(entry);
+  addLog("Supplier entry added", `${supplierName} · ${date} · ${workerCount} workers · ${money(supplierEntryTotals(entry).total)}`);
+  $("#supplierForm").reset();
+  $("#supplierDate").value = date;
+  $("#supplierOvertimeHours").value = 0;
+  $("#supplierPaidAmount").value = 0;
+  saveData();
+  toast(t("supplierEntrySaved"));
+}
+
+function removeSupplierEntry(id) {
+  const entry = app.supplierEntries.find((item) => item.id === id);
+  app.supplierEntries = app.supplierEntries.filter((item) => item.id !== id);
+  addLog("Supplier entry removed", `${entry?.supplierName || id} · ${entry?.date || "-"}`);
+  saveData();
+  toast(t("supplierEntryRemoved"));
+}
+
+function printSupplierReport() {
+  const entries = filteredSupplierEntries();
+  const rows = supplierReportRows(entries);
+  const totals = supplierTotals(entries);
+  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
+  const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  printPlainReport(t("supplierWorkers"), `
+    <div class="row"><span>${t("totalSupplierAmount")}</span><strong>${money(totals.total)}</strong></div>
+    <div class="row"><span>${t("paid")}</span><strong>${money(totals.paid)}</strong></div>
+    <div class="row"><span>${t("unpaid")}</span><strong>${money(totals.unpaid)}</strong></div>
+    ${table}
+  `);
+  addLog("Supplier report printed", `${entries.length} rows`);
+}
+
+function exportSupplierCSV() {
+  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
+  const rows = [headers, ...supplierReportRows()];
+  downloadFile(`supplier-workers-report-${todayISO()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
+  addLog("Supplier CSV exported", `${rows.length - 1} rows`);
+  saveData(false);
 }
 
 function renderExpenses() {
@@ -3593,6 +3824,7 @@ function importBackup(file) {
       app.attendance = parsed.attendance;
       app.payments = parsed.payments || {};
       app.expenses = parsed.expenses || [];
+      app.supplierEntries = parsed.supplierEntries || [];
       app.payrollLocks = parsed.payrollLocks || {};
       app.dailyBackups = parsed.dailyBackups || {};
       app.logs = parsed.logs || app.logs || [];
@@ -3901,6 +4133,9 @@ function bindEvents() {
     const removeExpenseButton = event.target.closest("[data-remove-expense]");
     if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
 
+    const removeSupplierButton = event.target.closest("[data-remove-supplier]");
+    if (removeSupplierButton) removeSupplierEntry(removeSupplierButton.dataset.removeSupplier);
+
     const viewExpenseButton = event.target.closest("[data-view-expense]");
     if (viewExpenseButton) viewExpenseReceipt(viewExpenseButton.dataset.viewExpense);
 
@@ -4075,6 +4310,16 @@ function bindEvents() {
     event.preventDefault();
     addExpenseFromForm();
   });
+  $("#supplierForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    addSupplierEntryFromForm();
+  });
+  ["supplierMonth", "supplierFilterDate", "supplierFilterStatus"].forEach((id) => {
+    $(`#${id}`).addEventListener("change", renderSupplierWorkers);
+  });
+  $("#supplierFilterName").addEventListener("input", renderSupplierWorkers);
+  $("#printSupplierReport").addEventListener("click", printSupplierReport);
+  $("#exportSupplierReport").addEventListener("click", exportSupplierCSV);
   $("#expenseReceiptUpload").addEventListener("change", (event) => {
     const file = event.target.files?.[0];
     if (!file) return;

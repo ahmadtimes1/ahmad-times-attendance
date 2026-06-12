@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=night-shift-hours-1">
+    <link rel="stylesheet" href="styles.css?v=supplier-workers-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -45,6 +45,7 @@
           <button class="nav-item active" data-view="dashboard" data-i18n="dashboard">Dashboard</button>
           <button class="nav-item" data-view="workers" data-i18n="workers">Workers</button>
           <button class="nav-item" data-view="attendance" data-i18n="attendance">Attendance</button>
+          <button class="nav-item" data-view="supplierWorkers" data-i18n="supplierWorkers">Supplier Workers</button>
           <button class="nav-item" data-view="expenses" data-i18n="expenses">Expenses</button>
           <button class="nav-item" data-view="reports" data-i18n="reports">Reports</button>
           <button class="nav-item" data-view="companyAssistant" data-i18n="companyAssistant">Company Assistant</button>
@@ -105,15 +106,19 @@
               <strong id="statPresentToday">0</strong>
             </article>
             <article class="stat-card blue">
-              <span data-i18n="monthWages">This month wages</span>
+              <span data-i18n="directWorkersTotalAmount">Direct workers total</span>
               <strong id="statMonthWages">AED 0</strong>
+            </article>
+            <article class="stat-card blue">
+              <span data-i18n="supplierWorkersTotalAmount">Supplier workers total</span>
+              <strong id="statSupplierTotal">AED 0</strong>
             </article>
             <article class="stat-card">
               <span data-i18n="monthlyExpenses">Company monthly expenses</span>
               <strong id="statMonthExpenses">AED 0</strong>
             </article>
             <article class="stat-card blue">
-              <span data-i18n="grandTotal">Grand total</span>
+              <span data-i18n="grandTotalAmount">Grand total amount</span>
               <strong id="statGrandTotal">AED 0</strong>
             </article>
             <article class="stat-card">
@@ -121,12 +126,28 @@
               <strong id="statAttendanceDays">0</strong>
             </article>
             <article class="stat-card amber">
-              <span data-i18n="unpaidWages">Unpaid wages</span>
+              <span data-i18n="directWorkersUnpaidAmount">Direct workers unpaid</span>
               <strong id="statUnpaidWages">AED 0</strong>
             </article>
             <article class="stat-card green">
-              <span data-i18n="paidWages">Paid wages</span>
+              <span data-i18n="directWorkersPaidAmount">Direct workers paid</span>
               <strong id="statPaidWages">AED 0</strong>
+            </article>
+            <article class="stat-card green">
+              <span data-i18n="supplierWorkersPaidAmount">Supplier workers paid</span>
+              <strong id="statSupplierPaid">AED 0</strong>
+            </article>
+            <article class="stat-card amber">
+              <span data-i18n="supplierWorkersUnpaidAmount">Supplier workers unpaid</span>
+              <strong id="statSupplierUnpaid">AED 0</strong>
+            </article>
+            <article class="stat-card green">
+              <span data-i18n="grandTotalPaid">Grand total paid</span>
+              <strong id="statGrandPaid">AED 0</strong>
+            </article>
+            <article class="stat-card amber">
+              <span data-i18n="grandTotalUnpaid">Grand total unpaid</span>
+              <strong id="statGrandUnpaid">AED 0</strong>
             </article>
           </div>
 
@@ -337,6 +358,64 @@
             </div>
             <div id="monthAttendanceGrid" class="month-grid-wrap"></div>
           </div>
+        </section>
+
+        <section id="supplierWorkers" class="view">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3 data-i18n="supplierWorkers">Supplier Workers</h3>
+                <p class="help-text" data-i18n="supplierWorkersHelp">Simple count-based supplier labour entry, separate from direct company workers.</p>
+              </div>
+              <input id="supplierMonth" type="month">
+            </div>
+            <div id="supplierSummary" class="expense-summary"></div>
+            <form id="supplierForm" class="expense-form">
+              <label><span data-i18n="date">Date</span><input id="supplierDate" type="date" required></label>
+              <label><span data-i18n="supplierName">Supplier name</span><input id="supplierName" required></label>
+              <label><span data-i18n="supplierWorkerCount">Workers provided today</span><input id="supplierWorkerCount" type="number" min="0" step="1" required></label>
+              <label><span data-i18n="supplierDailyWage">Daily wage per worker</span><input id="supplierDailyWage" type="number" min="0" step="0.01" required></label>
+              <label><span data-i18n="supplierOvertimeHours">Overtime hours per worker</span><input id="supplierOvertimeHours" type="number" min="0" step="0.25" value="0"></label>
+              <label><span data-i18n="paidAmount">Paid amount</span><input id="supplierPaidAmount" type="number" min="0" step="0.01" value="0"></label>
+              <label><span data-i18n="paymentNote">Notes</span><input id="supplierNotes"></label>
+              <button class="primary" data-i18n="addSupplierEntry">Add supplier entry</button>
+            </form>
+            <div class="report-controls compact-report-controls">
+              <label><span data-i18n="date">Date</span><input id="supplierFilterDate" type="date"></label>
+              <label><span data-i18n="supplierName">Supplier name</span><input id="supplierFilterName" list="supplierNameOptions"></label>
+              <datalist id="supplierNameOptions"></datalist>
+              <label><span data-i18n="status">Status</span>
+                <select id="supplierFilterStatus">
+                  <option value="all" data-i18n="all">All</option>
+                  <option value="paid" data-i18n="paid">Paid</option>
+                  <option value="unpaid" data-i18n="unpaid">Unpaid</option>
+                </select>
+              </label>
+              <button type="button" id="printSupplierReport" data-i18n="print">Download report</button>
+              <button type="button" id="exportSupplierReport" data-i18n="exportCsv">Export CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th data-i18n="date">Date</th>
+                    <th data-i18n="supplierName">Supplier name</th>
+                    <th data-i18n="supplierWorkerCount">Workers</th>
+                    <th data-i18n="supplierDailyWage">Daily wage</th>
+                    <th data-i18n="supplierOvertimeHours">Overtime hours</th>
+                    <th data-i18n="normalAmount">Normal amount</th>
+                    <th data-i18n="overtimeAmount">Overtime amount</th>
+                    <th data-i18n="totalSupplierAmount">Total supplier amount</th>
+                    <th data-i18n="paidAmount">Paid amount</th>
+                    <th data-i18n="unpaidAmount">Unpaid amount</th>
+                    <th data-i18n="paymentNote">Notes</th>
+                    <th data-i18n="action">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="supplierEntriesList"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
 
         <section id="expenses" class="view">
@@ -737,6 +816,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=night-shift-hours-1"></script>
+    <script src="app.js?v=supplier-workers-1"></script>
   </body>
 </html>
