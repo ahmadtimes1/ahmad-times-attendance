@@ -3963,22 +3963,35 @@ function removeWorker() {
   const id = $("#workerId").value;
   if (!id) return;
   const worker = app.workers.find((item) => item.id === id);
+  if (!worker) return;
   const hasRecords = Object.values(app.attendance).some((day) => day[id]);
-  const message = hasRecords
-    ? `${worker.name} has attendance records. Mark inactive instead to keep records safe? Press OK to mark inactive.`
-    : `Remove ${worker.name}?`;
-
-  if (!confirm(message)) return;
-
   if (hasRecords) {
-    worker.status = "inactive";
-    addLog("Worker marked inactive", worker.name);
-  } else {
-    app.workers = app.workers.filter((item) => item.id !== id);
-    addLog("Worker removed", worker.name);
+    const keepRecords = confirm(`${worker.name} has attendance or wage records.\n\nPress OK to mark inactive and keep records safe.\nPress Cancel if this is a wrong duplicate entry and you want the permanent delete option.`);
+    if (keepRecords) {
+      worker.status = "inactive";
+      addLog("Worker marked inactive", worker.name);
+      $("#workerDialog").close();
+      saveData();
+      return;
+    }
+    const deleteForever = confirm(`Permanently delete ${worker.name} and remove this worker from attendance and payment records?\n\nUse this only for wrong duplicate entries.`);
+    if (!deleteForever) return;
   }
+  purgeWorker(worker.id);
   $("#workerDialog").close();
   saveData();
+}
+
+function purgeWorker(workerId) {
+  const worker = app.workers.find((item) => item.id === workerId);
+  app.workers = app.workers.filter((item) => item.id !== workerId);
+  Object.keys(app.attendance || {}).forEach((date) => {
+    if (app.attendance[date]?.[workerId]) delete app.attendance[date][workerId];
+    if (Object.keys(app.attendance[date] || {}).length === 0) delete app.attendance[date];
+  });
+  app.payments = paymentLedgerEntries().filter((payment) => payment.workerId !== workerId);
+  if (app.selectedWorkerSummaryId === workerId) app.selectedWorkerSummaryId = "";
+  addLog("Worker permanently removed", worker?.name || workerId);
 }
 
 function moveWorker(workerId, direction) {
