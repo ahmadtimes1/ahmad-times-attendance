@@ -1373,9 +1373,11 @@ async function loadData() {
     if (!error && data?.data) {
       Object.assign(app, data.data);
       normalizeAppCollections();
+      const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = "cloud";
       restoreSimpleLogin();
       resetHistory();
+      if (cleaned) await saveData(false);
       return;
     }
     if (error) toast(error.message);
@@ -1386,8 +1388,10 @@ async function loadData() {
     try {
       Object.assign(app, JSON.parse(saved));
       normalizeAppCollections();
+      const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = supabaseClient ? "login required" : "local";
       resetHistory();
+      if (cleaned) await saveData(false);
       return;
     } catch {
       removeBrowserBackup();
@@ -3992,6 +3996,15 @@ function purgeWorker(workerId) {
   app.payments = paymentLedgerEntries().filter((payment) => payment.workerId !== workerId);
   if (app.selectedWorkerSummaryId === workerId) app.selectedWorkerSummaryId = "";
   addLog("Worker permanently removed", worker?.name || workerId);
+}
+
+function purgeWorkersByExactName(name) {
+  const target = normalizeCompare(name);
+  const matches = app.workers.filter((worker) => normalizeCompare(worker.name) === target);
+  if (!matches.length) return false;
+  matches.forEach((worker) => purgeWorker(worker.id));
+  addLog("Duplicate worker cleanup", `${name} removed completely`);
+  return true;
 }
 
 function moveWorker(workerId, direction) {
