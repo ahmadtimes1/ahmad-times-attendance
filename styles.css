@@ -3055,6 +3055,414 @@ dialog::backdrop {
   }
 }
 
+@media screen and (max-width: 820px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  * {
+    min-width: 0;
+  }
+
+  .app-shell,
+  .main,
+  .view,
+  .panel,
+  .bulk-attendance-panel,
+  .report-panel,
+  .worker-summary-panel,
+  .content-grid,
+  .control-center {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .app-shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    overflow: hidden;
+    border-right: 0;
+  }
+
+  .brand {
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .brand-logo,
+  .brand-logo-fallback {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .brand h1 {
+    font-size: 18px;
+    line-height: 1.05;
+  }
+
+  .brand p {
+    font-size: 12px;
+  }
+
+  .nav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 0 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-item {
+    flex: 0 0 auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
+
+  .main {
+    padding: 14px 10px 18px;
+    overflow: visible;
+  }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .topbar h2 {
+    font-size: clamp(25px, 8vw, 34px);
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+
+  .top-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .top-actions > *,
+  .top-actions button,
+  .top-actions select,
+  .top-actions input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .cloud-chip,
+  .history-actions,
+  .theme-toggle {
+    grid-column: 1 / -1;
+  }
+
+  .history-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .date-chip {
+    min-width: 0;
+  }
+
+  .date-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stat-grid,
+  .summary-strip,
+  .receipt-detail-grid,
+  .expense-summary,
+  .payment-entry-summary,
+  .worker-report-grid,
+  .mini-attendance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .control-center,
+  .content-grid,
+  .attendance-filter-grid,
+  .bulk-attendance-grid,
+  .payment-entry-grid,
+  .expense-form,
+  .form-grid,
+  .photo-editor,
+  .worker-form,
+  .report-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .report-controls {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .report-controls label,
+  .report-controls button,
+  .bulk-tools button,
+  .button-row button,
+  .dialog-actions button,
+  .payment-row button,
+  .payment-row label {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .panel,
+  .bulk-attendance-panel,
+  .report-controls,
+  .worker-card,
+  .attendance-row,
+  .today-row {
+    box-shadow: none;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .panel-head,
+  .worker-card-head,
+  .attendance-row,
+  .today-row,
+  .worker-summary-head,
+  .payment-row,
+  .report-meta,
+  .report-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-head > *,
+  .worker-summary-head button {
+    width: 100%;
+  }
+
+  .worker-cards,
+  .worker-cards.worker-view-large,
+  .worker-cards.worker-view-medium,
+  .worker-cards.worker-view-list {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-title,
+  .worker-view-list .worker-title {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .worker-meta,
+  .worker-view-list .worker-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-control {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .attendance-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .time-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-wrap,
+  .month-grid-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrap table,
+  .month-grid-wrap table {
+    min-width: 720px;
+  }
+
+  .dashboard-wage-wrap {
+    overflow: visible;
+  }
+
+  .dashboard-wage-table,
+  .dashboard-wage-table thead,
+  .dashboard-wage-table tbody,
+  .dashboard-wage-table tr,
+  .dashboard-wage-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-wage-table {
+    table-layout: auto;
+  }
+
+  .dashboard-wage-table thead {
+    display: none;
+  }
+
+  .dashboard-wage-table tr {
+    margin-bottom: 10px;
+    padding: 10px;
+    border: var(--glass-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  :root[data-theme="dark"] .dashboard-wage-table tr {
+    background: rgba(20, 35, 45, 0.68);
+  }
+
+  .dashboard-wage-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-wage-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .dashboard-wage-table td::before {
+    content: attr(data-label);
+    flex: 0 0 42%;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .worker-report-details,
+  .report-brand {
+    padding: 10px;
+  }
+
+  .report-brand {
+    align-items: flex-start;
+  }
+
+  .report-brand img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .report-panel {
+    overflow-x: auto;
+  }
+
+  dialog {
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+    overflow: auto;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .top-actions,
+  .stat-grid,
+  .summary-strip,
+  .expense-summary,
+  .payment-entry-summary,
+  .worker-report-grid,
+  .mini-attendance-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .top-actions .date-chip {
+    min-height: 60px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card span {
+    min-height: 0;
+  }
+
+  .stat-card strong {
+    font-size: 22px;
+  }
+
+  .mode-tabs,
+  .compact-tabs,
+  .view-picker,
+  .bulk-tools,
+  .button-row,
+  .dialog-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .attendance-person,
+  .worker-title,
+  .month-worker-cell,
+  .worker-report-id {
+    align-items: flex-start;
+    gap: 9px;
+  }
+
+  .attendance-avatar,
+  .worker-avatar {
+    flex-basis: 50px;
+    width: 50px;
+    height: 50px;
+  }
+
+  .attendance-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table-wrap table,
+  .month-grid-wrap table {
+    min-width: 680px;
+  }
+
+  .login-card {
+    width: calc(100vw - 20px);
+    padding: 18px;
+  }
+
+  .toast {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
+
 @media print {
   body {
     background: #fff;
