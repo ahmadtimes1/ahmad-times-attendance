@@ -1456,8 +1456,8 @@ async function saveData(show = true) {
       supplierEntries: app.supplierEntries,
       supplierPayments: app.supplierPayments,
       payrollLocks: app.payrollLocks,
-      dailyBackups: app.dailyBackups,
-      logs: app.logs,
+      dailyBackups: {},
+      logs: (app.logs || []).slice(0, 300),
       lastSaved: app.lastSaved,
     };
     const { error } = await supabaseClient
