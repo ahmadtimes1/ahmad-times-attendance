@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=gemini-hybrid-1">
+    <link rel="stylesheet" href="styles.css?v=receipt-ai-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -442,6 +442,7 @@
                 <span data-i18n="takeBillPicture">Take bill picture</span>
                 <input id="expenseReceiptUpload" type="file" accept="image/*" capture="environment">
               </label>
+              <button type="button" id="scanExpenseReceipt" class="ghost receipt-ai-button" data-i18n="scanBillAI">AI scan bill</button>
               <div id="expenseReceiptPreview" class="receipt-preview">No bill picture</div>
               <button class="primary" data-i18n="addExpense">Add expense</button>
             </form>
@@ -854,6 +855,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=gemini-hybrid-1"></script>
+    <script src="app.js?v=receipt-ai-1"></script>
   </body>
 </html>

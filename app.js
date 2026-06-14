@@ -605,6 +605,11 @@ Object.assign(translations.en, {
   expenseLocation: "Location",
   expenseLocationPlaceholder: "Area or site",
   takeBillPicture: "Take bill picture",
+  scanBillAI: "AI scan bill",
+  scanningBill: "Scanning bill...",
+  billScanFilled: "Bill scanned. Please review before adding expense.",
+  billScanFailed: "Bill scan failed. Please enter bill details manually.",
+  noBillToScan: "Take or upload a bill picture first.",
   noBillPicture: "No bill picture",
   bill: "Bill",
   viewBill: "View bill",
@@ -755,6 +760,11 @@ Object.assign(translations.ps, {
   expenseLocation: "ځای",
   expenseLocationPlaceholder: "سیمه یا سایټ",
   takeBillPicture: "د بل عکس واخلئ",
+  scanBillAI: "AI بل ولولئ",
+  scanningBill: "بل لوستل کېږي...",
+  billScanFilled: "بل ولوستل شو. د مصرف له اضافه کولو مخکې یې وګورئ.",
+  billScanFailed: "د بل لوستل ناکام شول. معلومات په لاس ولیکئ.",
+  noBillToScan: "لومړی د بل عکس واخلئ یا پورته یې کړئ.",
   noBillPicture: "د بل عکس نشته",
   bill: "بل",
   viewBill: "بل وګورئ",
@@ -3521,6 +3531,50 @@ function suggestReceiptFields(file) {
   }
 }
 
+async function scanExpenseReceiptWithAI() {
+  const photo = $("#expenseReceiptPhoto")?.value || "";
+  const button = $("#scanExpenseReceipt");
+  if (!photo) {
+    toast(t("noBillToScan"));
+    return;
+  }
+  if (button) {
+    button.disabled = true;
+    button.textContent = t("scanningBill");
+  }
+  try {
+    const response = await fetch("/api/receipt-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: photo,
+        today: $("#todayInput")?.value || todayISO(),
+        language: app.language,
+      }),
+    });
+    const data = await response.json();
+    if (!data?.ok) throw new Error(data?.reason || "Bill scan failed");
+    const fields = data.fields || {};
+    if (fields.date && /^\d{4}-\d{2}-\d{2}$/.test(fields.date)) $("#expenseDate").value = fields.date;
+    if (fields.merchant) $("#expenseMerchant").value = fields.merchant;
+    if (fields.category) $("#expenseCategory").value = fields.category;
+    if (Number(fields.amount || 0) > 0) $("#expenseAmount").value = roundMoney(fields.amount);
+    if (Number(fields.paidAmount || 0) > 0) $("#expensePaidAmount").value = roundMoney(fields.paidAmount);
+    if (fields.location) $("#expenseLocation").value = fields.location;
+    if (fields.description) $("#expenseDescription").value = fields.description;
+    addLog("Bill AI scanned", `${fields.merchant || "-"} · ${money(fields.amount || 0)} · confidence ${Math.round(Number(fields.confidence || 0) * 100)}%`);
+    toast(t("billScanFilled"));
+  } catch (error) {
+    console.warn(error);
+    toast(t("billScanFailed"));
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = t("scanBillAI");
+    }
+  }
+}
+
 function viewExpenseReceipt(expenseId) {
   const expense = (app.expenses || []).find((item) => item.id === expenseId);
   if (!expense) return;
@@ -3620,23 +3674,51 @@ function assistantTodayContext() {
 }
 
 function assistantFindWorker(question) {
+  return assistantFindWorkers(question)[0] || null;
+}
+
+function assistantNameMatchScore(worker, normalizedQuestion, questionWords) {
+  const aliases = [worker.name, worker.namePs, worker.phone, worker.emiratesId].filter(Boolean).map(normalizeCompare);
+  if (aliases.some((alias) => alias && normalizedQuestion.includes(alias))) return 100;
+  const tokens = normalizeCompare(`${worker.name || ""} ${worker.namePs || ""}`)
+    .split(" ")
+    .filter((token) => token.length > 1);
+  return tokens.reduce((score, token) => {
+    if (normalizedQuestion.includes(token)) return score + 2;
+    if (token.length < 4) return score;
+    const close = questionWords.some((word) => word.length >= 4 && assistantEditDistance(token, word) <= Math.max(1, Math.floor(token.length * 0.25)));
+    return score + (close ? 1 : 0);
+  }, 0);
+}
+
+function assistantEditDistance(a, b) {
+  const first = String(a || "");
+  const second = String(b || "");
+  const previous = Array.from({ length: second.length + 1 }, (_item, index) => index);
+  for (let i = 1; i <= first.length; i += 1) {
+    let last = i - 1;
+    previous[0] = i;
+    for (let j = 1; j <= second.length; j += 1) {
+      const old = previous[j];
+      previous[j] = Math.min(
+        previous[j] + 1,
+        previous[j - 1] + 1,
+        last + (first[i - 1] === second[j - 1] ? 0 : 1)
+      );
+      last = old;
+    }
+  }
+  return previous[second.length];
+}
+
+function assistantFindWorkers(question) {
   const normalized = normalizeCompare(question);
-  const exact = app.workers.find((worker) => [worker.name, worker.namePs, worker.phone, worker.emiratesId]
-    .filter(Boolean)
-    .some((value) => normalized.includes(normalizeCompare(value))));
-  if (exact) return exact;
-  const candidates = app.workers.map((worker) => {
-    const tokens = normalizeCompare(`${worker.name || ""} ${worker.namePs || ""}`)
-      .split(" ")
-      .filter((token) => token.length > 1);
-    const score = tokens.reduce((sum, token) => sum + (normalized.includes(token) ? 1 : 0), 0);
-    return { worker, score, tokenCount: tokens.length };
-  }).filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.tokenCount - b.tokenCount);
-  const best = candidates[0];
-  if (!best) return null;
-  if (best.score >= Math.min(2, best.tokenCount || 1)) return best.worker;
-  return null;
+  const questionWords = normalized.replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+  return app.workers
+    .map((worker) => ({ worker, score: assistantNameMatchScore(worker, normalized, questionWords) }))
+    .filter((item) => item.score >= 1)
+    .sort((a, b) => b.score - a.score || displayWorkerName(a.worker).localeCompare(displayWorkerName(b.worker)))
+    .map((item) => item.worker);
 }
 
 function assistantNormalizeDate(year, month, day) {
@@ -3692,7 +3774,8 @@ function assistantAmountFromText(question, worker = null) {
   let withoutDates = String(question || "")
     .replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/g, " ")
     .replace(/\b\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\b/g, " ");
-  [worker?.name, worker?.namePs, worker?.phone, worker?.emiratesId].filter(Boolean).forEach((value) => {
+  const workers = Array.isArray(worker) ? worker : [worker];
+  workers.flatMap((item) => [item?.name, item?.namePs, item?.phone, item?.emiratesId]).filter(Boolean).forEach((value) => {
     withoutDates = withoutDates.replaceAll(String(value), " ");
   });
   const patterns = [
@@ -3766,7 +3849,7 @@ function assistantSetAttendance(question, worker, status) {
 }
 
 function assistantSaveWorkerPayment(question, worker) {
-  const period = assistantPeriod(question, "month");
+  const period = assistantPaymentPeriod(question);
   const rows = summarizeRecords(recordsForRange(period.start, period.end, worker.id));
   const row = rows[0];
   if (!row) return `${displayWorkerName(worker)} has no wage record for ${period.label}.`;
@@ -3774,8 +3857,61 @@ function assistantSaveWorkerPayment(question, worker) {
   const explicitAmount = assistantAmountFromText(question, worker);
   const amount = explicitAmount > 0 ? explicitAmount : unpaid;
   if (amount <= 0) return `${displayWorkerName(worker)} has no unpaid balance for ${period.label}.`;
-  savePayment(worker.id, period.start, period.end, amount, assistantDatesFromText(question)[0] || todayISO(), "cash", "Saved by company assistant");
+  savePayment(worker.id, period.start, period.end, amount, period.paymentDate, "cash", "Saved by company assistant");
   return `Payment saved for ${displayWorkerName(worker)}: ${money(amount)} · period ${period.label}. Remaining unpaid: ${money(Math.max(0, unpaid - amount))}.`;
+}
+
+function assistantPaymentPeriod(question) {
+  const dates = assistantDatesFromText(question);
+  const q = normalizeCompare(question);
+  const paymentDate = dates[0] || $("#todayInput")?.value || todayISO();
+  if (dates.length >= 2 || q.includes("from") || q.includes("between")) {
+    const period = assistantPeriod(question, "month");
+    return { ...period, paymentDate };
+  }
+  const month = (dates[0] || $("#reportMonth")?.value || $("#dashboardMonth")?.value || monthISO()).slice(0, 7);
+  const monthDates = daysInMonth(month);
+  return { start: monthDates[0], end: monthDates[monthDates.length - 1], label: month, paymentDate };
+}
+
+function assistantSaveMultipleWorkerPayments(question, workers) {
+  const uniqueWorkers = Array.from(new Map(workers.map((worker) => [worker.id, worker])).values());
+  const amount = assistantAmountFromText(question, uniqueWorkers);
+  if (uniqueWorkers.length < 2) return uniqueWorkers[0] ? assistantSaveWorkerPayment(question, uniqueWorkers[0]) : t("assistantNoAnswer");
+  if (amount <= 0) return `I found ${uniqueWorkers.length} workers, but I need the paid amount.`;
+  const period = assistantPaymentPeriod(question);
+  if (!canChangePayrollDate(period.paymentDate, "Assistant payment")) return "This payment date is locked.";
+  const q = normalizeCompare(question);
+  const payEach = q.includes("each") || q.includes("per worker") || q.includes("for each");
+  const totalCents = Math.round(amount * 100);
+  const baseCents = payEach ? totalCents : Math.floor(totalCents / uniqueWorkers.length);
+  const payments = uniqueWorkers.map((worker, index) => {
+    const cents = payEach ? baseCents : index === uniqueWorkers.length - 1 ? totalCents - (baseCents * (uniqueWorkers.length - 1)) : baseCents;
+    return { worker, amount: roundMoney(cents / 100) };
+  });
+  normalizePaymentLedger();
+  payments.forEach((payment) => {
+    app.payments.push({
+      id: `payment__${payment.worker.id}__${period.paymentDate}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
+      workerId: payment.worker.id,
+      date: period.paymentDate,
+      start: period.start,
+      end: period.end,
+      amount: payment.amount,
+      method: "cash",
+      note: payEach ? "Saved by company assistant - amount each" : "Saved by company assistant - split total",
+      source: "assistant",
+      user: currentUserLabel(),
+      updatedAt: new Date().toISOString(),
+    });
+  });
+  addLog("Assistant multi-payment saved", `${uniqueWorkers.map(displayWorkerName).join(", ")} · ${money(amount)} · ${period.paymentDate}`);
+  saveData();
+  return [
+    `Payment saved for ${uniqueWorkers.length} workers on ${period.paymentDate}.`,
+    payEach ? `${money(amount)} each worker.` : `${money(amount)} total split as ${payments.map((payment) => `${displayWorkerName(payment.worker)}: ${money(payment.amount)}`).join(", ")}.`,
+    `Wage period: ${period.label}.`,
+  ].join("\n");
 }
 
 function assistantOpenWorkerReport(worker, period) {
@@ -3813,13 +3949,15 @@ function assistantAnswer(question) {
   const q = question.trim().toLowerCase();
   const today = assistantTodayContext();
   const context = assistantMonthContext();
-  const foundWorker = assistantFindWorker(question);
+  const foundWorkers = assistantFindWorkers(question);
+  const foundWorker = foundWorkers[0] || null;
   const status = assistantStatusFromText(question);
   const reportIntent = /\b(report|slip|summary|from|between)\b/i.test(question) || q.includes("راپور");
   const paymentIntent = /\b(pay|payment|give)\b/i.test(question)
     || /\bmark\b.*\bpaid\b/i.test(question)
     || (/\bpaid\b/i.test(question) && assistantAmountFromText(question, foundWorker) > 0)
     || q.includes("ادا کړه");
+  if (foundWorkers.length > 1 && paymentIntent) return assistantSaveMultipleWorkerPayments(question, foundWorkers);
   if (foundWorker && status && !reportIntent && /\b(mark|take|set|present|absent|off|half)\b/i.test(question)) {
     return assistantSetAttendance(question, foundWorker, status);
   }
@@ -3884,6 +4022,15 @@ function assistantAnswer(question) {
   return t("assistantNoAnswer");
 }
 
+function assistantIsLocalAction(question) {
+  const q = normalizeCompare(question);
+  const hasAmount = assistantAmountFromText(question, assistantFindWorkers(question)) > 0;
+  const hasPaymentWord = /\b(pay|paid|payment|give)\b/i.test(question) || q.includes("ادا");
+  const hasAttendanceWord = /\b(mark|take|set|present|absent|off|halfday|half day)\b/i.test(question);
+  const hasReportWord = /\b(report|slip)\b/i.test(question) || q.includes("راپور");
+  return (hasPaymentWord && hasAmount) || hasAttendanceWord || hasReportWord;
+}
+
 function renderCompanyAssistant() {
   const summary = $("#assistantSummary");
   const messages = $("#assistantMessages");
@@ -3904,6 +4051,28 @@ function renderCompanyAssistant() {
 }
 
 function assistantGeminiPayload(question) {
+  const monthContext = assistantMonthContext();
+  const todayContext = assistantTodayContext();
+  const periodStart = monthContext.dates[0];
+  const periodEnd = monthContext.dates[monthContext.dates.length - 1];
+  const supplier = supplierTotals(monthSupplierEntries(monthContext.month), periodStart, periodEnd);
+  const workerRows = monthContext.rows.map((row) => {
+    const paid = rowPaidAmount(row, periodStart, periodEnd);
+    return {
+      name: displayWorkerName(row.worker),
+      status: row.worker.status || "active",
+      shift: workerDefaultShift(row.worker),
+      present: row.present || 0,
+      halfday: row.halfday || 0,
+      absent: row.absent || 0,
+      off: row.off || 0,
+      overtimeHours: roundMoney(row.overtime || 0),
+      payable: roundMoney(row.wage || 0),
+      paid: roundMoney(paid),
+      unpaid: roundMoney(Math.max(0, Number(row.wage || 0) - paid)),
+    };
+  });
+  const unpaidWorkers = workerRows.filter((row) => row.unpaid > 0).sort((a, b) => b.unpaid - a.unpaid).slice(0, 40);
   return {
     question,
     today: $("#todayInput")?.value || todayISO(),
@@ -3914,6 +4083,24 @@ function assistantGeminiPayload(question) {
       phone: worker.phone || "",
       status: worker.status || "active",
     })),
+    companyContext: {
+      month: monthContext.month,
+      today: todayContext.date,
+      activeWorkers: todayContext.active.length,
+      inactiveWorkers: app.workers.filter((worker) => worker.status === "inactive").length,
+      presentToday: todayContext.present.length,
+      absentToday: todayContext.absent.map(displayWorkerName).slice(0, 40),
+      unmarkedToday: todayContext.unmarked.map(displayWorkerName).slice(0, 40),
+      monthWages: roundMoney(monthContext.wages),
+      monthPaid: roundMoney(monthContext.pay.paid),
+      monthUnpaid: roundMoney(monthContext.pay.pending),
+      monthExpenses: roundMoney(monthContext.expenses),
+      supplierTotal: supplier.total,
+      supplierPaid: supplier.paid,
+      supplierUnpaid: supplier.unpaid,
+      unpaidWorkers,
+      workerRows: workerRows.slice(0, 80),
+    },
   };
 }
 
@@ -3927,7 +4114,7 @@ async function assistantGeminiRewrite(question) {
     if (!response.ok) return null;
     const data = await response.json();
     if (!data?.ok) return null;
-    if (data.assistantReply && !data.rewrittenQuestion) return { reply: data.assistantReply };
+    if (data.assistantReply) return { reply: data.assistantReply };
     if (!data.rewrittenQuestion || Number(data.confidence || 0) < 0.45) return null;
     return { rewrittenQuestion: data.rewrittenQuestion, model: data.model };
   } catch {
@@ -3943,6 +4130,12 @@ async function askCompanyAssistant(question) {
   app.assistantMessages.push(pending);
   app.assistantMessages = app.assistantMessages.slice(-20);
   renderCompanyAssistant();
+  if (assistantIsLocalAction(text)) {
+    pending.text = assistantAnswer(text);
+    app.assistantMessages = app.assistantMessages.slice(-20);
+    renderCompanyAssistant();
+    return;
+  }
   const gemini = await assistantGeminiRewrite(text);
   if (gemini?.reply) {
     pending.text = gemini.reply;
@@ -4905,6 +5098,7 @@ function bindEvents() {
     };
     reader.readAsDataURL(file);
   });
+  $("#scanExpenseReceipt")?.addEventListener("click", scanExpenseReceiptWithAI);
   $("#closeReceiptDialog").addEventListener("click", () => $("#receiptDialog").close());
 
   $$(".mode-tab").forEach((tab) => {

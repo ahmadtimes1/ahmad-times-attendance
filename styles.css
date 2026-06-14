@@ -2123,6 +2123,18 @@ tbody tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.receipt-ai-button {
+  min-height: 46px;
+  border-color: rgba(25, 169, 220, 0.34);
+  color: var(--brand-2);
+  background: rgba(230, 247, 252, 0.68);
+}
+
+.receipt-ai-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .payment-history-list {
   display: grid;
   gap: 6px;
