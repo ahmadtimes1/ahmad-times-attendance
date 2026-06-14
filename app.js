@@ -101,7 +101,7 @@ const translations = {
     askExpensesMonth: "Expenses this month",
     askMistakes: "Attendance mistakes",
     askNightShift: "Night shift workers",
-    assistantReady: "Internal assistant ready",
+    assistantReady: "Internal assistant ready. Gemini will improve understanding when GEMINI_API_KEY is added in Vercel.",
     assistantNoAnswer: "I could not understand that yet. Try asking about unpaid wages, attendance, expenses, workers, shifts, or mistakes.",
     safety: "Safety",
     logs: "Logs",
@@ -342,7 +342,7 @@ const translations = {
     askExpensesMonth: "د دې میاشتې مصارف",
     askMistakes: "د حاضري غلطۍ",
     askNightShift: "د شپې شفټ کارکوونکي",
-    assistantReady: "داخلي مرستیال چمتو دی",
+    assistantReady: "داخلي مرستیال چمتو دی. که په Vercel کې GEMINI_API_KEY اضافه شي Gemini به ښه پوهه ورکړي.",
     assistantNoAnswer: "دا پوښتنه مې ښه ونه پېژندله. د مزدورۍ، حاضري، مصارفو، کارکوونکو، شفټونو یا غلطیو په اړه پوښتنه وکړئ.",
     safety: "خوندیتوب",
     logs: "لاګونه",
@@ -3903,11 +3903,56 @@ function renderCompanyAssistant() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function askCompanyAssistant(question) {
+function assistantGeminiPayload(question) {
+  return {
+    question,
+    today: $("#todayInput")?.value || todayISO(),
+    language: app.language,
+    workers: app.workers.map((worker) => ({
+      name: worker.name || "",
+      pashtoName: worker.namePs || "",
+      phone: worker.phone || "",
+      status: worker.status || "active",
+    })),
+  };
+}
+
+async function assistantGeminiRewrite(question) {
+  try {
+    const response = await fetch("/api/gemini-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(assistantGeminiPayload(question)),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data?.ok) return null;
+    if (data.assistantReply && !data.rewrittenQuestion) return { reply: data.assistantReply };
+    if (!data.rewrittenQuestion || Number(data.confidence || 0) < 0.45) return null;
+    return { rewrittenQuestion: data.rewrittenQuestion, model: data.model };
+  } catch {
+    return null;
+  }
+}
+
+async function askCompanyAssistant(question) {
   const text = String(question || "").trim();
   if (!text) return;
   app.assistantMessages.push({ role: "user", text });
-  app.assistantMessages.push({ role: "assistant", text: assistantAnswer(text) });
+  const pending = { role: "assistant", text: "Thinking with safe company AI..." };
+  app.assistantMessages.push(pending);
+  app.assistantMessages = app.assistantMessages.slice(-20);
+  renderCompanyAssistant();
+  const gemini = await assistantGeminiRewrite(text);
+  if (gemini?.reply) {
+    pending.text = gemini.reply;
+  } else {
+    const normalizedQuestion = gemini?.rewrittenQuestion || text;
+    const answer = assistantAnswer(normalizedQuestion);
+    pending.text = gemini?.rewrittenQuestion && normalizeCompare(gemini.rewrittenQuestion) !== normalizeCompare(text)
+      ? `Understood: ${gemini.rewrittenQuestion}\n\n${answer}`
+      : answer;
+  }
   app.assistantMessages = app.assistantMessages.slice(-20);
   renderCompanyAssistant();
 }
