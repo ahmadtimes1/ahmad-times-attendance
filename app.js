@@ -92,7 +92,7 @@ const translations = {
     reports: "Reports",
     companyAssistant: "Company Assistant",
     companyAssistantHelp: "Private internal assistant for company workers, attendance, wages, payments, expenses, and safety checks.",
-    assistantPlaceholder: "Ask: who is unpaid this month, show absent today, worker Naeem report...",
+    assistantPlaceholder: "Examples: mark Naeem present today in 8am out 6pm | pay Naeem 200 | report Naeem from 2026-06-03 to 2026-06-07",
     askAssistant: "Ask assistant",
     quickQuestions: "Quick questions",
     askTodaySummary: "Today summary",
@@ -333,7 +333,7 @@ const translations = {
     reports: "راپورونه",
     companyAssistant: "د شرکت مرستیال",
     companyAssistantHelp: "د شرکت د کارکوونکو، حاضري، مزدوري، تادیاتو، مصارفو او غلطیو لپاره داخلي مرستیال.",
-    assistantPlaceholder: "پوښتنه وکړئ: د دې میاشتې ناادا مزدوران، د نن غیر حاضر، د نعیم راپور...",
+    assistantPlaceholder: "بېلګې: Naeem present today in 8am out 6pm | pay Naeem 200 | report Naeem from 2026-06-03 to 2026-06-07",
     askAssistant: "پوښتنه وکړئ",
     quickQuestions: "چټکې پوښتنې",
     askTodaySummary: "د نن لنډیز",
@@ -3620,24 +3620,192 @@ function assistantTodayContext() {
 }
 
 function assistantFindWorker(question) {
-  const normalized = question.toLowerCase();
-  return app.workers.find((worker) => [worker.name, worker.namePs, worker.phone, worker.emiratesId]
+  const normalized = normalizeCompare(question);
+  const exact = app.workers.find((worker) => [worker.name, worker.namePs, worker.phone, worker.emiratesId]
     .filter(Boolean)
-    .some((value) => normalized.includes(String(value).toLowerCase())));
+    .some((value) => normalized.includes(normalizeCompare(value))));
+  if (exact) return exact;
+  const candidates = app.workers.map((worker) => {
+    const tokens = normalizeCompare(`${worker.name || ""} ${worker.namePs || ""}`)
+      .split(" ")
+      .filter((token) => token.length > 1);
+    const score = tokens.reduce((sum, token) => sum + (normalized.includes(token) ? 1 : 0), 0);
+    return { worker, score, tokenCount: tokens.length };
+  }).filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.tokenCount - b.tokenCount);
+  const best = candidates[0];
+  if (!best) return null;
+  if (best.score >= Math.min(2, best.tokenCount || 1)) return best.worker;
+  return null;
 }
 
-function assistantWorkerReport(worker) {
-  const context = assistantMonthContext();
-  const row = monthSummary(context.month, worker.id)[0];
+function assistantNormalizeDate(year, month, day) {
+  const yyyy = Number(year) < 100 ? 2000 + Number(year) : Number(year);
+  return `${String(yyyy).padStart(4, "0")}-${String(Number(month)).padStart(2, "0")}-${String(Number(day)).padStart(2, "0")}`;
+}
+
+function assistantDatesFromText(text) {
+  const dates = [];
+  const pushDate = (date) => {
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && !dates.includes(date)) dates.push(date);
+  };
+  String(text || "").replace(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g, (_match, year, month, day) => {
+    pushDate(assistantNormalizeDate(year, month, day));
+    return "";
+  });
+  String(text || "").replace(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})\b/g, (_match, day, month, year) => {
+    pushDate(assistantNormalizeDate(year, month, day));
+    return "";
+  });
+  const q = normalizeCompare(text);
+  if (q.includes("today") || q.includes("نن")) pushDate(todayISO());
+  if (q.includes("yesterday")) {
+    const date = new Date(`${todayISO()}T00:00:00`);
+    date.setDate(date.getDate() - 1);
+    pushDate(date.toISOString().slice(0, 10));
+  }
+  return dates.sort();
+}
+
+function assistantPeriod(question, fallback = "month") {
+  const dates = assistantDatesFromText(question);
+  if (dates.length >= 2) return { start: dates[0], end: dates[dates.length - 1], label: reportPeriodLabel(dates[0], dates[dates.length - 1]) };
+  if (dates.length === 1 && !normalizeCompare(question).includes("month")) return { start: dates[0], end: dates[0], label: dates[0] };
+  if (normalizeCompare(question).includes("week")) {
+    const base = dates[0] || $("#reportDate")?.value || todayISO();
+    const start = weekStart(base);
+    const endDate = new Date(`${start}T00:00:00`);
+    endDate.setDate(endDate.getDate() + 6);
+    const end = endDate.toISOString().slice(0, 10);
+    return { start, end, label: reportPeriodLabel(start, end) };
+  }
+  if (fallback === "today") {
+    const date = dates[0] || $("#todayInput")?.value || todayISO();
+    return { start: date, end: date, label: date };
+  }
+  const month = dates[0]?.slice(0, 7) || $("#reportMonth")?.value || $("#dashboardMonth")?.value || monthISO();
+  const monthDates = daysInMonth(month);
+  return { start: monthDates[0], end: monthDates[monthDates.length - 1], label: month };
+}
+
+function assistantAmountFromText(question, worker = null) {
+  let withoutDates = String(question || "")
+    .replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/g, " ")
+    .replace(/\b\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\b/g, " ");
+  [worker?.name, worker?.namePs, worker?.phone, worker?.emiratesId].filter(Boolean).forEach((value) => {
+    withoutDates = withoutDates.replaceAll(String(value), " ");
+  });
+  const patterns = [
+    /(?:aed|amount|pay|paid|payment|give)\s*(?:is|=|of)?\s*(\d+(?:\.\d+)?)/i,
+    /(\d+(?:\.\d+)?)\s*(?:aed|درهم)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = withoutDates.match(pattern);
+    if (match) return Number(match[1]);
+  }
+  const fallback = withoutDates.match(/\b(\d+(?:\.\d+)?)\b/);
+  if (fallback) return Number(fallback[1]);
+  return 0;
+}
+
+function assistantStatusFromText(question) {
+  const q = normalizeCompare(question);
+  if (q.includes("half")) return "halfday";
+  if (q.includes("absent") || q.includes("غیر حاضر")) return "absent";
+  if (q.includes("off")) return "off";
+  if (q.includes("present") || q.includes("حاضر") || q.includes("attendance")) return "present";
+  return "";
+}
+
+function assistantParseTime(value) {
+  const match = String(value || "").match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+  if (!match) return "";
+  let hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  const meridiem = String(match[3] || "").toLowerCase();
+  if (meridiem === "pm" && hour < 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+  if (hour > 23 || minute > 59) return "";
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function assistantTimeAfter(question, label) {
+  const pattern = label === "out"
+    ? /(?:out|checkout|check out|to|till|until)\s*(?:time)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i
+    : /(?:in|checkin|check in|start|from)\s*(?:time)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i;
+  const match = String(question || "").match(pattern);
+  return match ? assistantParseTime(match[1]) : "";
+}
+
+function assistantSetAttendance(question, worker, status) {
+  const period = assistantPeriod(question, "today");
+  const date = period.start;
+  if (period.start !== period.end) return "Attendance can be changed for one date at a time. Please give one date.";
+  if (!workerAvailableForAttendance(worker, date)) return `${displayWorkerName(worker)} is not active/available on ${date}.`;
+  if (!canChangePayrollDate(date, "Assistant attendance")) return "This payroll date is locked.";
+  const inTime = assistantTimeAfter(question, "in");
+  const outTime = assistantTimeAfter(question, "out");
+  const working = ["present", "halfday"].includes(status);
+  const current = getAttendanceRecord(date, worker.id);
+  app.attendance[date] ||= {};
+  app.attendance[date][worker.id] = {
+    ...current,
+    status,
+    shift: working ? shiftFromInTime(inTime || current.inTime || currentTime(), normalizeCompare(question).includes("night") ? "night" : current.shift || "day") : "day",
+    inTime: working ? (inTime || current.inTime || currentTime()) : "",
+    outTime: working ? (outTime || current.outTime || "") : "",
+    restBreakType: working ? current.restBreakType || "default" : "default",
+    restMinutes: working ? Number(current.restMinutes ?? 60) : 60,
+    overtimeHours: working ? current.overtimeHours : "",
+    foodDeduction: working ? Number(current.foodDeduction || 0) : 0,
+    paidAmount: 0,
+  };
+  addLog("Assistant attendance changed", `${displayWorkerName(worker)} · ${date} · ${statusLabel(status)}`);
+  saveData();
+  return `${displayWorkerName(worker)} marked ${statusLabel(status)} on ${date}${inTime ? ` · ${t("in")}: ${inTime}` : ""}${outTime ? ` · ${t("out")}: ${outTime}` : ""}.`;
+}
+
+function assistantSaveWorkerPayment(question, worker) {
+  const period = assistantPeriod(question, "month");
+  const rows = summarizeRecords(recordsForRange(period.start, period.end, worker.id));
+  const row = rows[0];
+  if (!row) return `${displayWorkerName(worker)} has no wage record for ${period.label}.`;
+  const unpaid = rowUnpaidAmount(row, period.start, period.end);
+  const explicitAmount = assistantAmountFromText(question, worker);
+  const amount = explicitAmount > 0 ? explicitAmount : unpaid;
+  if (amount <= 0) return `${displayWorkerName(worker)} has no unpaid balance for ${period.label}.`;
+  savePayment(worker.id, period.start, period.end, amount, assistantDatesFromText(question)[0] || todayISO(), "cash", "Saved by company assistant");
+  return `Payment saved for ${displayWorkerName(worker)}: ${money(amount)} · period ${period.label}. Remaining unpaid: ${money(Math.max(0, unpaid - amount))}.`;
+}
+
+function assistantOpenWorkerReport(worker, period) {
+  const navButton = $(`.nav-item[data-view="reports"]`);
+  if (navButton) navButton.click();
+  if ($("#reportType")) $("#reportType").value = "custom";
+  if ($("#reportStartDate")) $("#reportStartDate").value = period.start;
+  if ($("#reportEndDate")) $("#reportEndDate").value = period.end;
+  renderReport();
+  if ($("#reportWorker")) {
+    Array.from($("#reportWorker").options).forEach((option) => {
+      option.selected = option.value === worker.id;
+    });
+  }
+  renderReport();
+}
+
+function assistantWorkerReport(worker, period = assistantPeriod("", "month"), openReport = false) {
+  const row = summarizeRecords(recordsForRange(period.start, period.end, worker.id))[0];
   if (!row) return `${displayWorkerName(worker)}: ${t("noWageRecords")}`;
-  const paid = rowPaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
-  const unpaid = rowUnpaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
+  const paid = rowPaidAmount(row, period.start, period.end);
+  const unpaid = rowUnpaidAmount(row, period.start, period.end);
+  if (openReport) assistantOpenWorkerReport(worker, period);
   return [
-    `${displayWorkerName(worker)} · ${context.month}`,
+    `${displayWorkerName(worker)} · ${period.label}`,
     `${t("status")}: ${t(worker.status || "active")} · ${t("shift")}: ${attendanceShiftLabel(workerDefaultShift(worker))}`,
     `${t("present")}: ${row.present} · ${t("halfday")}: ${row.halfday || 0} · ${t("absent")}: ${row.absent} · ${t("off")}: ${row.off}`,
     `${t("hours")}: ${formatHours(row.hours)} · ${t("overtime")}: ${formatHours(row.overtime)}`,
     `${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}`,
+    openReport ? "Report opened in the Reports section." : "",
   ].join("\n");
 }
 
@@ -3646,7 +3814,17 @@ function assistantAnswer(question) {
   const today = assistantTodayContext();
   const context = assistantMonthContext();
   const foundWorker = assistantFindWorker(question);
-  if (foundWorker) return assistantWorkerReport(foundWorker);
+  const status = assistantStatusFromText(question);
+  const reportIntent = /\b(report|slip|summary|from|between)\b/i.test(question) || q.includes("راپور");
+  const paymentIntent = /\b(pay|payment|give)\b/i.test(question)
+    || /\bmark\b.*\bpaid\b/i.test(question)
+    || (/\bpaid\b/i.test(question) && assistantAmountFromText(question, foundWorker) > 0)
+    || q.includes("ادا کړه");
+  if (foundWorker && status && !reportIntent && /\b(mark|take|set|present|absent|off|half)\b/i.test(question)) {
+    return assistantSetAttendance(question, foundWorker, status);
+  }
+  if (foundWorker && paymentIntent) return assistantSaveWorkerPayment(question, foundWorker);
+  if (foundWorker) return assistantWorkerReport(foundWorker, assistantPeriod(question, "month"), reportIntent);
   if (q.includes("today") || q.includes("نن")) {
     return [
       `${t("today")}: ${today.date}`,
