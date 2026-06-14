@@ -7,6 +7,7 @@ const THEME_KEY = "ahmad-times-theme";
 const ROLLING_BACKUPS_KEY = "ahmad-times-rolling-backups-v1";
 const STANDARD_HOURS = 8;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
+const LIVE_API_BASE = "https://ahmad-times-attendance.vercel.app";
 
 const SIMPLE_USERS = [
   { username: "admin", password: "Dubai@#123", role: "admin", name: "Admin" },
@@ -839,6 +840,23 @@ let suppressWorkerOpen = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+function apiPath(path) {
+  const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const base = window.AHMAD_TIMES_API_BASE || (isLocal ? LIVE_API_BASE : "");
+  return `${base}${path}`;
+}
+
+async function fetchApiJson(path, options = {}) {
+  const response = await fetch(apiPath(path), options);
+  const text = await response.text();
+  try {
+    return JSON.parse(text || "{}");
+  } catch {
+    const preview = text.replace(/\s+/g, " ").slice(0, 120);
+    throw new Error(`API did not return JSON. ${preview || `HTTP ${response.status}`}`);
+  }
+}
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
@@ -3544,7 +3562,7 @@ async function scanExpenseReceiptWithAI() {
   }
   try {
     const scanImage = await resizePhotoDataUrl(photo, 1000);
-    const response = await fetch("/api/receipt-ai", {
+    const data = await fetchApiJson("/api/receipt-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -3553,7 +3571,6 @@ async function scanExpenseReceiptWithAI() {
         language: app.language,
       }),
     });
-    const data = await response.json();
     if (!data?.ok) throw new Error(data?.reason || "Bill scan failed");
     const fields = data.fields || {};
     if (fields.date && /^\d{4}-\d{2}-\d{2}$/.test(fields.date)) $("#expenseDate").value = fields.date;
@@ -4108,13 +4125,11 @@ function assistantGeminiPayload(question) {
 
 async function assistantGeminiRewrite(question) {
   try {
-    const response = await fetch("/api/gemini-ai", {
+    const data = await fetchApiJson("/api/gemini-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(assistantGeminiPayload(question)),
     });
-    if (!response.ok) return null;
-    const data = await response.json();
     if (!data?.ok) return null;
     if (data.assistantReply) return { reply: data.assistantReply };
     if (!data.rewrittenQuestion || Number(data.confidence || 0) < 0.45) return null;
