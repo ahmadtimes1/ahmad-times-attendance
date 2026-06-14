@@ -607,6 +607,13 @@ Object.assign(translations.en, {
   allBuyers: "All buyers",
   expenseSummary: "Expense summary",
   totalExpenses: "Total expenses",
+  weeklyExpense: "Week expense",
+  monthlyExpense: "Month expense",
+  overallExpense: "Overall summary",
+  fuelExpense: "Fuel",
+  roomExpense: "Room",
+  breakfastExpense: "Breakfast",
+  foodExpense: "Food",
   moneyGiven: "Money given",
   expenseUnpaid: "Expense unpaid",
   buyerBalance: "Buyer balance",
@@ -625,6 +632,9 @@ Object.assign(translations.en, {
   addExpense: "Add expense",
   noExpenses: "No company expenses yet.",
   expenseSaved: "Expense saved",
+  expenseUpdated: "Expense updated",
+  editExpense: "Edit",
+  saveExpenseChanges: "Save changes",
   expenseRemoved: "Expense removed",
   monthlyExpenses: "Company monthly expenses",
   grandTotal: "Grand total",
@@ -757,6 +767,13 @@ Object.assign(translations.ps, {
   allBuyers: "ټول اخیستونکي",
   expenseSummary: "د مصارفو لنډیز",
   totalExpenses: "ټول مصارف",
+  weeklyExpense: "اونۍ مصرف",
+  monthlyExpense: "میاشتنی مصرف",
+  overallExpense: "ټول لنډیز",
+  fuelExpense: "تیل",
+  roomExpense: "روم",
+  breakfastExpense: "ناشته",
+  foodExpense: "خوراک",
   moneyGiven: "ورکړل شوې پیسې",
   expenseUnpaid: "ناادا مصرف",
   buyerBalance: "د اخیستونکي باقي",
@@ -775,6 +792,9 @@ Object.assign(translations.ps, {
   addExpense: "مصرف اضافه کړئ",
   noExpenses: "د شرکت مصرف نشته.",
   expenseSaved: "مصرف ذخیره شو",
+  expenseUpdated: "مصرف تازه شو",
+  editExpense: "سمول",
+  saveExpenseChanges: "بدلونونه ذخیره کړئ",
   expenseRemoved: "مصرف لرې شو",
   supplierWorkers: "د سپلایر کارکوونکي",
   supplierWorkersHelp: "د سپلایر مزدورانو ساده حساب، د مستقیمو کارکوونکو څخه جلا.",
@@ -832,6 +852,7 @@ const app = {
   attendanceWorkerFilter: "all",
   attendanceShiftFilter: "all",
   bulkAttendanceShiftFilter: "all",
+  editingExpenseId: "",
 };
 
 let supabaseClient = null;
@@ -3211,6 +3232,46 @@ function expenseBuyerName(expense) {
   return String(expense.buyer || "").trim() || "-";
 }
 
+function expenseSearchText(expense) {
+  return [
+    expense.category,
+    expense.merchant,
+    expense.location,
+    expense.description,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function expenseCategoryGroup(expense) {
+  const text = expenseSearchText(expense);
+  if (/(breakfast|ناشته|صبح|chai|tea|karak)/i.test(text)) return "breakfast";
+  if (/(room|rent|accommodation|camp|روم|کرایه|اطاق)/i.test(text)) return "room";
+  if (/(fuel|petrol|diesel|gasoline|pump|car oil|engine oil|oil|تیل|پمپ)/i.test(text)) return "fuel";
+  if (/(food|meal|lunch|dinner|restaurant|kitchen|خوراک|ډوډۍ|غذا)/i.test(text)) return "food";
+  return "other";
+}
+
+function expenseRowsBetween(start, end, buyerFilter = "") {
+  const buyer = String(buyerFilter || "").trim().toLowerCase();
+  return (app.expenses || []).filter((expense) => {
+    const date = String(expense.date || "");
+    if (!date || date < start || date > end) return false;
+    if (!buyer) return true;
+    return expenseBuyerName(expense).toLowerCase() === buyer;
+  });
+}
+
+function expenseTotalsForRows(rows, category = "all") {
+  return rows.reduce((sum, expense) => {
+    if (category !== "all" && expenseCategoryGroup(expense) !== category) return sum;
+    const ledger = expenseLedger(expense);
+    sum.amount = roundMoney(sum.amount + ledger.amount);
+    sum.paid = roundMoney(sum.paid + ledger.paid);
+    sum.unpaid = roundMoney(sum.unpaid + ledger.unpaid);
+    sum.balance = roundMoney(sum.balance + ledger.balance);
+    return sum;
+  }, { amount: 0, paid: 0, unpaid: 0, balance: 0 });
+}
+
 function supplierEntryTotals(entry) {
   const workers = Math.max(0, Number(entry.workerCount || 0));
   const dailyWage = roundMoney(entry.dailyWage || 0);
@@ -3469,12 +3530,40 @@ function renderExpenses() {
   const summary = $("#expenseSummary");
   if (summary) {
     const buyerFilter = ($("#expenseBuyerFilter")?.value || "").trim();
+    const weekDates = weekRange($("#todayInput")?.value || todayISO());
+    const weekStart = weekDates[0];
+    const weekEnd = weekDates[weekDates.length - 1];
+    const monthDates = daysInMonth(month);
+    const monthStart = monthDates[0];
+    const monthEnd = monthDates[monthDates.length - 1];
+    const weeklyRows = expenseRowsBetween(weekStart, weekEnd, buyerFilter);
+    const monthlyRows = expenseRowsBetween(monthStart, monthEnd, buyerFilter);
+    const categories = [
+      ["all", t("overallExpense")],
+      ["fuel", t("fuelExpense")],
+      ["room", t("roomExpense")],
+      ["breakfast", t("breakfastExpense")],
+      ["food", t("foodExpense")],
+    ];
     summary.innerHTML = `
       <article><span>${t("expenseSummary")}</span><strong>${buyerFilter ? escapeHTML(buyerFilter) : t("allBuyers")}</strong></article>
       <article><span>${t("totalExpenses")}</span><strong>${money(totals.amount)}</strong></article>
       <article><span>${t("moneyGiven")}</span><strong>${money(totals.paid)}</strong></article>
       <article><span>${t("expenseUnpaid")}</span><strong>${money(totals.unpaid)}</strong></article>
       <article><span>${t("buyerBalance")}</span><strong>${money(totals.balance)}</strong></article>
+      ${categories.map(([key, label]) => {
+        const week = expenseTotalsForRows(weeklyRows, key);
+        const monthTotal = expenseTotalsForRows(monthlyRows, key);
+        return `
+          <article class="expense-category-card">
+            <span>${escapeHTML(label)}</span>
+            <strong>${money(monthTotal.amount)}</strong>
+            <small>${t("monthlyExpense")} · ${month}</small>
+            <small>${t("weeklyExpense")} · ${money(week.amount)}</small>
+            <small>${t("paid")}: ${money(monthTotal.paid)} · ${t("unpaid")}: ${money(monthTotal.unpaid)}</small>
+          </article>
+        `;
+      }).join("")}
     `;
   }
   list.innerHTML = rows.length ? rows.map((expense) => `
@@ -3494,7 +3583,10 @@ function renderExpenses() {
       <td>${ledger.balance ? `${money(ledger.balance)}<br><small>${t("expenseOverpaidHelp")}</small>` : money(0)}</td>
       <td><span class="status-pill ${ledger.status === "paid" ? "paid" : "unpaid"}">${expenseStatusLabel(ledger.status)}</span></td>
       <td>${expense.receiptPhoto ? `<button class="ghost" data-view-expense="${expense.id}">${t("viewBill")}</button>` : "-"}</td>
-      <td><button class="danger ghost" data-remove-expense="${expense.id}">${t("remove")}</button></td>
+      <td>
+        <button class="ghost" data-edit-expense="${expense.id}">${t("editExpense")}</button>
+        <button class="danger ghost" data-remove-expense="${expense.id}">${t("remove")}</button>
+      </td>
         `;
       })()}
     </tr>
@@ -4076,8 +4168,11 @@ function showWorkerContextMenu(event, workerId) {
 function addExpenseFromForm() {
   if (!requireAdmin()) return;
   app.expenses ||= [];
+  const existing = app.editingExpenseId
+    ? app.expenses.find((item) => item.id === app.editingExpenseId)
+    : null;
   const expense = {
-    id: makeId(),
+    id: existing?.id || makeId(),
     date: $("#expenseDate").value || todayISO(),
     buyer: $("#expenseBuyer").value.trim(),
     category: $("#expenseCategory").value.trim(),
@@ -4087,11 +4182,25 @@ function addExpenseFromForm() {
     amount: Number($("#expenseAmount").value || 0),
     paidAmount: Number($("#expensePaidAmount").value || 0),
     receiptPhoto: $("#expenseReceiptPhoto").value || "",
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
   if (!expense.category || expense.amount <= 0) return;
-  app.expenses.unshift(expense);
-  addLog("Company expense added", `${expense.date} · ${expense.category} · ${money(expense.amount)}`);
+  if (existing) {
+    const index = app.expenses.findIndex((item) => item.id === existing.id);
+    app.expenses[index] = { ...existing, ...expense };
+    addLog("Company expense updated", `${expense.date} · ${expense.category} · ${money(expense.amount)}`);
+  } else {
+    app.expenses.unshift(expense);
+    addLog("Company expense added", `${expense.date} · ${expense.category} · ${money(expense.amount)}`);
+  }
+  clearExpenseForm();
+  saveData();
+  toast(existing ? t("expenseUpdated") : t("expenseSaved"));
+}
+
+function clearExpenseForm() {
+  app.editingExpenseId = "";
   $("#expenseBuyer").value = "";
   $("#expenseCategory").value = "";
   $("#expenseMerchant").value = "";
@@ -4101,14 +4210,36 @@ function addExpenseFromForm() {
   $("#expensePaidAmount").value = "";
   $("#expenseReceiptUpload").value = "";
   setExpenseReceiptPhoto("");
-  saveData();
-  toast(t("expenseSaved"));
+  const button = $("#saveExpenseButton");
+  if (button) button.textContent = t("addExpense");
+  $("#cancelExpenseEdit")?.classList.add("hidden");
+}
+
+function editExpense(expenseId) {
+  if (!requireAdmin()) return;
+  const expense = (app.expenses || []).find((item) => item.id === expenseId);
+  if (!expense) return;
+  app.editingExpenseId = expense.id;
+  $("#expenseDate").value = expense.date || todayISO();
+  $("#expenseBuyer").value = expense.buyer || "";
+  $("#expenseCategory").value = expense.category || "";
+  $("#expenseMerchant").value = expense.merchant || "";
+  $("#expenseLocation").value = expense.location || "";
+  $("#expenseDescription").value = expense.description || "";
+  $("#expenseAmount").value = Number(expense.amount || 0);
+  $("#expensePaidAmount").value = Number(expense.paidAmount || 0);
+  setExpenseReceiptPhoto(expense.receiptPhoto || "");
+  const button = $("#saveExpenseButton");
+  if (button) button.textContent = t("saveExpenseChanges");
+  $("#cancelExpenseEdit")?.classList.remove("hidden");
+  $("#expenseForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function removeExpense(expenseId) {
   if (!requireAdmin()) return;
   const expense = (app.expenses || []).find((item) => item.id === expenseId);
   app.expenses = (app.expenses || []).filter((item) => item.id !== expenseId);
+  if (app.editingExpenseId === expenseId) clearExpenseForm();
   addLog("Company expense removed", expense ? `${expense.date} · ${expense.category} · ${money(expense.amount)}` : expenseId);
   saveData();
   toast(t("expenseRemoved"));
@@ -4489,6 +4620,9 @@ function bindEvents() {
     const removeExpenseButton = event.target.closest("[data-remove-expense]");
     if (removeExpenseButton) removeExpense(removeExpenseButton.dataset.removeExpense);
 
+    const editExpenseButton = event.target.closest("[data-edit-expense]");
+    if (editExpenseButton) editExpense(editExpenseButton.dataset.editExpense);
+
     const removeSupplierButton = event.target.closest("[data-remove-supplier]");
     if (removeSupplierButton) removeSupplierEntry(removeSupplierButton.dataset.removeSupplier);
 
@@ -4674,6 +4808,7 @@ function bindEvents() {
     event.preventDefault();
     addExpenseFromForm();
   });
+  $("#cancelExpenseEdit")?.addEventListener("click", clearExpenseForm);
   $("#supplierForm").addEventListener("submit", (event) => {
     event.preventDefault();
     addSupplierEntryFromForm();
