@@ -3543,11 +3543,12 @@ async function scanExpenseReceiptWithAI() {
     button.textContent = t("scanningBill");
   }
   try {
+    const scanImage = await resizePhotoDataUrl(photo, 1000);
     const response = await fetch("/api/receipt-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        image: photo,
+        image: scanImage,
         today: $("#todayInput")?.value || todayISO(),
         language: app.language,
       }),
@@ -3565,8 +3566,9 @@ async function scanExpenseReceiptWithAI() {
     addLog("Bill AI scanned", `${fields.merchant || "-"} · ${money(fields.amount || 0)} · confidence ${Math.round(Number(fields.confidence || 0) * 100)}%`);
     toast(t("billScanFilled"));
   } catch (error) {
-    console.warn(error);
-    toast(t("billScanFailed"));
+    console.warn("Bill AI scan failed", error);
+    const detail = error?.message ? ` (${error.message.slice(0, 120)})` : "";
+    toast(`${t("billScanFailed")}${detail}`);
   } finally {
     if (button) {
       button.disabled = false;

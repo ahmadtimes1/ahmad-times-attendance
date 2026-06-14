@@ -1,5 +1,7 @@
 const GEMINI_MODELS = [
   process.env.GEMINI_MODEL,
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
 ].filter(Boolean);
@@ -19,7 +21,7 @@ function readRequestBody(req) {
     let raw = "";
     req.on("data", (chunk) => {
       raw += chunk;
-      if (raw.length > 1_800_000) {
+      if (raw.length > 6_000_000) {
         reject(new Error("Request too large"));
         req.destroy();
       }
@@ -35,10 +37,36 @@ function normalizeImage(dataUrl = "") {
   return { mimeType: match[1], data: match[2] };
 }
 
+function parseModelJson(value) {
+  const raw = String(value || "").trim();
+  const cleaned = raw
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    }
+    throw new Error("AI did not return readable bill data.");
+  }
+}
+
+function safeNumber(value) {
+  const cleaned = String(value ?? "").replace(/[^\d.-]/g, "");
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : 0;
+}
+
 async function callGemini(model, apiKey, image, today) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const prompt = `
 Read this company expense bill/receipt image for Ahmad Times Building Maintenance.
+The receipt may be in English, Arabic, Urdu, or Pashto.
 Extract only what is visible. Do not invent missing values.
 Today is ${today}.
 
@@ -80,10 +108,10 @@ Rules:
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`${model}: ${response.status} ${text.slice(0, 180)}`);
-  const data = JSON.parse(text);
+  const data = parseModelJson(text);
   const answer = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
   if (!answer) throw new Error(`${model}: empty response`);
-  return JSON.parse(answer);
+  return parseModelJson(answer);
 }
 
 module.exports = async function handler(req, res) {
@@ -111,6 +139,8 @@ module.exports = async function handler(req, res) {
     for (const model of GEMINI_MODELS) {
       try {
         const result = await callGemini(model, apiKey, image, body.today || "");
+        const amount = safeNumber(result.amount);
+        const paidAmount = safeNumber(result.paidAmount) || amount;
         sendJson(res, 200, {
           ok: true,
           model,
@@ -118,11 +148,11 @@ module.exports = async function handler(req, res) {
             date: String(result.date || ""),
             merchant: String(result.merchant || "").slice(0, 100),
             category: String(result.category || "").slice(0, 80),
-            amount: Number(result.amount || 0),
-            paidAmount: Number(result.paidAmount || 0),
+            amount,
+            paidAmount,
             location: String(result.location || "").slice(0, 120),
             description: String(result.description || "").slice(0, 240),
-            confidence: Number(result.confidence || 0),
+            confidence: safeNumber(result.confidence),
           },
         });
         return;
