@@ -900,6 +900,37 @@ function normalizeAppCollections() {
   normalizePaymentLedger();
 }
 
+function hasBusinessRecords(data = app) {
+  return Boolean(
+    (Array.isArray(data.workers) && data.workers.length) ||
+    (data.attendance && Object.keys(data.attendance).length) ||
+    (Array.isArray(data.payments) && data.payments.length) ||
+    (Array.isArray(data.expenses) && data.expenses.length) ||
+    (Array.isArray(data.supplierEntries) && data.supplierEntries.length) ||
+    (Array.isArray(data.supplierPayments) && data.supplierPayments.length)
+  );
+}
+
+function latestBackupWithRecords(backups = app.dailyBackups) {
+  return Object.entries(backups || {})
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([, backup]) => backup)
+    .find((backup) => hasBusinessRecords(backup));
+}
+
+function restoreFromBackupObject(backup) {
+  if (!backup) return false;
+  app.workers = cloneData(backup.workers || []);
+  app.attendance = cloneData(backup.attendance || {});
+  app.payments = cloneData(backup.payments || []);
+  app.expenses = cloneData(backup.expenses || []);
+  app.supplierEntries = cloneData(backup.supplierEntries || []);
+  app.supplierPayments = cloneData(backup.supplierPayments || []);
+  app.payrollLocks = cloneData(backup.payrollLocks || {});
+  normalizeAppCollections();
+  return hasBusinessRecords(app);
+}
+
 function resetHistory() {
   normalizeAppCollections();
   undoStack = [];
@@ -1392,6 +1423,7 @@ async function loadProfile() {
 }
 
 async function loadData() {
+  app.cloudLoadFailed = false;
   if (supabaseClient && app.user && app.profile?.active) {
     const { data, error } = await supabaseClient
       .from("app_data")
@@ -1401,6 +1433,16 @@ async function loadData() {
     if (!error && data?.data) {
       Object.assign(app, data.data);
       normalizeAppCollections();
+      if (!hasBusinessRecords(app)) {
+        const restored = restoreFromBackupObject(latestBackupWithRecords(app.dailyBackups));
+        if (restored) {
+          app.storageMode = "cloud";
+          restoreSimpleLogin();
+          resetHistory();
+          await saveData(false, { allowEmpty: false });
+          return;
+        }
+      }
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = "cloud";
       restoreSimpleLogin();
@@ -1408,14 +1450,19 @@ async function loadData() {
       if (cleaned) await saveData(false);
       return;
     }
+    app.cloudLoadFailed = true;
     if (error) toast(error.message);
   }
 
   const saved = getBrowserBackup();
   if (saved) {
     try {
-      Object.assign(app, JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      Object.assign(app, parsed);
       normalizeAppCollections();
+      if (!hasBusinessRecords(app)) {
+        restoreFromBackupObject(latestBackupWithRecords(app.dailyBackups || parsed.dailyBackups));
+      }
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = supabaseClient ? "login required" : "local";
       resetHistory();
@@ -1433,16 +1480,23 @@ async function loadData() {
   app.supplierPayments = [];
   app.logs = [];
   resetHistory();
-  saveData(false);
+  setBrowserBackup();
 }
 
-async function saveData(show = true) {
+async function saveData(show = true, options = {}) {
   createDailyBackup();
   recordHistory();
   app.lastSaved = new Date().toISOString();
   setBrowserBackup();
 
   if (supabaseClient && app.user && app.profile?.active && ["admin", "manager"].includes(app.profile.role)) {
+    if (app.cloudLoadFailed && !hasBusinessRecords(app) && !options.allowEmpty) {
+      app.lastCloudSaveError = "Cloud data was not loaded, empty save blocked.";
+      app.storageMode = "cloud save blocked";
+      if (show) toast(app.lastCloudSaveError);
+      renderAll();
+      return;
+    }
     const payload = {
       workers: app.workers,
       attendance: app.attendance,
