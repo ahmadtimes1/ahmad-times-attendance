@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=recovery-1">
+    <link rel="stylesheet" href="styles.css?v=remove-ayoub-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -442,7 +442,6 @@
                 <span data-i18n="takeBillPicture">Take bill picture</span>
                 <input id="expenseReceiptUpload" type="file" accept="image/*" capture="environment">
               </label>
-              <button type="button" id="scanExpenseReceipt" class="ghost receipt-ai-button" data-i18n="scanBillAI">AI scan bill</button>
               <div id="expenseReceiptPreview" class="receipt-preview">No bill picture</div>
               <button class="primary" data-i18n="addExpense">Add expense</button>
             </form>
@@ -583,9 +582,6 @@
                 <button type="button" data-assistant-prompt="expenses this month" data-i18n="askExpensesMonth">Expenses this month</button>
                 <button type="button" data-assistant-prompt="attendance mistakes" data-i18n="askMistakes">Attendance mistakes</button>
                 <button type="button" data-assistant-prompt="night shift workers" data-i18n="askNightShift">Night shift workers</button>
-                <button type="button" data-assistant-prompt="report worker name from 2026-06-03 to 2026-06-07">Report by date range</button>
-                <button type="button" data-assistant-prompt="pay worker name 200 today">Save worker payment</button>
-                <button type="button" data-assistant-prompt="mark worker name present today in 8am out 6pm">Mark attendance by chat</button>
               </div>
             </section>
           </div>
@@ -722,11 +718,6 @@
                 <div><span data-i18n="lastSaved">Last saved</span><strong id="storageSaved">Never</strong></div>
               </div>
             </section>
-            <section class="panel">
-              <h3 data-i18n="recoveryBackups">Recovery backups</h3>
-              <p class="help-text" data-i18n="recoveryBackupsHelp">Restore a previous browser safety copy if the cloud screen shows zero data.</p>
-              <div id="recoveryBackupsList" class="storage-list"></div>
-            </section>
           </div>
         </section>
 
@@ -860,6 +851,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=recovery-1"></script>
+    <script src="app.js?v=remove-ayoub-1"></script>
   </body>
 </html>

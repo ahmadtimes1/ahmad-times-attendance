@@ -7,7 +7,6 @@ const THEME_KEY = "ahmad-times-theme";
 const ROLLING_BACKUPS_KEY = "ahmad-times-rolling-backups-v1";
 const STANDARD_HOURS = 8;
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
-const LIVE_API_BASE = "https://ahmad-times-attendance.vercel.app";
 
 const SIMPLE_USERS = [
   { username: "admin", password: "Dubai@#123", role: "admin", name: "Admin" },
@@ -93,7 +92,7 @@ const translations = {
     reports: "Reports",
     companyAssistant: "Company Assistant",
     companyAssistantHelp: "Private internal assistant for company workers, attendance, wages, payments, expenses, and safety checks.",
-    assistantPlaceholder: "Examples: mark Naeem present today in 8am out 6pm | pay Naeem 200 | report Naeem from 2026-06-03 to 2026-06-07",
+    assistantPlaceholder: "Ask: who is unpaid this month, show absent today, worker Naeem report...",
     askAssistant: "Ask assistant",
     quickQuestions: "Quick questions",
     askTodaySummary: "Today summary",
@@ -102,7 +101,7 @@ const translations = {
     askExpensesMonth: "Expenses this month",
     askMistakes: "Attendance mistakes",
     askNightShift: "Night shift workers",
-    assistantReady: "Internal assistant ready. Gemini will improve understanding when GEMINI_API_KEY is added in Vercel.",
+    assistantReady: "Internal assistant ready",
     assistantNoAnswer: "I could not understand that yet. Try asking about unpaid wages, attendance, expenses, workers, shifts, or mistakes.",
     safety: "Safety",
     logs: "Logs",
@@ -179,11 +178,6 @@ const translations = {
     backupHelp: "Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.",
     exportBackup: "Export backup",
     importBackup: "Import backup",
-    recoveryBackups: "Recovery backups",
-    recoveryBackupsHelp: "Restore a previous browser safety copy if the cloud screen shows zero data.",
-    noRecoveryBackups: "No recovery backups with worker records found in this browser.",
-    restoreBackup: "Restore",
-    recoveryBackupRestored: "Recovery backup restored",
     storage: "Storage",
     attendanceRecords: "Attendance records",
     lastSaved: "Last saved",
@@ -339,7 +333,7 @@ const translations = {
     reports: "راپورونه",
     companyAssistant: "د شرکت مرستیال",
     companyAssistantHelp: "د شرکت د کارکوونکو، حاضري، مزدوري، تادیاتو، مصارفو او غلطیو لپاره داخلي مرستیال.",
-    assistantPlaceholder: "بېلګې: Naeem present today in 8am out 6pm | pay Naeem 200 | report Naeem from 2026-06-03 to 2026-06-07",
+    assistantPlaceholder: "پوښتنه وکړئ: د دې میاشتې ناادا مزدوران، د نن غیر حاضر، د نعیم راپور...",
     askAssistant: "پوښتنه وکړئ",
     quickQuestions: "چټکې پوښتنې",
     askTodaySummary: "د نن لنډیز",
@@ -348,7 +342,7 @@ const translations = {
     askExpensesMonth: "د دې میاشتې مصارف",
     askMistakes: "د حاضري غلطۍ",
     askNightShift: "د شپې شفټ کارکوونکي",
-    assistantReady: "داخلي مرستیال چمتو دی. که په Vercel کې GEMINI_API_KEY اضافه شي Gemini به ښه پوهه ورکړي.",
+    assistantReady: "داخلي مرستیال چمتو دی",
     assistantNoAnswer: "دا پوښتنه مې ښه ونه پېژندله. د مزدورۍ، حاضري، مصارفو، کارکوونکو، شفټونو یا غلطیو په اړه پوښتنه وکړئ.",
     safety: "خوندیتوب",
     logs: "لاګونه",
@@ -425,11 +419,6 @@ const translations = {
     backupHelp: "ټول کارکوونکي، حاضري او مزدوري ریکارډونه د JSON بیک اپ فایل په توګه وباسئ. وروسته یې د سیستم د بحالولو لپاره داخل کړئ.",
     exportBackup: "بیک اپ وباسئ",
     importBackup: "بیک اپ داخل کړئ",
-    recoveryBackups: "د بیا راګرځولو بیک اپونه",
-    recoveryBackupsHelp: "که کلاوډ صفر ښکاره کړي، پخوانۍ د براوزر خوندي کاپي راواخلئ.",
-    noRecoveryBackups: "په دې براوزر کې د کارکوونکو بیک اپ ونه موندل شو.",
-    restoreBackup: "راګرځول",
-    recoveryBackupRestored: "بیک اپ راواګرځول شو",
     storage: "ذخیره",
     attendanceRecords: "د حاضري ریکارډونه",
     lastSaved: "وروستی ذخیره",
@@ -616,11 +605,6 @@ Object.assign(translations.en, {
   expenseLocation: "Location",
   expenseLocationPlaceholder: "Area or site",
   takeBillPicture: "Take bill picture",
-  scanBillAI: "AI scan bill",
-  scanningBill: "Scanning bill...",
-  billScanFilled: "Bill scanned. Please review before adding expense.",
-  billScanFailed: "Bill scan failed. Please enter bill details manually.",
-  noBillToScan: "Take or upload a bill picture first.",
   noBillPicture: "No bill picture",
   bill: "Bill",
   viewBill: "View bill",
@@ -771,11 +755,6 @@ Object.assign(translations.ps, {
   expenseLocation: "ځای",
   expenseLocationPlaceholder: "سیمه یا سایټ",
   takeBillPicture: "د بل عکس واخلئ",
-  scanBillAI: "AI بل ولولئ",
-  scanningBill: "بل لوستل کېږي...",
-  billScanFilled: "بل ولوستل شو. د مصرف له اضافه کولو مخکې یې وګورئ.",
-  billScanFailed: "د بل لوستل ناکام شول. معلومات په لاس ولیکئ.",
-  noBillToScan: "لومړی د بل عکس واخلئ یا پورته یې کړئ.",
   noBillPicture: "د بل عکس نشته",
   bill: "بل",
   viewBill: "بل وګورئ",
@@ -851,23 +830,6 @@ let suppressWorkerOpen = false;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
-function apiPath(path) {
-  const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-  const base = window.AHMAD_TIMES_API_BASE || (isLocal ? LIVE_API_BASE : "");
-  return `${base}${path}`;
-}
-
-async function fetchApiJson(path, options = {}) {
-  const response = await fetch(apiPath(path), options);
-  const text = await response.text();
-  try {
-    return JSON.parse(text || "{}");
-  } catch {
-    const preview = text.replace(/\s+/g, " ").slice(0, 120);
-    throw new Error(`API did not return JSON. ${preview || `HTTP ${response.status}`}`);
-  }
-}
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -908,37 +870,6 @@ function normalizeAppCollections() {
   app.payrollLocks ||= {};
   app.dailyBackups ||= {};
   normalizePaymentLedger();
-}
-
-function hasBusinessRecords(data = app) {
-  return Boolean(
-    (Array.isArray(data.workers) && data.workers.length) ||
-    (data.attendance && Object.keys(data.attendance).length) ||
-    (Array.isArray(data.payments) && data.payments.length) ||
-    (Array.isArray(data.expenses) && data.expenses.length) ||
-    (Array.isArray(data.supplierEntries) && data.supplierEntries.length) ||
-    (Array.isArray(data.supplierPayments) && data.supplierPayments.length)
-  );
-}
-
-function latestBackupWithRecords(backups = app.dailyBackups) {
-  return Object.entries(backups || {})
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([, backup]) => backup)
-    .find((backup) => hasBusinessRecords(backup));
-}
-
-function restoreFromBackupObject(backup) {
-  if (!backup) return false;
-  app.workers = cloneData(backup.workers || []);
-  app.attendance = cloneData(backup.attendance || {});
-  app.payments = cloneData(backup.payments || []);
-  app.expenses = cloneData(backup.expenses || []);
-  app.supplierEntries = cloneData(backup.supplierEntries || []);
-  app.supplierPayments = cloneData(backup.supplierPayments || []);
-  app.payrollLocks = cloneData(backup.payrollLocks || {});
-  normalizeAppCollections();
-  return hasBusinessRecords(app);
 }
 
 function resetHistory() {
@@ -1433,7 +1364,6 @@ async function loadProfile() {
 }
 
 async function loadData() {
-  app.cloudLoadFailed = false;
   if (supabaseClient && app.user && app.profile?.active) {
     const { data, error } = await supabaseClient
       .from("app_data")
@@ -1443,16 +1373,6 @@ async function loadData() {
     if (!error && data?.data) {
       Object.assign(app, data.data);
       normalizeAppCollections();
-      if (!hasBusinessRecords(app)) {
-        const restored = restoreFromBackupObject(latestBackupWithRecords(app.dailyBackups));
-        if (restored) {
-          app.storageMode = "cloud";
-          restoreSimpleLogin();
-          resetHistory();
-          await saveData(false, { allowEmpty: false });
-          return;
-        }
-      }
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = "cloud";
       restoreSimpleLogin();
@@ -1460,24 +1380,18 @@ async function loadData() {
       if (cleaned) await saveData(false);
       return;
     }
-    app.cloudLoadFailed = true;
     if (error) toast(error.message);
   }
 
   const saved = getBrowserBackup();
   if (saved) {
     try {
-      const parsed = JSON.parse(saved);
-      Object.assign(app, parsed);
+      Object.assign(app, JSON.parse(saved));
       normalizeAppCollections();
-      if (!hasBusinessRecords(app)) {
-        restoreFromBackupObject(latestBackupWithRecords(app.dailyBackups || parsed.dailyBackups));
-      }
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
-      app.storageMode = supabaseClient && app.user ? "cloud" : (supabaseClient ? "login required" : "local");
+      app.storageMode = supabaseClient ? "login required" : "local";
       resetHistory();
       if (cleaned) await saveData(false);
-      if (supabaseClient && app.user && hasBusinessRecords(app)) await saveData(false, { allowEmpty: false });
       return;
     } catch {
       removeBrowserBackup();
@@ -1491,23 +1405,16 @@ async function loadData() {
   app.supplierPayments = [];
   app.logs = [];
   resetHistory();
-  setBrowserBackup();
+  saveData(false);
 }
 
-async function saveData(show = true, options = {}) {
+async function saveData(show = true) {
   createDailyBackup();
   recordHistory();
   app.lastSaved = new Date().toISOString();
   setBrowserBackup();
 
   if (supabaseClient && app.user && app.profile?.active && ["admin", "manager"].includes(app.profile.role)) {
-    if (app.cloudLoadFailed && !hasBusinessRecords(app) && !options.allowEmpty) {
-      app.lastCloudSaveError = "Cloud data was not loaded, empty save blocked.";
-      app.storageMode = "cloud save blocked";
-      if (show) toast(app.lastCloudSaveError);
-      renderAll();
-      return;
-    }
     const payload = {
       workers: app.workers,
       attendance: app.attendance,
@@ -1565,19 +1472,9 @@ function setBrowserBackup() {
     };
     const serialized = JSON.stringify(payload);
     localStorage.setItem(STORAGE_KEY, serialized);
-    if (!hasBusinessRecords(payload)) return;
     const rolling = JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]");
     rolling.unshift({ at: new Date().toISOString(), data: payload });
-    const unique = [];
-    const seen = new Set();
-    rolling.forEach((entry) => {
-      if (!hasBusinessRecords(entry?.data)) return;
-      const key = `${entry.at}__${entry.data?.workers?.length || 0}__${Object.keys(entry.data?.attendance || {}).length}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      unique.push(entry);
-    });
-    localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(unique.slice(0, 20)));
+    localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(rolling.slice(0, 5)));
   } catch {
     // Browser storage can be disabled; cloud storage is primary after login.
   }
@@ -1589,32 +1486,6 @@ function removeBrowserBackup() {
   } catch {
     // Ignore unavailable storage.
   }
-}
-
-function getRollingBackups() {
-  try {
-    return JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]")
-      .filter((entry) => hasBusinessRecords(entry?.data));
-  } catch {
-    return [];
-  }
-}
-
-async function restoreRollingBackup(index) {
-  const entry = getRollingBackups()[Number(index)];
-  if (!entry?.data || !hasBusinessRecords(entry.data)) {
-    toast(t("backupImportFailed"));
-    return;
-  }
-  Object.assign(app, cloneData(entry.data));
-  normalizeAppCollections();
-  app.storageMode = supabaseClient && app.user ? "cloud" : "local";
-  app.cloudLoadFailed = false;
-  addLog("Recovery backup restored", `${app.workers.length} workers · ${new Date(entry.at).toLocaleString()}`);
-  await saveData(true, { allowEmpty: false });
-  resetHistory();
-  renderAll();
-  toast(t("recoveryBackupRestored"));
 }
 
 function toast(message) {
@@ -3650,51 +3521,6 @@ function suggestReceiptFields(file) {
   }
 }
 
-async function scanExpenseReceiptWithAI() {
-  const photo = $("#expenseReceiptPhoto")?.value || "";
-  const button = $("#scanExpenseReceipt");
-  if (!photo) {
-    toast(t("noBillToScan"));
-    return;
-  }
-  if (button) {
-    button.disabled = true;
-    button.textContent = t("scanningBill");
-  }
-  try {
-    const scanImage = await resizePhotoDataUrl(photo, 1000);
-    const data = await fetchApiJson("/api/receipt-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: scanImage,
-        today: $("#todayInput")?.value || todayISO(),
-        language: app.language,
-      }),
-    });
-    if (!data?.ok) throw new Error(data?.reason || "Bill scan failed");
-    const fields = data.fields || {};
-    if (fields.date && /^\d{4}-\d{2}-\d{2}$/.test(fields.date)) $("#expenseDate").value = fields.date;
-    if (fields.merchant) $("#expenseMerchant").value = fields.merchant;
-    if (fields.category) $("#expenseCategory").value = fields.category;
-    if (Number(fields.amount || 0) > 0) $("#expenseAmount").value = roundMoney(fields.amount);
-    if (Number(fields.paidAmount || 0) > 0) $("#expensePaidAmount").value = roundMoney(fields.paidAmount);
-    if (fields.location) $("#expenseLocation").value = fields.location;
-    if (fields.description) $("#expenseDescription").value = fields.description;
-    addLog("Bill AI scanned", `${fields.merchant || "-"} · ${money(fields.amount || 0)} · confidence ${Math.round(Number(fields.confidence || 0) * 100)}%`);
-    toast(t("billScanFilled"));
-  } catch (error) {
-    console.warn("Bill AI scan failed", error);
-    const detail = error?.message ? ` (${error.message.slice(0, 120)})` : "";
-    toast(`${t("billScanFailed")}${detail}`);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = t("scanBillAI");
-    }
-  }
-}
-
 function viewExpenseReceipt(expenseId) {
   const expense = (app.expenses || []).find((item) => item.id === expenseId);
   if (!expense) return;
@@ -3721,23 +3547,6 @@ function renderStorage() {
   $("#storageWorkers").textContent = app.workers.length;
   $("#storageAttendance").textContent = attendanceCount;
   $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
-  const recoveryList = $("#recoveryBackupsList");
-  if (recoveryList) {
-    const backups = getRollingBackups();
-    recoveryList.innerHTML = backups.length
-      ? backups.slice(0, 12).map((entry, index) => {
-        const data = entry.data || {};
-        const attendanceDays = Object.keys(data.attendance || {}).length;
-        const payments = Array.isArray(data.payments) ? data.payments.length : Object.keys(data.payments || {}).length;
-        return `
-          <div>
-            <span>${new Date(entry.at).toLocaleString()} · ${data.workers?.length || 0} ${t("workers")} · ${attendanceDays} ${t("attendanceRecords")} · ${payments} ${t("paymentLedger")}</span>
-            <button class="small-button" data-restore-rolling-backup="${index}">${t("restoreBackup")}</button>
-          </div>
-        `;
-      }).join("")
-      : `<div><span>${t("noRecoveryBackups")}</span><strong>-</strong></div>`;
-  }
 }
 
 function payrollAlerts() {
@@ -3811,274 +3620,24 @@ function assistantTodayContext() {
 }
 
 function assistantFindWorker(question) {
-  return assistantFindWorkers(question)[0] || null;
+  const normalized = question.toLowerCase();
+  return app.workers.find((worker) => [worker.name, worker.namePs, worker.phone, worker.emiratesId]
+    .filter(Boolean)
+    .some((value) => normalized.includes(String(value).toLowerCase())));
 }
 
-function assistantNameMatchScore(worker, normalizedQuestion, questionWords) {
-  const aliases = [worker.name, worker.namePs, worker.phone, worker.emiratesId].filter(Boolean).map(normalizeCompare);
-  if (aliases.some((alias) => alias && normalizedQuestion.includes(alias))) return 100;
-  const tokens = normalizeCompare(`${worker.name || ""} ${worker.namePs || ""}`)
-    .split(" ")
-    .filter((token) => token.length > 1);
-  return tokens.reduce((score, token) => {
-    if (normalizedQuestion.includes(token)) return score + 2;
-    if (token.length < 4) return score;
-    const close = questionWords.some((word) => word.length >= 4 && assistantEditDistance(token, word) <= Math.max(1, Math.floor(token.length * 0.25)));
-    return score + (close ? 1 : 0);
-  }, 0);
-}
-
-function assistantEditDistance(a, b) {
-  const first = String(a || "");
-  const second = String(b || "");
-  const previous = Array.from({ length: second.length + 1 }, (_item, index) => index);
-  for (let i = 1; i <= first.length; i += 1) {
-    let last = i - 1;
-    previous[0] = i;
-    for (let j = 1; j <= second.length; j += 1) {
-      const old = previous[j];
-      previous[j] = Math.min(
-        previous[j] + 1,
-        previous[j - 1] + 1,
-        last + (first[i - 1] === second[j - 1] ? 0 : 1)
-      );
-      last = old;
-    }
-  }
-  return previous[second.length];
-}
-
-function assistantFindWorkers(question) {
-  const normalized = normalizeCompare(question);
-  const questionWords = normalized.replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
-  return app.workers
-    .map((worker) => ({ worker, score: assistantNameMatchScore(worker, normalized, questionWords) }))
-    .filter((item) => item.score >= 1)
-    .sort((a, b) => b.score - a.score || displayWorkerName(a.worker).localeCompare(displayWorkerName(b.worker)))
-    .map((item) => item.worker);
-}
-
-function assistantNormalizeDate(year, month, day) {
-  const yyyy = Number(year) < 100 ? 2000 + Number(year) : Number(year);
-  return `${String(yyyy).padStart(4, "0")}-${String(Number(month)).padStart(2, "0")}-${String(Number(day)).padStart(2, "0")}`;
-}
-
-function assistantDatesFromText(text) {
-  const dates = [];
-  const pushDate = (date) => {
-    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && !dates.includes(date)) dates.push(date);
-  };
-  String(text || "").replace(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g, (_match, year, month, day) => {
-    pushDate(assistantNormalizeDate(year, month, day));
-    return "";
-  });
-  String(text || "").replace(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})\b/g, (_match, day, month, year) => {
-    pushDate(assistantNormalizeDate(year, month, day));
-    return "";
-  });
-  const q = normalizeCompare(text);
-  if (q.includes("today") || q.includes("نن")) pushDate(todayISO());
-  if (q.includes("yesterday")) {
-    const date = new Date(`${todayISO()}T00:00:00`);
-    date.setDate(date.getDate() - 1);
-    pushDate(date.toISOString().slice(0, 10));
-  }
-  return dates.sort();
-}
-
-function assistantPeriod(question, fallback = "month") {
-  const dates = assistantDatesFromText(question);
-  if (dates.length >= 2) return { start: dates[0], end: dates[dates.length - 1], label: reportPeriodLabel(dates[0], dates[dates.length - 1]) };
-  if (dates.length === 1 && !normalizeCompare(question).includes("month")) return { start: dates[0], end: dates[0], label: dates[0] };
-  if (normalizeCompare(question).includes("week")) {
-    const base = dates[0] || $("#reportDate")?.value || todayISO();
-    const start = weekStart(base);
-    const endDate = new Date(`${start}T00:00:00`);
-    endDate.setDate(endDate.getDate() + 6);
-    const end = endDate.toISOString().slice(0, 10);
-    return { start, end, label: reportPeriodLabel(start, end) };
-  }
-  if (fallback === "today") {
-    const date = dates[0] || $("#todayInput")?.value || todayISO();
-    return { start: date, end: date, label: date };
-  }
-  const month = dates[0]?.slice(0, 7) || $("#reportMonth")?.value || $("#dashboardMonth")?.value || monthISO();
-  const monthDates = daysInMonth(month);
-  return { start: monthDates[0], end: monthDates[monthDates.length - 1], label: month };
-}
-
-function assistantAmountFromText(question, worker = null) {
-  let withoutDates = String(question || "")
-    .replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/g, " ")
-    .replace(/\b\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\b/g, " ");
-  const workers = Array.isArray(worker) ? worker : [worker];
-  workers.flatMap((item) => [item?.name, item?.namePs, item?.phone, item?.emiratesId]).filter(Boolean).forEach((value) => {
-    withoutDates = withoutDates.replaceAll(String(value), " ");
-  });
-  const patterns = [
-    /(?:aed|amount|pay|paid|payment|give)\s*(?:is|=|of)?\s*(\d+(?:\.\d+)?)/i,
-    /(\d+(?:\.\d+)?)\s*(?:aed|درهم)/i,
-  ];
-  for (const pattern of patterns) {
-    const match = withoutDates.match(pattern);
-    if (match) return Number(match[1]);
-  }
-  const fallback = withoutDates.match(/\b(\d+(?:\.\d+)?)\b/);
-  if (fallback) return Number(fallback[1]);
-  return 0;
-}
-
-function assistantStatusFromText(question) {
-  const q = normalizeCompare(question);
-  if (q.includes("half")) return "halfday";
-  if (q.includes("absent") || q.includes("غیر حاضر")) return "absent";
-  if (q.includes("off")) return "off";
-  if (q.includes("present") || q.includes("حاضر") || q.includes("attendance")) return "present";
-  return "";
-}
-
-function assistantParseTime(value) {
-  const match = String(value || "").match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
-  if (!match) return "";
-  let hour = Number(match[1]);
-  const minute = Number(match[2] || 0);
-  const meridiem = String(match[3] || "").toLowerCase();
-  if (meridiem === "pm" && hour < 12) hour += 12;
-  if (meridiem === "am" && hour === 12) hour = 0;
-  if (hour > 23 || minute > 59) return "";
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
-
-function assistantTimeAfter(question, label) {
-  const pattern = label === "out"
-    ? /(?:out|checkout|check out|to|till|until)\s*(?:time)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i
-    : /(?:in|checkin|check in|start|from)\s*(?:time)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i;
-  const match = String(question || "").match(pattern);
-  return match ? assistantParseTime(match[1]) : "";
-}
-
-function assistantSetAttendance(question, worker, status) {
-  const period = assistantPeriod(question, "today");
-  const date = period.start;
-  if (period.start !== period.end) return "Attendance can be changed for one date at a time. Please give one date.";
-  if (!workerAvailableForAttendance(worker, date)) return `${displayWorkerName(worker)} is not active/available on ${date}.`;
-  if (!canChangePayrollDate(date, "Assistant attendance")) return "This payroll date is locked.";
-  const inTime = assistantTimeAfter(question, "in");
-  const outTime = assistantTimeAfter(question, "out");
-  const working = ["present", "halfday"].includes(status);
-  const current = getAttendanceRecord(date, worker.id);
-  app.attendance[date] ||= {};
-  app.attendance[date][worker.id] = {
-    ...current,
-    status,
-    shift: working ? shiftFromInTime(inTime || current.inTime || currentTime(), normalizeCompare(question).includes("night") ? "night" : current.shift || "day") : "day",
-    inTime: working ? (inTime || current.inTime || currentTime()) : "",
-    outTime: working ? (outTime || current.outTime || "") : "",
-    restBreakType: working ? current.restBreakType || "default" : "default",
-    restMinutes: working ? Number(current.restMinutes ?? 60) : 60,
-    overtimeHours: working ? current.overtimeHours : "",
-    foodDeduction: working ? Number(current.foodDeduction || 0) : 0,
-    paidAmount: 0,
-  };
-  addLog("Assistant attendance changed", `${displayWorkerName(worker)} · ${date} · ${statusLabel(status)}`);
-  saveData();
-  return `${displayWorkerName(worker)} marked ${statusLabel(status)} on ${date}${inTime ? ` · ${t("in")}: ${inTime}` : ""}${outTime ? ` · ${t("out")}: ${outTime}` : ""}.`;
-}
-
-function assistantSaveWorkerPayment(question, worker) {
-  const period = assistantPaymentPeriod(question);
-  const rows = summarizeRecords(recordsForRange(period.start, period.end, worker.id));
-  const row = rows[0];
-  if (!row) return `${displayWorkerName(worker)} has no wage record for ${period.label}.`;
-  const unpaid = rowUnpaidAmount(row, period.start, period.end);
-  const explicitAmount = assistantAmountFromText(question, worker);
-  const amount = explicitAmount > 0 ? explicitAmount : unpaid;
-  if (amount <= 0) return `${displayWorkerName(worker)} has no unpaid balance for ${period.label}.`;
-  savePayment(worker.id, period.start, period.end, amount, period.paymentDate, "cash", "Saved by company assistant");
-  return `Payment saved for ${displayWorkerName(worker)}: ${money(amount)} · period ${period.label}. Remaining unpaid: ${money(Math.max(0, unpaid - amount))}.`;
-}
-
-function assistantPaymentPeriod(question) {
-  const dates = assistantDatesFromText(question);
-  const q = normalizeCompare(question);
-  const paymentDate = dates[0] || $("#todayInput")?.value || todayISO();
-  if (dates.length >= 2 || q.includes("from") || q.includes("between")) {
-    const period = assistantPeriod(question, "month");
-    return { ...period, paymentDate };
-  }
-  const month = (dates[0] || $("#reportMonth")?.value || $("#dashboardMonth")?.value || monthISO()).slice(0, 7);
-  const monthDates = daysInMonth(month);
-  return { start: monthDates[0], end: monthDates[monthDates.length - 1], label: month, paymentDate };
-}
-
-function assistantSaveMultipleWorkerPayments(question, workers) {
-  const uniqueWorkers = Array.from(new Map(workers.map((worker) => [worker.id, worker])).values());
-  const amount = assistantAmountFromText(question, uniqueWorkers);
-  if (uniqueWorkers.length < 2) return uniqueWorkers[0] ? assistantSaveWorkerPayment(question, uniqueWorkers[0]) : t("assistantNoAnswer");
-  if (amount <= 0) return `I found ${uniqueWorkers.length} workers, but I need the paid amount.`;
-  const period = assistantPaymentPeriod(question);
-  if (!canChangePayrollDate(period.paymentDate, "Assistant payment")) return "This payment date is locked.";
-  const q = normalizeCompare(question);
-  const payEach = q.includes("each") || q.includes("per worker") || q.includes("for each");
-  const totalCents = Math.round(amount * 100);
-  const baseCents = payEach ? totalCents : Math.floor(totalCents / uniqueWorkers.length);
-  const payments = uniqueWorkers.map((worker, index) => {
-    const cents = payEach ? baseCents : index === uniqueWorkers.length - 1 ? totalCents - (baseCents * (uniqueWorkers.length - 1)) : baseCents;
-    return { worker, amount: roundMoney(cents / 100) };
-  });
-  normalizePaymentLedger();
-  payments.forEach((payment) => {
-    app.payments.push({
-      id: `payment__${payment.worker.id}__${period.paymentDate}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
-      workerId: payment.worker.id,
-      date: period.paymentDate,
-      start: period.start,
-      end: period.end,
-      amount: payment.amount,
-      method: "cash",
-      note: payEach ? "Saved by company assistant - amount each" : "Saved by company assistant - split total",
-      source: "assistant",
-      user: currentUserLabel(),
-      updatedAt: new Date().toISOString(),
-    });
-  });
-  addLog("Assistant multi-payment saved", `${uniqueWorkers.map(displayWorkerName).join(", ")} · ${money(amount)} · ${period.paymentDate}`);
-  saveData();
-  return [
-    `Payment saved for ${uniqueWorkers.length} workers on ${period.paymentDate}.`,
-    payEach ? `${money(amount)} each worker.` : `${money(amount)} total split as ${payments.map((payment) => `${displayWorkerName(payment.worker)}: ${money(payment.amount)}`).join(", ")}.`,
-    `Wage period: ${period.label}.`,
-  ].join("\n");
-}
-
-function assistantOpenWorkerReport(worker, period) {
-  const navButton = $(`.nav-item[data-view="reports"]`);
-  if (navButton) navButton.click();
-  if ($("#reportType")) $("#reportType").value = "custom";
-  if ($("#reportStartDate")) $("#reportStartDate").value = period.start;
-  if ($("#reportEndDate")) $("#reportEndDate").value = period.end;
-  renderReport();
-  if ($("#reportWorker")) {
-    Array.from($("#reportWorker").options).forEach((option) => {
-      option.selected = option.value === worker.id;
-    });
-  }
-  renderReport();
-}
-
-function assistantWorkerReport(worker, period = assistantPeriod("", "month"), openReport = false) {
-  const row = summarizeRecords(recordsForRange(period.start, period.end, worker.id))[0];
+function assistantWorkerReport(worker) {
+  const context = assistantMonthContext();
+  const row = monthSummary(context.month, worker.id)[0];
   if (!row) return `${displayWorkerName(worker)}: ${t("noWageRecords")}`;
-  const paid = rowPaidAmount(row, period.start, period.end);
-  const unpaid = rowUnpaidAmount(row, period.start, period.end);
-  if (openReport) assistantOpenWorkerReport(worker, period);
+  const paid = rowPaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
+  const unpaid = rowUnpaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
   return [
-    `${displayWorkerName(worker)} · ${period.label}`,
+    `${displayWorkerName(worker)} · ${context.month}`,
     `${t("status")}: ${t(worker.status || "active")} · ${t("shift")}: ${attendanceShiftLabel(workerDefaultShift(worker))}`,
     `${t("present")}: ${row.present} · ${t("halfday")}: ${row.halfday || 0} · ${t("absent")}: ${row.absent} · ${t("off")}: ${row.off}`,
     `${t("hours")}: ${formatHours(row.hours)} · ${t("overtime")}: ${formatHours(row.overtime)}`,
     `${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}`,
-    openReport ? "Report opened in the Reports section." : "",
   ].join("\n");
 }
 
@@ -4086,20 +3645,8 @@ function assistantAnswer(question) {
   const q = question.trim().toLowerCase();
   const today = assistantTodayContext();
   const context = assistantMonthContext();
-  const foundWorkers = assistantFindWorkers(question);
-  const foundWorker = foundWorkers[0] || null;
-  const status = assistantStatusFromText(question);
-  const reportIntent = /\b(report|slip|summary|from|between)\b/i.test(question) || q.includes("راپور");
-  const paymentIntent = /\b(pay|payment|give)\b/i.test(question)
-    || /\bmark\b.*\bpaid\b/i.test(question)
-    || (/\bpaid\b/i.test(question) && assistantAmountFromText(question, foundWorker) > 0)
-    || q.includes("ادا کړه");
-  if (foundWorkers.length > 1 && paymentIntent) return assistantSaveMultipleWorkerPayments(question, foundWorkers);
-  if (foundWorker && status && !reportIntent && /\b(mark|take|set|present|absent|off|half)\b/i.test(question)) {
-    return assistantSetAttendance(question, foundWorker, status);
-  }
-  if (foundWorker && paymentIntent) return assistantSaveWorkerPayment(question, foundWorker);
-  if (foundWorker) return assistantWorkerReport(foundWorker, assistantPeriod(question, "month"), reportIntent);
+  const foundWorker = assistantFindWorker(question);
+  if (foundWorker) return assistantWorkerReport(foundWorker);
   if (q.includes("today") || q.includes("نن")) {
     return [
       `${t("today")}: ${today.date}`,
@@ -4159,15 +3706,6 @@ function assistantAnswer(question) {
   return t("assistantNoAnswer");
 }
 
-function assistantIsLocalAction(question) {
-  const q = normalizeCompare(question);
-  const hasAmount = assistantAmountFromText(question, assistantFindWorkers(question)) > 0;
-  const hasPaymentWord = /\b(pay|paid|payment|give)\b/i.test(question) || q.includes("ادا");
-  const hasAttendanceWord = /\b(mark|take|set|present|absent|off|halfday|half day)\b/i.test(question);
-  const hasReportWord = /\b(report|slip)\b/i.test(question) || q.includes("راپور");
-  return (hasPaymentWord && hasAmount) || hasAttendanceWord || hasReportWord;
-}
-
 function renderCompanyAssistant() {
   const summary = $("#assistantSummary");
   const messages = $("#assistantMessages");
@@ -4187,100 +3725,11 @@ function renderCompanyAssistant() {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function assistantGeminiPayload(question) {
-  const monthContext = assistantMonthContext();
-  const todayContext = assistantTodayContext();
-  const periodStart = monthContext.dates[0];
-  const periodEnd = monthContext.dates[monthContext.dates.length - 1];
-  const supplier = supplierTotals(monthSupplierEntries(monthContext.month), periodStart, periodEnd);
-  const workerRows = monthContext.rows.map((row) => {
-    const paid = rowPaidAmount(row, periodStart, periodEnd);
-    return {
-      name: displayWorkerName(row.worker),
-      status: row.worker.status || "active",
-      shift: workerDefaultShift(row.worker),
-      present: row.present || 0,
-      halfday: row.halfday || 0,
-      absent: row.absent || 0,
-      off: row.off || 0,
-      overtimeHours: roundMoney(row.overtime || 0),
-      payable: roundMoney(row.wage || 0),
-      paid: roundMoney(paid),
-      unpaid: roundMoney(Math.max(0, Number(row.wage || 0) - paid)),
-    };
-  });
-  const unpaidWorkers = workerRows.filter((row) => row.unpaid > 0).sort((a, b) => b.unpaid - a.unpaid).slice(0, 40);
-  return {
-    question,
-    today: $("#todayInput")?.value || todayISO(),
-    language: app.language,
-    workers: app.workers.map((worker) => ({
-      name: worker.name || "",
-      pashtoName: worker.namePs || "",
-      phone: worker.phone || "",
-      status: worker.status || "active",
-    })),
-    companyContext: {
-      month: monthContext.month,
-      today: todayContext.date,
-      activeWorkers: todayContext.active.length,
-      inactiveWorkers: app.workers.filter((worker) => worker.status === "inactive").length,
-      presentToday: todayContext.present.length,
-      absentToday: todayContext.absent.map(displayWorkerName).slice(0, 40),
-      unmarkedToday: todayContext.unmarked.map(displayWorkerName).slice(0, 40),
-      monthWages: roundMoney(monthContext.wages),
-      monthPaid: roundMoney(monthContext.pay.paid),
-      monthUnpaid: roundMoney(monthContext.pay.pending),
-      monthExpenses: roundMoney(monthContext.expenses),
-      supplierTotal: supplier.total,
-      supplierPaid: supplier.paid,
-      supplierUnpaid: supplier.unpaid,
-      unpaidWorkers,
-      workerRows: workerRows.slice(0, 80),
-    },
-  };
-}
-
-async function assistantGeminiRewrite(question) {
-  try {
-    const data = await fetchApiJson("/api/gemini-ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(assistantGeminiPayload(question)),
-    });
-    if (!data?.ok) return null;
-    if (data.assistantReply) return { reply: data.assistantReply };
-    if (!data.rewrittenQuestion || Number(data.confidence || 0) < 0.45) return null;
-    return { rewrittenQuestion: data.rewrittenQuestion, model: data.model };
-  } catch {
-    return null;
-  }
-}
-
-async function askCompanyAssistant(question) {
+function askCompanyAssistant(question) {
   const text = String(question || "").trim();
   if (!text) return;
   app.assistantMessages.push({ role: "user", text });
-  const pending = { role: "assistant", text: "Thinking with safe company AI..." };
-  app.assistantMessages.push(pending);
-  app.assistantMessages = app.assistantMessages.slice(-20);
-  renderCompanyAssistant();
-  if (assistantIsLocalAction(text)) {
-    pending.text = assistantAnswer(text);
-    app.assistantMessages = app.assistantMessages.slice(-20);
-    renderCompanyAssistant();
-    return;
-  }
-  const gemini = await assistantGeminiRewrite(text);
-  if (gemini?.reply) {
-    pending.text = gemini.reply;
-  } else {
-    const normalizedQuestion = gemini?.rewrittenQuestion || text;
-    const answer = assistantAnswer(normalizedQuestion);
-    pending.text = gemini?.rewrittenQuestion && normalizeCompare(gemini.rewrittenQuestion) !== normalizeCompare(text)
-      ? `Understood: ${gemini.rewrittenQuestion}\n\n${answer}`
-      : answer;
-  }
+  app.assistantMessages.push({ role: "assistant", text: assistantAnswer(text) });
   app.assistantMessages = app.assistantMessages.slice(-20);
   renderCompanyAssistant();
 }
@@ -5233,7 +4682,6 @@ function bindEvents() {
     };
     reader.readAsDataURL(file);
   });
-  $("#scanExpenseReceipt")?.addEventListener("click", scanExpenseReceiptWithAI);
   $("#closeReceiptDialog").addEventListener("click", () => $("#receiptDialog").close());
 
   $$(".mode-tab").forEach((tab) => {
@@ -5294,12 +4742,6 @@ function bindEvents() {
     const promptButton = event.target.closest("[data-assistant-prompt]");
     if (!promptButton) return;
     askCompanyAssistant(promptButton.dataset.assistantPrompt);
-  });
-  document.addEventListener("click", (event) => {
-    const restoreButton = event.target.closest("[data-restore-rolling-backup]");
-    if (!restoreButton) return;
-    if (!confirm(t("oldChangeWarning"))) return;
-    restoreRollingBackup(restoreButton.dataset.restoreRollingBackup);
   });
 }
 
