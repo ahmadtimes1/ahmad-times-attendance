@@ -704,6 +704,7 @@
               <p class="help-text" data-i18n="backupHelp">Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.</p>
               <div class="button-row">
                 <button class="primary" id="exportBackup" data-i18n="exportBackup">Export backup</button>
+                <button type="button" id="restoreLatestBackup" data-i18n="restoreLatestBackup">Restore latest backup</button>
                 <label class="file-button">
                   <span data-i18n="importBackup">Import backup</span>
                   <input id="importBackup" type="file" accept="application/json">
@@ -717,6 +718,11 @@
                 <div><span data-i18n="attendanceRecords">Attendance records</span><strong id="storageAttendance">0</strong></div>
                 <div><span data-i18n="lastSaved">Last saved</span><strong id="storageSaved">Never</strong></div>
               </div>
+            </section>
+            <section class="panel">
+              <h3 data-i18n="recoveryBackups">Recovery backups</h3>
+              <p class="help-text" data-i18n="recoveryBackupsHelp">Restore a previous browser safety copy if the cloud screen shows zero data.</p>
+              <div id="recoveryBackupsList" class="storage-list"></div>
             </section>
           </div>
         </section>
