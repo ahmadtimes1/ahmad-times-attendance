@@ -589,10 +589,13 @@ Object.assign(translations.en, {
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
   currentDailyWage: "Current daily wage",
-  workerBalance: "Balance",
+  advanceBalanceAed: "Balance / advance payment (AED)",
   workerAdvanceBalance: "Worker advance balance",
-  advanceBalanceAed: "Advance balance (AED)",
+  advanceDeducted: "Advance deducted",
+  advanceDeductedThisMonth: "Advance deducted this month",
   remainingAdvanceBalance: "Remaining advance balance",
+  grossPayable: "Gross payable",
+  finalPayable: "Final payable",
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
   effectiveFrom: "from",
@@ -663,7 +666,7 @@ Object.assign(translations.en, {
   supplierWorkersTotalAmount: "Supplier workers total",
   supplierWorkersPaidAmount: "Supplier workers paid",
   supplierWorkersUnpaidAmount: "Supplier workers unpaid",
-  directWorkersTotalAmount: "Direct workers total",
+  directWorkersTotalAmount: "Direct workers final payable",
   directWorkersPaidAmount: "Direct workers paid",
   directWorkersUnpaidAmount: "Direct workers unpaid",
   grandTotalAmount: "Grand total amount",
@@ -753,10 +756,13 @@ Object.assign(translations.ps, {
 
 Object.assign(translations.ps, {
   currentDailyWage: "اوسنۍ ورځنۍ مزدوري",
-  workerBalance: "بیلنس",
+  advanceBalanceAed: "بیلنس / اډوانس تادیه (AED)",
   workerAdvanceBalance: "د کارکوونکو اډوانس بیلنس",
-  advanceBalanceAed: "اډوانس بیلنس (AED)",
+  advanceDeducted: "کم شوی اډوانس",
+  advanceDeductedThisMonth: "د دې میاشتې کم شوی اډوانس",
   remainingAdvanceBalance: "پاتې اډوانس بیلنس",
+  grossPayable: "مجموعي ورکړه",
+  finalPayable: "وروستۍ ورکړه",
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
   effectiveFrom: "له",
@@ -822,7 +828,7 @@ Object.assign(translations.ps, {
   supplierWorkersTotalAmount: "د سپلایر ټول مبلغ",
   supplierWorkersPaidAmount: "د سپلایر ادا شوی",
   supplierWorkersUnpaidAmount: "د سپلایر ناادا",
-  directWorkersTotalAmount: "د مستقیمو کارکوونکو ټول",
+  directWorkersTotalAmount: "د مستقیمو کارکوونکو وروستۍ ورکړه",
   directWorkersPaidAmount: "د مستقیمو کارکوونکو ادا شوی",
   directWorkersUnpaidAmount: "د مستقیمو کارکوونکو ناادا",
   grandTotalAmount: "ټول مجموعه",
@@ -1215,37 +1221,6 @@ function paymentLedgerTotal(workerId, start, end) {
     .reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
 }
 
-function workerAdvanceAmount(worker) {
-  return roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
-}
-
-function previousISODate(date) {
-  const value = new Date(`${date}T00:00:00`);
-  value.setDate(value.getDate() - 1);
-  return value.toISOString().slice(0, 10);
-}
-
-function workerWageTotalUntil(workerId, end) {
-  if (!workerId || !end || end < "2000-01-01") return 0;
-  const row = summarizeRecords(recordsForRange("2000-01-01", end, [workerId], "all"))[0];
-  return roundMoney(row?.wage || 0);
-}
-
-function workerAdvanceUsedUntil(worker, end) {
-  return roundMoney(Math.min(workerAdvanceAmount(worker), workerWageTotalUntil(worker?.id, end)));
-}
-
-function workerAdvanceUsedInRange(worker, start, end) {
-  if (!worker?.id || !start || !end) return 0;
-  const usedThroughEnd = workerAdvanceUsedUntil(worker, end);
-  const usedBeforeStart = workerAdvanceUsedUntil(worker, previousISODate(start));
-  return roundMoney(Math.max(0, usedThroughEnd - usedBeforeStart));
-}
-
-function workerRemainingAdvance(worker, end = todayISO()) {
-  return roundMoney(Math.max(0, workerAdvanceAmount(worker) - workerAdvanceUsedUntil(worker, end)));
-}
-
 function rangesOverlap(aStart, aEnd, bStart, bEnd) {
   return String(aStart || "") <= String(bEnd || "") && String(aEnd || "") >= String(bStart || "");
 }
@@ -1266,12 +1241,47 @@ function workerPaymentHistory(workerId, start, end) {
     .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
 }
 
+function workerAdvanceAmount(worker) {
+  return roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+}
+
+function previousISODate(date) {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() - 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function workerGrossWageUntil(workerId, end) {
+  if (!workerId || !end || end < "2000-01-01") return 0;
+  const row = summarizeRecords(recordsForRange("2000-01-01", end, [workerId], "all"))[0];
+  return roundMoney(row?.wage || 0);
+}
+
+function workerAdvanceUsedUntil(worker, end) {
+  return roundMoney(Math.min(workerAdvanceAmount(worker), workerGrossWageUntil(worker?.id, end)));
+}
+
+function rowAdvanceDeduction(row, start, end) {
+  if (!row?.worker?.id || !start || !end) return 0;
+  const usedThroughEnd = workerAdvanceUsedUntil(row.worker, end);
+  const usedBeforeStart = workerAdvanceUsedUntil(row.worker, previousISODate(start));
+  return roundMoney(Math.min(Number(row.wage || 0), Math.max(0, usedThroughEnd - usedBeforeStart)));
+}
+
+function rowFinalPayable(row, start, end) {
+  return roundMoney(Math.max(0, Number(row.wage || 0) - rowAdvanceDeduction(row, start, end)));
+}
+
+function workerRemainingAdvance(worker, end = todayISO()) {
+  return roundMoney(Math.max(0, workerAdvanceAmount(worker) - workerAdvanceUsedUntil(worker, end)));
+}
+
 function rowPaidAmount(row, start, end) {
-  return roundMoney(paymentLedgerTotal(row.worker.id, start, end) + workerAdvanceUsedInRange(row.worker, start, end));
+  return paymentLedgerTotal(row.worker.id, start, end);
 }
 
 function rowUnpaidAmount(row, start, end) {
-  return roundMoney(Math.max(0, Number(row.wage || 0) - rowPaidAmount(row, start, end)));
+  return roundMoney(Math.max(0, rowFinalPayable(row, start, end) - rowPaidAmount(row, start, end)));
 }
 
 function whatsappNumber(worker) {
@@ -1289,7 +1299,8 @@ function reportPeriodLabel(start, end) {
 function buildWhatsAppMessage(row, start, end, title) {
   const paid = rowPaidAmount(row, start, end);
   const unpaid = rowUnpaidAmount(row, start, end);
-  const remainingAdvance = workerRemainingAdvance(worker, end);
+  const advance = rowAdvanceDeduction(row, start, end);
+  const finalPayable = rowFinalPayable(row, start, end);
   return [
     "Ahmad Times For Building Maintenance L.L.C",
     t("buildingMaintenance"),
@@ -1313,7 +1324,9 @@ function buildWhatsAppMessage(row, start, end, title) {
     `${t("baseWage")}: ${money(row.baseWage || 0)}`,
     `${t("overtimeWage")}: ${money(row.overtimeWage || 0)}`,
     `${t("foodDeductionTotal")}: ${money(row.foodDeduction || 0)}`,
-    `${t("payableWage")}: ${money(row.wage || 0)}`,
+    `${t("grossPayable")}: ${money(row.wage || 0)}`,
+    `${t("advanceDeducted")}: ${money(advance)}`,
+    `${t("finalPayable")}: ${money(finalPayable)}`,
     `${t("paid")}: ${money(paid)}`,
     `${t("unpaid")}: ${money(unpaid)}`,
     "",
@@ -2011,11 +2024,16 @@ function paymentRecord(workerId, start, end) {
 
 function paymentTotals(rows, start, end) {
   return rows.reduce((acc, row) => {
+    const advance = rowAdvanceDeduction(row, start, end);
+    const finalPayable = rowFinalPayable(row, start, end);
     const paid = rowPaidAmount(row, start, end);
+    acc.gross = roundMoney(acc.gross + Number(row.wage || 0));
+    acc.advance = roundMoney(acc.advance + advance);
+    acc.finalPayable = roundMoney(acc.finalPayable + finalPayable);
     acc.paid = roundMoney(acc.paid + paid);
-    acc.pending = roundMoney(acc.pending + Math.max(0, Number(row.wage || 0) - paid));
+    acc.pending = roundMoney(acc.pending + Math.max(0, finalPayable - paid));
     return acc;
-  }, { paid: 0, pending: 0 });
+  }, { gross: 0, advance: 0, finalPayable: 0, paid: 0, pending: 0 });
 }
 
 function currentReportPeriod() {
@@ -2115,8 +2133,8 @@ function renderPaymentEntryPanel() {
         ? monthSummary(month, [worker.id], reportShift)
         : summarizeRecords(recordsForRange(start, end, [worker.id], reportShift));
       const row = rows[0];
-      total = roundMoney(row?.wage || 0);
-      paid = row ? rowPaidAmount(row, start, end) : paymentLedgerTotal(worker.id, start, end);
+      total = row ? rowFinalPayable(row, start, end) : 0;
+      paid = paymentLedgerTotal(worker.id, start, end);
       history = workerPaymentHistory(worker.id, start, end);
     }
   }
@@ -2128,7 +2146,7 @@ function renderPaymentEntryPanel() {
     return;
   }
   summary.innerHTML = `
-    <div><span>${t("totalWageAmount")}</span><strong>${money(total)}</strong></div>
+    <div><span>${t("finalPayable")}</span><strong>${money(total)}</strong></div>
     <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
     <div><span>${t("remainingUnpaidBalance")}</span><strong>${money(unpaid)}</strong></div>
     ${selectedWorker ? `<div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>` : ""}
@@ -2552,7 +2570,6 @@ function renderDashboardLegacyUnused() {
   const month = $("#dashboardMonth").value || monthISO();
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
-  const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthExpensesTotal = companyExpenseTotal(month);
   const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
     const ledger = expenseLedger(expense);
@@ -2652,6 +2669,9 @@ function workerSummaryPanel(worker) {
   };
   const paid = rowPaidAmount(row, start, end);
   const unpaid = rowUnpaidAmount(row, start, end);
+  const advance = rowAdvanceDeduction(row, start, end);
+  const finalPayable = rowFinalPayable(row, start, end);
+  const remainingAdvance = workerRemainingAdvance(worker, end);
   const today = $("#todayInput")?.value || todayISO();
   const todayRecord = getAttendanceRecord(today, worker.id);
   const todayHours = calculateHours(todayRecord);
@@ -2666,7 +2686,7 @@ function workerSummaryPanel(worker) {
       const hours = calculateHours(record);
       const overtime = record.status === "present" ? hours.overtime : 0;
       const payable = attendanceWage(worker, record, overtime, date);
-      const paid = roundMoney(paymentLedgerTotal(worker.id, date, date) + workerAdvanceUsedInRange(worker, date, date));
+      const paid = paymentLedgerTotal(worker.id, date, date);
       return `
         <tr>
           <td>${date}</td>
@@ -2701,8 +2721,10 @@ function workerSummaryPanel(worker) {
         <div><span>${t("hours")}</span><strong>${formatHours(row.hours)}</strong></div>
         <div><span>${t("overtime")}</span><strong>${formatHours(row.overtime)}</strong></div>
         <div><span>${t("dailyWage")}</span><strong>${money(row.dailyWage || currentDailyWage(worker))}</strong></div>
-        <div><span>${t("payableWage")}</span><strong>${money(row.wage)}</strong></div>
-        <div><span>${t("workerBalance")}</span><strong>${money(remainingAdvance)}</strong></div>
+        <div><span>${t("grossPayable")}</span><strong>${money(row.wage)}</strong></div>
+        <div><span>${t("advanceDeducted")}</span><strong>${money(advance)}</strong></div>
+        <div><span>${t("finalPayable")}</span><strong>${money(finalPayable)}</strong></div>
+        <div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>
         <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
         <div><span>${t("unpaid")}</span><strong>${money(unpaid)}</strong></div>
       </div>
@@ -2804,7 +2826,7 @@ function renderWorkers() {
       <div class="worker-meta">
         <div><span>${t("workerNumber")}</span><strong>#${workerIndex + 1}</strong></div>
         <div><span>${t("currentDailyWage")}</span><strong>${money(currentDailyWage(worker))}</strong></div>
-        <div><span>${t("workerBalance")}</span><strong>${money(workerRemainingAdvance(worker, todayISO()))}</strong></div>
+        <div><span>${t("remainingAdvanceBalance")}</span><strong>${money(workerRemainingAdvance(worker, todayISO()))}</strong></div>
         <div><span>${t("wageHistory")}</span><strong>${escapeHTML(wageHistoryText(worker))}</strong></div>
         <div><span>${t("joiningDate")}</span><strong>${worker.joinDate || "-"}</strong></div>
         <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
@@ -2911,7 +2933,7 @@ function attendanceRowWithTime(worker, date) {
   const hours = calculateHours(record);
   const overtime = record.status === "present" ? hours.overtime : 0;
   const payable = attendanceWage(worker, record, overtime, date);
-  const paid = roundMoney(paymentLedgerTotal(worker.id, date, date) + workerAdvanceUsedInRange(worker, date, date));
+  const paid = paymentLedgerTotal(worker.id, date, date);
   const unpaid = Math.max(0, payable - paid);
   const isFullyPaid = payable > 0 && paid >= payable;
   return `
@@ -3101,9 +3123,10 @@ function renderReport() {
     acc.foodDeduction += row.foodDeduction || 0;
     acc.paidAmount += row.paidAmount || 0;
     acc.wage += row.wage;
-    acc.workerBalance += workerRemainingAdvance(row.worker, end);
+    acc.advanceDeducted += rowAdvanceDeduction(row, start, end);
+    acc.finalPayable += rowFinalPayable(row, start, end);
     return acc;
-  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0, workerBalance: 0 });
+  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0, advanceDeducted: 0, finalPayable: 0 });
   const payTotals = paymentTotals(rows, start, end);
   const selectedWorker = selectedWorkerIds.length === 1 && !selectedWorkerIds.includes("all") ? app.workers.find((worker) => worker.id === selectedWorkerIds[0]) : null;
   const reportSubject = selectedWorkerIds.includes("all")
@@ -3137,8 +3160,9 @@ function renderReport() {
       <div><span>${t("baseWage")}</span><strong>${money(totals.baseWage)}</strong></div>
       <div><span>${t("overtimeWage")}</span><strong>${money(totals.overtimeWage)}</strong></div>
       <div><span>${t("foodDeductionTotal")}</span><strong>${money(totals.foodDeduction)}</strong></div>
-      <div><span>${t("payableWage")}</span><strong>${money(totals.wage)}</strong></div>
-      <div><span>${t("workerBalance")}</span><strong>${money(totals.workerBalance)}</strong></div>
+      <div><span>${t("grossPayable")}</span><strong>${money(totals.wage)}</strong></div>
+      <div><span>${t("advanceDeducted")}</span><strong>${money(totals.advanceDeducted)}</strong></div>
+      <div><span>${t("finalPayable")}</span><strong>${money(totals.finalPayable)}</strong></div>
       <div><span>${t("paid")}</span><strong>${money(payTotals.paid)}</strong></div>
       <div><span>${t("unpaid")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
@@ -3146,6 +3170,8 @@ function renderReport() {
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
         const paid = rowPaidAmount(row, start, end);
+        const advance = rowAdvanceDeduction(row, start, end);
+        const finalPayable = rowFinalPayable(row, start, end);
         const pending = rowUnpaidAmount(row, start, end);
         const serial = reportSerial(row.worker, start, end);
         const history = workerPaymentHistory(row.worker.id, start, end);
@@ -3154,7 +3180,7 @@ function renderReport() {
             <div>
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
-              <p>${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
+              <p>${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("finalPayable")}: ${money(finalPayable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
               <div class="payment-row-history">${renderPaymentHistory(history)}</div>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
@@ -3190,8 +3216,9 @@ function renderReport() {
             <th>${t("baseWage")}</th>
             <th>${t("overtimeWage")}</th>
             <th>${t("foodDeductionTotal")}</th>
-            <th>${t("payableWage")}</th>
-            <th>${t("workerBalance")}</th>
+            <th>${t("grossPayable")}</th>
+            <th>${t("advanceDeducted")}</th>
+            <th>${t("finalPayable")}</th>
             <th>${t("paid")}</th>
             <th>${t("unpaid")}</th>
           </tr>
@@ -3212,11 +3239,12 @@ function renderReport() {
               <td>${money(row.overtimeWage || 0)}</td>
               <td>${money(row.foodDeduction || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
-              <td>${money(workerRemainingAdvance(row.worker, end))}</td>
+              <td>${money(rowAdvanceDeduction(row, start, end))}</td>
+              <td><strong>${money(rowFinalPayable(row, start, end))}</strong></td>
               <td>${money(rowPaidAmount(row, start, end))}</td>
               <td><strong>${money(rowUnpaidAmount(row, start, end))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="16">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="17">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3711,7 +3739,7 @@ function payrollAlerts() {
       const label = `${worker?.name || workerId} · ${date}`;
       const hours = calculateHours(record);
       const payable = attendanceWage(worker || { dailyWage: 0 }, record, record.status === "present" ? hours.overtime : 0, date);
-      const paid = roundMoney(paymentLedgerTotal(workerId, date, date) + workerAdvanceUsedInRange(worker, date, date));
+      const paid = paymentLedgerTotal(workerId, date, date);
       if (["present", "halfday"].includes(record.status) && record.inTime && !record.outTime) alerts.push(`${label}: in time without out time`);
       if (record.status === "present" && hours.total > 14) alerts.push(`${label}: more than 14 total attendance hours`);
       if (record.foodDeduction > payable && payable > 0) alerts.push(`${label}: food deduction bigger than wage`);
@@ -3731,7 +3759,8 @@ function verifyPayrollCalculations(month = monthISO()) {
   rows.forEach((row) => {
     const expectedWage = roundMoney(Math.max(0, Number(row.baseWage || 0) + Number(row.overtimeWage || 0) - Number(row.foodDeduction || 0)));
     const paid = rowPaidAmount(row, start, end);
-    const expectedUnpaid = roundMoney(Math.max(0, expectedWage - paid));
+    const expectedFinalPayable = roundMoney(Math.max(0, expectedWage - rowAdvanceDeduction(row, start, end)));
+    const expectedUnpaid = roundMoney(Math.max(0, expectedFinalPayable - paid));
     const shownUnpaid = rowUnpaidAmount(row, start, end);
     const name = displayWorkerName(row.worker);
 
@@ -3756,7 +3785,7 @@ function assistantMonthContext() {
   const dates = daysInMonth(month);
   const rows = monthSummary(month).filter((row) => row.worker.status === "active");
   const pay = paymentTotals(rows, dates[0], dates[dates.length - 1]);
-  const wages = rows.reduce((sum, row) => sum + Number(row.wage || 0), 0);
+  const wages = pay.finalPayable;
   const expenses = companyExpenseTotal(month);
   return { month, dates, rows, pay, wages, expenses };
 }
@@ -3785,12 +3814,14 @@ function assistantWorkerReport(worker) {
   if (!row) return `${displayWorkerName(worker)}: ${t("noWageRecords")}`;
   const paid = rowPaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
   const unpaid = rowUnpaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
+  const advance = rowAdvanceDeduction(row, context.dates[0], context.dates[context.dates.length - 1]);
+  const finalPayable = rowFinalPayable(row, context.dates[0], context.dates[context.dates.length - 1]);
   return [
     `${displayWorkerName(worker)} · ${context.month}`,
     `${t("status")}: ${t(worker.status || "active")} · ${t("shift")}: ${attendanceShiftLabel(workerDefaultShift(worker))}`,
     `${t("present")}: ${row.present} · ${t("halfday")}: ${row.halfday || 0} · ${t("absent")}: ${row.absent} · ${t("off")}: ${row.off}`,
     `${t("hours")}: ${formatHours(row.hours)} · ${t("overtime")}: ${formatHours(row.overtime)}`,
-    `${t("payableWage")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}`,
+    `${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("finalPayable")}: ${money(finalPayable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}`,
   ].join("\n");
 }
 
@@ -3849,7 +3880,8 @@ function assistantAnswer(question) {
     return [
       `${t("monthlySummary")} · ${context.month}`,
       `${t("activeWorkers")}: ${activeWorkers().length}`,
-      `${t("monthWages")}: ${money(context.wages)}`,
+      `${t("finalPayable")}: ${money(context.wages)}`,
+      `${t("advanceDeducted")}: ${money(context.pay.advance)}`,
       `${t("paidWages")}: ${money(context.pay.paid)}`,
       `${t("unpaidWages")}: ${money(context.pay.pending)}`,
       `${t("monthlyExpenses")}: ${money(context.expenses)}`,
@@ -4976,7 +5008,6 @@ function renderDashboard() {
   const month = $("#dashboardMonth").value || monthISO();
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
-  const monthWages = summary.reduce((sum, row) => sum + row.wage, 0);
   const monthExpensesTotal = companyExpenseTotal(month);
   const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
     const ledger = expenseLedger(expense);
@@ -4988,9 +5019,10 @@ function renderDashboard() {
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
   const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month), monthDates[0], monthDates[monthDates.length - 1]);
+  const monthWages = dashboardPayTotals.finalPayable;
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
-  const workerBalanceTotal = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, monthDates[monthDates.length - 1]), 0));
+  const workerAdvanceRemaining = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, monthDates[monthDates.length - 1]), 0));
 
   $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
@@ -4999,21 +5031,23 @@ function renderDashboard() {
   $("#statMonthWages").textContent = money(monthWages);
   if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(monthExpensesTotal);
-  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal + workerBalanceTotal);
+  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(directUnpaid);
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
-  if ($("#statWorkerBalance")) $("#statWorkerBalance").textContent = money(workerBalanceTotal);
+  if ($("#statWorkerAdvance")) $("#statWorkerAdvance").textContent = money(workerAdvanceRemaining);
+  if ($("#statAdvanceDeducted")) $("#statAdvanceDeducted").textContent = money(dashboardPayTotals.advance);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
-    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]) || workerRemainingAdvance(row.worker, monthDates[monthDates.length - 1]))
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]) || rowAdvanceDeduction(row, monthDates[0], monthDates[monthDates.length - 1]))
     .map((row) => {
       const paid = rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
       const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
-      const balance = workerRemainingAdvance(row.worker, monthDates[monthDates.length - 1]);
+      const advance = rowAdvanceDeduction(row, monthDates[0], monthDates[monthDates.length - 1]);
+      const finalPayable = rowFinalPayable(row, monthDates[0], monthDates[monthDates.length - 1]);
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -5021,10 +5055,10 @@ function renderDashboard() {
           <td data-label="${t("hours")}">${formatHours(row.hours)}</td>
           <td data-label="${t("overtime")}">${formatHours(row.overtime)}</td>
           <td data-label="${t("dailyWage")}">${money(row.dailyWage || currentDailyWage(row.worker))}</td>
-          <td data-label="${t("workerBalance")}">${money(balance)}</td>
+          <td data-label="${t("advanceDeducted")}">${money(advance)}</td>
           <td data-label="${t("paid")}">${money(paid)}</td>
           <td data-label="${t("unpaid")}"><strong>${money(unpaid)}</strong></td>
-          <td data-label="${t("total")}"><strong>${money(row.wage)}</strong></td>
+          <td data-label="${t("finalPayable")}"><strong>${money(finalPayable)}</strong></td>
         </tr>
       `;
     }).join("") || `<tr><td colspan="9">${t("noWageRecords")}</td></tr>`;

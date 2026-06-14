@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=worker-balance-1">
+    <link rel="stylesheet" href="styles.css?v=worker-advance-correct-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -143,7 +143,11 @@
             </article>
             <article class="stat-card blue">
               <span data-i18n="workerAdvanceBalance">Worker advance balance</span>
-              <strong id="statWorkerBalance">AED 0</strong>
+              <strong id="statWorkerAdvance">AED 0</strong>
+            </article>
+            <article class="stat-card amber">
+              <span data-i18n="advanceDeductedThisMonth">Advance deducted this month</span>
+              <strong id="statAdvanceDeducted">AED 0</strong>
             </article>
           </div>
 
@@ -185,10 +189,10 @@
                       <th data-i18n="hours">Hours</th>
                       <th data-i18n="overtime">Overtime</th>
                       <th data-i18n="dailyWage">Daily wage</th>
-                      <th data-i18n="workerBalance">Balance</th>
+                      <th data-i18n="advanceDeducted">Advance deducted</th>
                       <th data-i18n="paid">Paid</th>
                       <th data-i18n="unpaid">Unpaid</th>
-                      <th data-i18n="total">Total</th>
+                      <th data-i18n="finalPayable">Final payable</th>
                     </tr>
                   </thead>
                   <tbody id="dashboardSummary"></tbody>
@@ -805,7 +809,7 @@
           <label><span data-i18n="phone">Phone</span><input id="workerPhone" placeholder="+971..."></label>
           <label><span data-i18n="emiratesId">Emirates ID</span><input id="workerEmiratesId" data-i18n-placeholder="optional" placeholder="Optional"></label>
           <label><span data-i18n="dailyWageAed">Daily wage (AED)</span><input id="workerDailyWage" type="number" min="0" step="0.01" required></label>
-          <label><span data-i18n="advanceBalanceAed">Advance balance (AED)</span><input id="workerAdvanceBalance" type="number" min="0" step="0.01" value="0"></label>
+          <label><span data-i18n="advanceBalanceAed">Balance / advance payment (AED)</span><input id="workerAdvanceBalance" type="number" min="0" step="0.01" value="0"></label>
           <label><span data-i18n="wageEffectiveDate">Wage effective from</span><input id="workerWageEffectiveDate" type="date"></label>
           <label><span data-i18n="joiningDate">Joining date</span><input id="workerJoinDate" type="date"></label>
           <label><span data-i18n="status">Status</span>
@@ -864,6 +868,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=worker-balance-1"></script>
+    <script src="app.js?v=worker-advance-correct-1"></script>
   </body>
 </html>
