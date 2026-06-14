@@ -589,6 +589,10 @@ Object.assign(translations.en, {
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
   currentDailyWage: "Current daily wage",
+  workerBalance: "Balance",
+  workerAdvanceBalance: "Worker advance balance",
+  advanceBalanceAed: "Advance balance (AED)",
+  remainingAdvanceBalance: "Remaining advance balance",
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
   effectiveFrom: "from",
@@ -749,6 +753,10 @@ Object.assign(translations.ps, {
 
 Object.assign(translations.ps, {
   currentDailyWage: "اوسنۍ ورځنۍ مزدوري",
+  workerBalance: "بیلنس",
+  workerAdvanceBalance: "د کارکوونکو اډوانس بیلنس",
+  advanceBalanceAed: "اډوانس بیلنس (AED)",
+  remainingAdvanceBalance: "پاتې اډوانس بیلنس",
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
   effectiveFrom: "له",
@@ -1207,6 +1215,37 @@ function paymentLedgerTotal(workerId, start, end) {
     .reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
 }
 
+function workerAdvanceAmount(worker) {
+  return roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+}
+
+function previousISODate(date) {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() - 1);
+  return value.toISOString().slice(0, 10);
+}
+
+function workerWageTotalUntil(workerId, end) {
+  if (!workerId || !end || end < "2000-01-01") return 0;
+  const row = summarizeRecords(recordsForRange("2000-01-01", end, [workerId], "all"))[0];
+  return roundMoney(row?.wage || 0);
+}
+
+function workerAdvanceUsedUntil(worker, end) {
+  return roundMoney(Math.min(workerAdvanceAmount(worker), workerWageTotalUntil(worker?.id, end)));
+}
+
+function workerAdvanceUsedInRange(worker, start, end) {
+  if (!worker?.id || !start || !end) return 0;
+  const usedThroughEnd = workerAdvanceUsedUntil(worker, end);
+  const usedBeforeStart = workerAdvanceUsedUntil(worker, previousISODate(start));
+  return roundMoney(Math.max(0, usedThroughEnd - usedBeforeStart));
+}
+
+function workerRemainingAdvance(worker, end = todayISO()) {
+  return roundMoney(Math.max(0, workerAdvanceAmount(worker) - workerAdvanceUsedUntil(worker, end)));
+}
+
 function rangesOverlap(aStart, aEnd, bStart, bEnd) {
   return String(aStart || "") <= String(bEnd || "") && String(aEnd || "") >= String(bStart || "");
 }
@@ -1228,7 +1267,7 @@ function workerPaymentHistory(workerId, start, end) {
 }
 
 function rowPaidAmount(row, start, end) {
-  return paymentLedgerTotal(row.worker.id, start, end);
+  return roundMoney(paymentLedgerTotal(row.worker.id, start, end) + workerAdvanceUsedInRange(row.worker, start, end));
 }
 
 function rowUnpaidAmount(row, start, end) {
@@ -1250,6 +1289,7 @@ function reportPeriodLabel(start, end) {
 function buildWhatsAppMessage(row, start, end, title) {
   const paid = rowPaidAmount(row, start, end);
   const unpaid = rowUnpaidAmount(row, start, end);
+  const remainingAdvance = workerRemainingAdvance(worker, end);
   return [
     "Ahmad Times For Building Maintenance L.L.C",
     t("buildingMaintenance"),
@@ -1972,8 +2012,8 @@ function paymentRecord(workerId, start, end) {
 function paymentTotals(rows, start, end) {
   return rows.reduce((acc, row) => {
     const paid = rowPaidAmount(row, start, end);
-    acc.paid += paid;
-    acc.pending += Math.max(0, Number(row.wage || 0) - paid);
+    acc.paid = roundMoney(acc.paid + paid);
+    acc.pending = roundMoney(acc.pending + Math.max(0, Number(row.wage || 0) - paid));
     return acc;
   }, { paid: 0, pending: 0 });
 }
@@ -2076,11 +2116,13 @@ function renderPaymentEntryPanel() {
         : summarizeRecords(recordsForRange(start, end, [worker.id], reportShift));
       const row = rows[0];
       total = roundMoney(row?.wage || 0);
-      paid = paymentLedgerTotal(worker.id, start, end);
+      paid = row ? rowPaidAmount(row, start, end) : paymentLedgerTotal(worker.id, start, end);
       history = workerPaymentHistory(worker.id, start, end);
     }
   }
   const unpaid = roundMoney(Math.max(0, total - paid));
+  const selectedWorker = type === "worker" ? app.workers.find((item) => item.id === personSelect.value) : null;
+  const remainingAdvance = selectedWorker ? workerRemainingAdvance(selectedWorker, end) : 0;
   if (!options.length) {
     summary.innerHTML = `<div><span>${t("paymentFor")}</span><strong>${type === "supplier" ? t("noSupplierEntries") : t("noPaymentTarget")}</strong></div>`;
     return;
@@ -2089,6 +2131,7 @@ function renderPaymentEntryPanel() {
     <div><span>${t("totalWageAmount")}</span><strong>${money(total)}</strong></div>
     <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
     <div><span>${t("remainingUnpaidBalance")}</span><strong>${money(unpaid)}</strong></div>
+    ${selectedWorker ? `<div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>` : ""}
     <div class="wide"><span>${t("paymentHistory")}</span>${renderPaymentHistory(history)}</div>
   `;
 }
@@ -2623,7 +2666,7 @@ function workerSummaryPanel(worker) {
       const hours = calculateHours(record);
       const overtime = record.status === "present" ? hours.overtime : 0;
       const payable = attendanceWage(worker, record, overtime, date);
-      const paid = paymentLedgerTotal(worker.id, date, date);
+      const paid = roundMoney(paymentLedgerTotal(worker.id, date, date) + workerAdvanceUsedInRange(worker, date, date));
       return `
         <tr>
           <td>${date}</td>
@@ -2659,6 +2702,7 @@ function workerSummaryPanel(worker) {
         <div><span>${t("overtime")}</span><strong>${formatHours(row.overtime)}</strong></div>
         <div><span>${t("dailyWage")}</span><strong>${money(row.dailyWage || currentDailyWage(worker))}</strong></div>
         <div><span>${t("payableWage")}</span><strong>${money(row.wage)}</strong></div>
+        <div><span>${t("workerBalance")}</span><strong>${money(remainingAdvance)}</strong></div>
         <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
         <div><span>${t("unpaid")}</span><strong>${money(unpaid)}</strong></div>
       </div>
@@ -2760,6 +2804,7 @@ function renderWorkers() {
       <div class="worker-meta">
         <div><span>${t("workerNumber")}</span><strong>#${workerIndex + 1}</strong></div>
         <div><span>${t("currentDailyWage")}</span><strong>${money(currentDailyWage(worker))}</strong></div>
+        <div><span>${t("workerBalance")}</span><strong>${money(workerRemainingAdvance(worker, todayISO()))}</strong></div>
         <div><span>${t("wageHistory")}</span><strong>${escapeHTML(wageHistoryText(worker))}</strong></div>
         <div><span>${t("joiningDate")}</span><strong>${worker.joinDate || "-"}</strong></div>
         <div><span>${t("city")}</span><strong>${escapeHTML(worker.city || "-")}</strong></div>
@@ -2866,7 +2911,7 @@ function attendanceRowWithTime(worker, date) {
   const hours = calculateHours(record);
   const overtime = record.status === "present" ? hours.overtime : 0;
   const payable = attendanceWage(worker, record, overtime, date);
-  const paid = paymentLedgerTotal(worker.id, date, date);
+  const paid = roundMoney(paymentLedgerTotal(worker.id, date, date) + workerAdvanceUsedInRange(worker, date, date));
   const unpaid = Math.max(0, payable - paid);
   const isFullyPaid = payable > 0 && paid >= payable;
   return `
@@ -3056,8 +3101,9 @@ function renderReport() {
     acc.foodDeduction += row.foodDeduction || 0;
     acc.paidAmount += row.paidAmount || 0;
     acc.wage += row.wage;
+    acc.workerBalance += workerRemainingAdvance(row.worker, end);
     return acc;
-  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0 });
+  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, paidAmount: 0, wage: 0, workerBalance: 0 });
   const payTotals = paymentTotals(rows, start, end);
   const selectedWorker = selectedWorkerIds.length === 1 && !selectedWorkerIds.includes("all") ? app.workers.find((worker) => worker.id === selectedWorkerIds[0]) : null;
   const reportSubject = selectedWorkerIds.includes("all")
@@ -3092,6 +3138,7 @@ function renderReport() {
       <div><span>${t("overtimeWage")}</span><strong>${money(totals.overtimeWage)}</strong></div>
       <div><span>${t("foodDeductionTotal")}</span><strong>${money(totals.foodDeduction)}</strong></div>
       <div><span>${t("payableWage")}</span><strong>${money(totals.wage)}</strong></div>
+      <div><span>${t("workerBalance")}</span><strong>${money(totals.workerBalance)}</strong></div>
       <div><span>${t("paid")}</span><strong>${money(payTotals.paid)}</strong></div>
       <div><span>${t("unpaid")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
@@ -3099,7 +3146,7 @@ function renderReport() {
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
         const paid = rowPaidAmount(row, start, end);
-        const pending = Math.max(0, Number(row.wage || 0) - paid);
+        const pending = rowUnpaidAmount(row, start, end);
         const serial = reportSerial(row.worker, start, end);
         const history = workerPaymentHistory(row.worker.id, start, end);
         return `
@@ -3144,6 +3191,7 @@ function renderReport() {
             <th>${t("overtimeWage")}</th>
             <th>${t("foodDeductionTotal")}</th>
             <th>${t("payableWage")}</th>
+            <th>${t("workerBalance")}</th>
             <th>${t("paid")}</th>
             <th>${t("unpaid")}</th>
           </tr>
@@ -3164,10 +3212,11 @@ function renderReport() {
               <td>${money(row.overtimeWage || 0)}</td>
               <td>${money(row.foodDeduction || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
+              <td>${money(workerRemainingAdvance(row.worker, end))}</td>
               <td>${money(rowPaidAmount(row, start, end))}</td>
               <td><strong>${money(rowUnpaidAmount(row, start, end))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="15">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="16">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3662,7 +3711,7 @@ function payrollAlerts() {
       const label = `${worker?.name || workerId} · ${date}`;
       const hours = calculateHours(record);
       const payable = attendanceWage(worker || { dailyWage: 0 }, record, record.status === "present" ? hours.overtime : 0, date);
-      const paid = paymentLedgerTotal(workerId, date, date);
+      const paid = roundMoney(paymentLedgerTotal(workerId, date, date) + workerAdvanceUsedInRange(worker, date, date));
       if (["present", "halfday"].includes(record.status) && record.inTime && !record.outTime) alerts.push(`${label}: in time without out time`);
       if (record.status === "present" && hours.total > 14) alerts.push(`${label}: more than 14 total attendance hours`);
       if (record.foodDeduction > payable && payable > 0) alerts.push(`${label}: food deduction bigger than wage`);
@@ -4002,6 +4051,7 @@ function openWorkerDialog(workerId = "") {
   $("#workerPhone").value = worker?.phone || "";
   $("#workerEmiratesId").value = worker?.emiratesId || "";
   $("#workerDailyWage").value = worker ? currentDailyWage(worker) : "";
+  $("#workerAdvanceBalance").value = workerAdvanceAmount(worker || {});
   $("#workerWageEffectiveDate").value = todayISO();
   $("#workerJoinDate").value = worker?.joinDate || todayISO();
   $("#workerStatus").value = worker?.status || "active";
@@ -4035,6 +4085,7 @@ function saveWorkerFromForm() {
     emiratesId: $("#workerEmiratesId").value.trim(),
     photo: $("#workerPhoto").value || "",
     dailyWage,
+    advanceBalance: roundMoney($("#workerAdvanceBalance").value || 0),
     wageHistory: updatedWageHistory,
     joinDate,
     status: $("#workerStatus").value,
@@ -4939,6 +4990,7 @@ function renderDashboard() {
   const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month), monthDates[0], monthDates[monthDates.length - 1]);
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
+  const workerBalanceTotal = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, monthDates[monthDates.length - 1]), 0));
 
   $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
@@ -4947,19 +4999,21 @@ function renderDashboard() {
   $("#statMonthWages").textContent = money(monthWages);
   if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(monthExpensesTotal);
-  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
+  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal + workerBalanceTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(directUnpaid);
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
+  if ($("#statWorkerBalance")) $("#statWorkerBalance").textContent = money(workerBalanceTotal);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
-    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]))
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]) || workerRemainingAdvance(row.worker, monthDates[monthDates.length - 1]))
     .map((row) => {
       const paid = rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
       const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
+      const balance = workerRemainingAdvance(row.worker, monthDates[monthDates.length - 1]);
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -4967,12 +5021,13 @@ function renderDashboard() {
           <td data-label="${t("hours")}">${formatHours(row.hours)}</td>
           <td data-label="${t("overtime")}">${formatHours(row.overtime)}</td>
           <td data-label="${t("dailyWage")}">${money(row.dailyWage || currentDailyWage(row.worker))}</td>
+          <td data-label="${t("workerBalance")}">${money(balance)}</td>
           <td data-label="${t("paid")}">${money(paid)}</td>
           <td data-label="${t("unpaid")}"><strong>${money(unpaid)}</strong></td>
           <td data-label="${t("total")}"><strong>${money(row.wage)}</strong></td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="8">${t("noWageRecords")}</td></tr>`;
+    }).join("") || `<tr><td colspan="9">${t("noWageRecords")}</td></tr>`;
 
   if ($("#todayList")) $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
