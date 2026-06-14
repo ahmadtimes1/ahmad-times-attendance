@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=data-safety-1">
+    <link rel="stylesheet" href="styles.css?v=recovery-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -722,6 +722,11 @@
                 <div><span data-i18n="lastSaved">Last saved</span><strong id="storageSaved">Never</strong></div>
               </div>
             </section>
+            <section class="panel">
+              <h3 data-i18n="recoveryBackups">Recovery backups</h3>
+              <p class="help-text" data-i18n="recoveryBackupsHelp">Restore a previous browser safety copy if the cloud screen shows zero data.</p>
+              <div id="recoveryBackupsList" class="storage-list"></div>
+            </section>
           </div>
         </section>
 
@@ -855,6 +860,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=data-safety-1"></script>
+    <script src="app.js?v=recovery-1"></script>
   </body>
 </html>

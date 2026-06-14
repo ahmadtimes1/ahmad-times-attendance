@@ -179,6 +179,11 @@ const translations = {
     backupHelp: "Export all workers, attendance, and wage records as a JSON backup file. Import the file later to restore the system on this browser.",
     exportBackup: "Export backup",
     importBackup: "Import backup",
+    recoveryBackups: "Recovery backups",
+    recoveryBackupsHelp: "Restore a previous browser safety copy if the cloud screen shows zero data.",
+    noRecoveryBackups: "No recovery backups with worker records found in this browser.",
+    restoreBackup: "Restore",
+    recoveryBackupRestored: "Recovery backup restored",
     storage: "Storage",
     attendanceRecords: "Attendance records",
     lastSaved: "Last saved",
@@ -420,6 +425,11 @@ const translations = {
     backupHelp: "ټول کارکوونکي، حاضري او مزدوري ریکارډونه د JSON بیک اپ فایل په توګه وباسئ. وروسته یې د سیستم د بحالولو لپاره داخل کړئ.",
     exportBackup: "بیک اپ وباسئ",
     importBackup: "بیک اپ داخل کړئ",
+    recoveryBackups: "د بیا راګرځولو بیک اپونه",
+    recoveryBackupsHelp: "که کلاوډ صفر ښکاره کړي، پخوانۍ د براوزر خوندي کاپي راواخلئ.",
+    noRecoveryBackups: "په دې براوزر کې د کارکوونکو بیک اپ ونه موندل شو.",
+    restoreBackup: "راګرځول",
+    recoveryBackupRestored: "بیک اپ راواګرځول شو",
     storage: "ذخیره",
     attendanceRecords: "د حاضري ریکارډونه",
     lastSaved: "وروستی ذخیره",
@@ -1464,9 +1474,10 @@ async function loadData() {
         restoreFromBackupObject(latestBackupWithRecords(app.dailyBackups || parsed.dailyBackups));
       }
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
-      app.storageMode = supabaseClient ? "login required" : "local";
+      app.storageMode = supabaseClient && app.user ? "cloud" : (supabaseClient ? "login required" : "local");
       resetHistory();
       if (cleaned) await saveData(false);
+      if (supabaseClient && app.user && hasBusinessRecords(app)) await saveData(false, { allowEmpty: false });
       return;
     } catch {
       removeBrowserBackup();
@@ -1554,9 +1565,19 @@ function setBrowserBackup() {
     };
     const serialized = JSON.stringify(payload);
     localStorage.setItem(STORAGE_KEY, serialized);
+    if (!hasBusinessRecords(payload)) return;
     const rolling = JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]");
     rolling.unshift({ at: new Date().toISOString(), data: payload });
-    localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(rolling.slice(0, 5)));
+    const unique = [];
+    const seen = new Set();
+    rolling.forEach((entry) => {
+      if (!hasBusinessRecords(entry?.data)) return;
+      const key = `${entry.at}__${entry.data?.workers?.length || 0}__${Object.keys(entry.data?.attendance || {}).length}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      unique.push(entry);
+    });
+    localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(unique.slice(0, 20)));
   } catch {
     // Browser storage can be disabled; cloud storage is primary after login.
   }
@@ -1568,6 +1589,32 @@ function removeBrowserBackup() {
   } catch {
     // Ignore unavailable storage.
   }
+}
+
+function getRollingBackups() {
+  try {
+    return JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]")
+      .filter((entry) => hasBusinessRecords(entry?.data));
+  } catch {
+    return [];
+  }
+}
+
+async function restoreRollingBackup(index) {
+  const entry = getRollingBackups()[Number(index)];
+  if (!entry?.data || !hasBusinessRecords(entry.data)) {
+    toast(t("backupImportFailed"));
+    return;
+  }
+  Object.assign(app, cloneData(entry.data));
+  normalizeAppCollections();
+  app.storageMode = supabaseClient && app.user ? "cloud" : "local";
+  app.cloudLoadFailed = false;
+  addLog("Recovery backup restored", `${app.workers.length} workers · ${new Date(entry.at).toLocaleString()}`);
+  await saveData(true, { allowEmpty: false });
+  resetHistory();
+  renderAll();
+  toast(t("recoveryBackupRestored"));
 }
 
 function toast(message) {
@@ -3674,6 +3721,23 @@ function renderStorage() {
   $("#storageWorkers").textContent = app.workers.length;
   $("#storageAttendance").textContent = attendanceCount;
   $("#storageSaved").textContent = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
+  const recoveryList = $("#recoveryBackupsList");
+  if (recoveryList) {
+    const backups = getRollingBackups();
+    recoveryList.innerHTML = backups.length
+      ? backups.slice(0, 12).map((entry, index) => {
+        const data = entry.data || {};
+        const attendanceDays = Object.keys(data.attendance || {}).length;
+        const payments = Array.isArray(data.payments) ? data.payments.length : Object.keys(data.payments || {}).length;
+        return `
+          <div>
+            <span>${new Date(entry.at).toLocaleString()} · ${data.workers?.length || 0} ${t("workers")} · ${attendanceDays} ${t("attendanceRecords")} · ${payments} ${t("paymentLedger")}</span>
+            <button class="small-button" data-restore-rolling-backup="${index}">${t("restoreBackup")}</button>
+          </div>
+        `;
+      }).join("")
+      : `<div><span>${t("noRecoveryBackups")}</span><strong>-</strong></div>`;
+  }
 }
 
 function payrollAlerts() {
@@ -5230,6 +5294,12 @@ function bindEvents() {
     const promptButton = event.target.closest("[data-assistant-prompt]");
     if (!promptButton) return;
     askCompanyAssistant(promptButton.dataset.assistantPrompt);
+  });
+  document.addEventListener("click", (event) => {
+    const restoreButton = event.target.closest("[data-restore-rolling-backup]");
+    if (!restoreButton) return;
+    if (!confirm(t("oldChangeWarning"))) return;
+    restoreRollingBackup(restoreButton.dataset.restoreRollingBackup);
   });
 }
 
