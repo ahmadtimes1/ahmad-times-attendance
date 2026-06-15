@@ -589,8 +589,16 @@ Object.assign(translations.en, {
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
   currentDailyWage: "Current daily wage",
-  advanceBalanceAed: "Balance / advance payment (AED)",
+  advanceBalanceAed: "Opening advance balance (AED)",
   workerAdvanceBalance: "Worker advance balance",
+  addWorkerAdvance: "Add worker advance",
+  advanceAmount: "Advance amount",
+  advanceDate: "Advance date",
+  advanceNote: "Advance note",
+  advanceSaved: "Advance saved",
+  advanceHistory: "Advance history",
+  noAdvanceHistory: "No advance history yet.",
+  totalAdvanceGiven: "Total advance given",
   advanceDeducted: "Advance deducted",
   advanceDeductedThisMonth: "Advance deducted this month",
   remainingAdvanceBalance: "Remaining advance balance",
@@ -662,6 +670,7 @@ Object.assign(translations.en, {
   unpaidAmount: "Unpaid amount",
   addSupplierEntry: "Add supplier entry",
   supplierEntrySaved: "Supplier entry saved",
+  supplierEntryUpdated: "Supplier entry updated",
   supplierEntryRemoved: "Supplier entry removed",
   supplierWorkersTotalAmount: "Supplier workers total",
   supplierWorkersPaidAmount: "Supplier workers paid",
@@ -756,8 +765,16 @@ Object.assign(translations.ps, {
 
 Object.assign(translations.ps, {
   currentDailyWage: "اوسنۍ ورځنۍ مزدوري",
-  advanceBalanceAed: "بیلنس / اډوانس تادیه (AED)",
+  advanceBalanceAed: "لومړنی اډوانس بیلنس (AED)",
   workerAdvanceBalance: "د کارکوونکو اډوانس بیلنس",
+  addWorkerAdvance: "د کارکوونکي اډوانس اضافه کړئ",
+  advanceAmount: "د اډوانس اندازه",
+  advanceDate: "د اډوانس نېټه",
+  advanceNote: "د اډوانس یادښت",
+  advanceSaved: "اډوانس ذخیره شو",
+  advanceHistory: "د اډوانس تاریخچه",
+  noAdvanceHistory: "تر اوسه اډوانس نشته.",
+  totalAdvanceGiven: "ټول ورکړل شوی اډوانس",
   advanceDeducted: "کم شوی اډوانس",
   advanceDeductedThisMonth: "د دې میاشتې کم شوی اډوانس",
   remainingAdvanceBalance: "پاتې اډوانس بیلنس",
@@ -824,6 +841,7 @@ Object.assign(translations.ps, {
   unpaidAmount: "ناادا مبلغ",
   addSupplierEntry: "د سپلایر ریکارډ اضافه کړئ",
   supplierEntrySaved: "د سپلایر ریکارډ ذخیره شو",
+  supplierEntryUpdated: "د سپلایر ریکارډ تازه شو",
   supplierEntryRemoved: "د سپلایر ریکارډ لرې شو",
   supplierWorkersTotalAmount: "د سپلایر ټول مبلغ",
   supplierWorkersPaidAmount: "د سپلایر ادا شوی",
@@ -848,6 +866,7 @@ const app = {
   expenses: [],
   supplierEntries: [],
   supplierPayments: [],
+  workerAdvances: [],
   logs: [],
   payrollLocks: {},
   dailyBackups: {},
@@ -901,6 +920,7 @@ function snapshotAppData() {
     expenses: app.expenses || [],
     supplierEntries: app.supplierEntries || [],
     supplierPayments: app.supplierPayments || [],
+    workerAdvances: app.workerAdvances || [],
     payrollLocks: app.payrollLocks || {},
     dailyBackups: app.dailyBackups || {},
   });
@@ -913,6 +933,7 @@ function normalizeAppCollections() {
   app.expenses ||= [];
   app.supplierEntries ||= [];
   app.supplierPayments ||= [];
+  app.workerAdvances ||= [];
   app.logs ||= [];
   app.payrollLocks ||= {};
   app.dailyBackups ||= {};
@@ -952,6 +973,7 @@ function restoreSnapshot(snapshot) {
   app.expenses = data.expenses || [];
   app.supplierEntries = data.supplierEntries || [];
   app.supplierPayments = data.supplierPayments || [];
+  app.workerAdvances = data.workerAdvances || [];
   normalizeAppCollections();
 }
 
@@ -1073,6 +1095,7 @@ function createDailyBackup() {
     expenses: cloneData(app.expenses),
     supplierEntries: cloneData(app.supplierEntries),
     supplierPayments: cloneData(app.supplierPayments),
+    workerAdvances: cloneData(app.workerAdvances),
     payrollLocks: cloneData(app.payrollLocks),
   };
   const dates = Object.keys(app.dailyBackups).sort();
@@ -1242,7 +1265,16 @@ function workerPaymentHistory(workerId, start, end) {
 }
 
 function workerAdvanceAmount(worker) {
-  return roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+  const opening = roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+  const entries = workerAdvanceEntries(worker?.id);
+  return roundMoney(opening + entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+}
+
+function workerAdvanceEntries(workerId) {
+  if (!workerId) return [];
+  return (app.workerAdvances || [])
+    .filter((entry) => entry.workerId === workerId)
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 }
 
 function previousISODate(date) {
@@ -1489,6 +1521,7 @@ async function loadData() {
   app.expenses = [];
   app.supplierEntries = [];
   app.supplierPayments = [];
+  app.workerAdvances = [];
   app.logs = [];
   resetHistory();
   saveData(false);
@@ -1508,6 +1541,7 @@ async function saveData(show = true) {
       expenses: app.expenses,
       supplierEntries: app.supplierEntries,
       supplierPayments: app.supplierPayments,
+      workerAdvances: app.workerAdvances,
       payrollLocks: app.payrollLocks,
       dailyBackups: {},
       logs: (app.logs || []).slice(0, 300),
@@ -1550,6 +1584,7 @@ function setBrowserBackup() {
       expenses: app.expenses,
       supplierEntries: app.supplierEntries,
       supplierPayments: app.supplierPayments,
+      workerAdvances: app.workerAdvances,
       payrollLocks: app.payrollLocks,
       dailyBackups: app.dailyBackups,
       logs: app.logs,
@@ -2230,6 +2265,30 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
   toast(t("paymentSaved"));
 }
 
+function saveWorkerAdvance(workerId, date, amount, note = "") {
+  if (!canChangePayrollDate(date || todayISO(), "Worker advance")) return;
+  const worker = app.workers.find((item) => item.id === workerId);
+  const value = roundMoney(amount || 0);
+  if (!worker || value <= 0) {
+    toast(t("addPaymentAmountFirst"));
+    return;
+  }
+  app.workerAdvances ||= [];
+  app.workerAdvances.push({
+    id: `advance__${workerId}__${date || todayISO()}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
+    workerId,
+    date: date || todayISO(),
+    amount: value,
+    note: note || "",
+    source: "worker-advance",
+    user: currentUserLabel(),
+    createdAt: new Date().toISOString(),
+  });
+  addLog("Worker advance saved", `${worker.name} · ${date || todayISO()} · ${money(value)}`);
+  saveData();
+  toast(t("advanceSaved"));
+}
+
 function saveDailyPayment(workerId, date, paidAmount) {
   if (!canChangePayrollDate(date, "Daily payment")) return;
   const worker = app.workers.find((item) => item.id === workerId);
@@ -2671,7 +2730,9 @@ function workerSummaryPanel(worker) {
   const unpaid = rowUnpaidAmount(row, start, end);
   const advance = rowAdvanceDeduction(row, start, end);
   const finalPayable = rowFinalPayable(row, start, end);
+  const totalAdvance = workerAdvanceAmount(worker);
   const remainingAdvance = workerRemainingAdvance(worker, end);
+  const advanceHistory = workerAdvanceEntries(worker.id);
   const today = $("#todayInput")?.value || todayISO();
   const todayRecord = getAttendanceRecord(today, worker.id);
   const todayHours = calculateHours(todayRecord);
@@ -2722,6 +2783,7 @@ function workerSummaryPanel(worker) {
         <div><span>${t("overtime")}</span><strong>${formatHours(row.overtime)}</strong></div>
         <div><span>${t("dailyWage")}</span><strong>${money(row.dailyWage || currentDailyWage(worker))}</strong></div>
         <div><span>${t("grossPayable")}</span><strong>${money(row.wage)}</strong></div>
+        <div><span>${t("totalAdvanceGiven")}</span><strong>${money(totalAdvance)}</strong></div>
         <div><span>${t("advanceDeducted")}</span><strong>${money(advance)}</strong></div>
         <div><span>${t("finalPayable")}</span><strong>${money(finalPayable)}</strong></div>
         <div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>
@@ -2741,6 +2803,23 @@ function workerSummaryPanel(worker) {
           <div><span>${t("actualWorkingHours")}</span><strong>${formatHours(todayHours.actual)}</strong></div>
           <div><span>${t("overtime")}</span><strong>${formatHours(todayHours.overtime)}</strong></div>
           <div><span>${t("payableWage")}</span><strong>${money(todayPayable)}</strong></div>
+        </div>
+      </section>
+
+      <section class="mini-attendance-card advance-card">
+        <div>
+          <h3>${t("addWorkerAdvance")}</h3>
+          <p class="help-text">${t("remainingAdvanceBalance")}: ${money(remainingAdvance)}</p>
+        </div>
+        <div class="advance-entry-grid" data-advance-worker="${worker.id}">
+          <label><span>${t("advanceDate")}</span><input type="date" data-advance-field="date" value="${today}"></label>
+          <label><span>${t("advanceAmount")}</span><input type="number" min="0" step="0.01" data-advance-field="amount"></label>
+          <label><span>${t("advanceNote")}</span><input data-advance-field="note"></label>
+          <button type="button" class="primary" data-save-advance>${t("addWorkerAdvance")}</button>
+        </div>
+        <div class="payment-row-history">
+          <h4>${t("advanceHistory")}</h4>
+          ${advanceHistory.length ? renderPaymentHistory(advanceHistory) : `<p class="help-text">${t("noAdvanceHistory")}</p>`}
         </div>
       </section>
 
@@ -3516,9 +3595,25 @@ function renderSupplierWorkers() {
       <td>${money(paid)}</td>
       <td><strong>${money(unpaid)}</strong></td>
       <td>${escapeHTML(entry.notes || "-")}</td>
-      <td><button class="danger ghost" data-remove-supplier="${entry.id}">${t("remove")}</button></td>
+      <td>
+        <button class="ghost" data-edit-supplier="${entry.id}">${t("editExpense")}</button>
+        <button class="danger ghost" data-remove-supplier="${entry.id}">${t("remove")}</button>
+      </td>
     </tr>`;
   }).join("") || `<tr><td colspan="14">${t("noSupplierEntries")}</td></tr>`;
+}
+
+function resetSupplierForm(keepDate = true) {
+  const date = $("#supplierDate")?.value || todayISO();
+  $("#supplierForm")?.reset();
+  if ($("#supplierEditId")) $("#supplierEditId").value = "";
+  if (keepDate && $("#supplierDate")) $("#supplierDate").value = date;
+  if ($("#supplierOvertimeHours")) $("#supplierOvertimeHours").value = 0;
+  if ($("#supplierTransportationCharges")) $("#supplierTransportationCharges").value = 0;
+  if ($("#supplierPreviousLoan")) $("#supplierPreviousLoan").value = 0;
+  if ($("#supplierPaidAmount")) $("#supplierPaidAmount").value = 0;
+  if ($("#saveSupplierEntry")) $("#saveSupplierEntry").textContent = t("addSupplierEntry");
+  $("#cancelSupplierEdit")?.classList.add("hidden");
 }
 
 function addSupplierEntryFromForm() {
@@ -3526,12 +3621,14 @@ function addSupplierEntryFromForm() {
   const supplierName = $("#supplierName").value.trim();
   const workerCount = Math.max(0, Number($("#supplierWorkerCount").value || 0));
   const dailyWage = roundMoney($("#supplierDailyWage").value || 0);
+  const editId = $("#supplierEditId")?.value || "";
+  const existing = editId ? app.supplierEntries.find((item) => item.id === editId) : null;
   if (!supplierName || workerCount <= 0 || dailyWage <= 0) {
     toast(t("requiredFields"));
     return;
   }
   const entry = {
-    id: makeId(),
+    id: existing?.id || makeId(),
     date,
     supplierName,
     workerCount,
@@ -3541,24 +3638,44 @@ function addSupplierEntryFromForm() {
     previousLoan: roundMoney($("#supplierPreviousLoan").value || 0),
     paidAmount: roundMoney($("#supplierPaidAmount").value || 0),
     notes: $("#supplierNotes").value.trim(),
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     user: currentUserLabel(),
   };
-  app.supplierEntries.unshift(entry);
-  addLog("Supplier entry added", `${supplierName} · ${date} · ${workerCount} workers · ${money(supplierEntryTotals(entry).total)}`);
-  $("#supplierForm").reset();
-  $("#supplierDate").value = date;
-  $("#supplierOvertimeHours").value = 0;
-  $("#supplierTransportationCharges").value = 0;
-  $("#supplierPreviousLoan").value = 0;
-  $("#supplierPaidAmount").value = 0;
+  if (existing) {
+    Object.assign(existing, entry);
+    addLog("Supplier entry updated", `${supplierName} · ${date} · ${workerCount} workers · ${money(supplierEntryTotals(entry).total)}`);
+  } else {
+    app.supplierEntries.unshift(entry);
+    addLog("Supplier entry added", `${supplierName} · ${date} · ${workerCount} workers · ${money(supplierEntryTotals(entry).total)}`);
+  }
+  resetSupplierForm(true);
   saveData();
-  toast(t("supplierEntrySaved"));
+  toast(existing ? t("supplierEntryUpdated") : t("supplierEntrySaved"));
+}
+
+function editSupplierEntry(id) {
+  const entry = app.supplierEntries.find((item) => item.id === id);
+  if (!entry) return;
+  $("#supplierEditId").value = entry.id;
+  $("#supplierDate").value = entry.date || todayISO();
+  $("#supplierName").value = entry.supplierName || "";
+  $("#supplierWorkerCount").value = Number(entry.workerCount || 0);
+  $("#supplierDailyWage").value = Number(entry.dailyWage || 0);
+  $("#supplierOvertimeHours").value = Number(entry.overtimeHours || 0);
+  $("#supplierTransportationCharges").value = Number(entry.transportationCharges || 0);
+  $("#supplierPreviousLoan").value = Number(entry.previousLoan || 0);
+  $("#supplierPaidAmount").value = Number(entry.paidAmount || 0);
+  $("#supplierNotes").value = entry.notes || "";
+  if ($("#saveSupplierEntry")) $("#saveSupplierEntry").textContent = t("saveExpenseChanges");
+  $("#cancelSupplierEdit")?.classList.remove("hidden");
+  $("#supplierForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function removeSupplierEntry(id) {
   const entry = app.supplierEntries.find((item) => item.id === id);
   app.supplierEntries = app.supplierEntries.filter((item) => item.id !== id);
+  if ($("#supplierEditId")?.value === id) resetSupplierForm(true);
   addLog("Supplier entry removed", `${entry?.supplierName || id} · ${entry?.date || "-"}`);
   saveData();
   toast(t("supplierEntryRemoved"));
@@ -4395,6 +4512,7 @@ function importBackup(file) {
       app.expenses = parsed.expenses || [];
       app.supplierEntries = parsed.supplierEntries || [];
       app.supplierPayments = parsed.supplierPayments || [];
+      app.workerAdvances = parsed.workerAdvances || [];
       app.payrollLocks = parsed.payrollLocks || {};
       app.dailyBackups = parsed.dailyBackups || {};
       app.logs = parsed.logs || app.logs || [];
@@ -4706,8 +4824,19 @@ function bindEvents() {
     const editExpenseButton = event.target.closest("[data-edit-expense]");
     if (editExpenseButton) editExpense(editExpenseButton.dataset.editExpense);
 
+    const editSupplierButton = event.target.closest("[data-edit-supplier]");
+    if (editSupplierButton) editSupplierEntry(editSupplierButton.dataset.editSupplier);
+
     const removeSupplierButton = event.target.closest("[data-remove-supplier]");
     if (removeSupplierButton) removeSupplierEntry(removeSupplierButton.dataset.removeSupplier);
+
+    const saveAdvanceButton = event.target.closest("[data-save-advance]");
+    if (saveAdvanceButton) {
+      const panel = saveAdvanceButton.closest("[data-advance-worker]");
+      const getField = (field) => panel?.querySelector(`[data-advance-field="${field}"]`)?.value || "";
+      saveWorkerAdvance(panel?.dataset.advanceWorker, getField("date"), getField("amount"), getField("note"));
+      renderAll();
+    }
 
     const viewExpenseButton = event.target.closest("[data-view-expense]");
     if (viewExpenseButton) viewExpenseReceipt(viewExpenseButton.dataset.viewExpense);
@@ -4896,6 +5025,7 @@ function bindEvents() {
     event.preventDefault();
     addSupplierEntryFromForm();
   });
+  $("#cancelSupplierEdit")?.addEventListener("click", () => resetSupplierForm(true));
   ["supplierMonth", "supplierFilterDate", "supplierFilterStatus"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderSupplierWorkers);
   });
