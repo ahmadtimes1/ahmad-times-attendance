@@ -915,6 +915,22 @@ let cloudSaveInFlight = false;
 let cloudSaveQueued = false;
 let pendingSaveToast = false;
 let lastRollingBackupAt = 0;
+const calculationCache = new Map();
+
+function cacheKey(...parts) {
+  return parts.map((part) => Array.isArray(part) ? part.join("|") : String(part ?? "")).join("::");
+}
+
+function cachedCalculation(key, calculator) {
+  if (calculationCache.has(key)) return calculationCache.get(key);
+  const value = calculator();
+  calculationCache.set(key, value);
+  return value;
+}
+
+function clearCalculationCache() {
+  calculationCache.clear();
+}
 
 function cloneData(value) {
   return JSON.parse(JSON.stringify(value || null));
@@ -983,6 +999,7 @@ function restoreSnapshot(snapshot) {
   app.supplierPayments = data.supplierPayments || [];
   app.workerAdvances = data.workerAdvances || [];
   normalizeAppCollections();
+  clearCalculationCache();
 }
 
 function updateUndoRedoButtons() {
@@ -1247,9 +1264,9 @@ function normalizePaymentLedger() {
 }
 
 function paymentLedgerTotal(workerId, start, end) {
-  return roundMoney(paymentLedgerEntries()
+  return cachedCalculation(cacheKey("paymentLedgerTotal", workerId, start, end), () => roundMoney(paymentLedgerEntries()
     .filter((payment) => payment.workerId === workerId && paymentAppliesToRange(payment, start, end))
-    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0)));
 }
 
 function rangesOverlap(aStart, aEnd, bStart, bEnd) {
@@ -1277,16 +1294,18 @@ function workerAdvanceAmount(worker) {
 }
 
 function workerAdvanceAmountUntil(worker, end = todayISO()) {
-  const opening = roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
-  const entries = workerAdvanceEntries(worker?.id).filter((entry) => String(entry.date || "") <= String(end || todayISO()));
-  return roundMoney(opening + entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+  return cachedCalculation(cacheKey("workerAdvanceAmountUntil", worker?.id, end, worker?.advanceBalance, worker?.balance, worker?.openingBalance), () => {
+    const opening = roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+    const entries = workerAdvanceEntries(worker?.id).filter((entry) => String(entry.date || "") <= String(end || todayISO()));
+    return roundMoney(opening + entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+  });
 }
 
 function workerAdvanceEntries(workerId) {
   if (!workerId) return [];
-  return (app.workerAdvances || [])
+  return cachedCalculation(cacheKey("workerAdvanceEntries", workerId), () => (app.workerAdvances || [])
     .filter((entry) => entry.workerId === workerId)
-    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.createdAt || "").localeCompare(String(a.createdAt || ""))));
 }
 
 function previousISODate(date) {
@@ -1297,27 +1316,31 @@ function previousISODate(date) {
 
 function workerGrossWageUntil(workerId, end) {
   if (!workerId || !end || end < "2000-01-01") return 0;
-  const row = summarizeRecords(recordsForRange("2000-01-01", end, [workerId], "all"))[0];
-  return roundMoney(row?.wage || 0);
+  return cachedCalculation(cacheKey("workerGrossWageUntil", workerId, end), () => {
+    const row = summarizeRecords(recordsForRange("2000-01-01", end, [workerId], "all"))[0];
+    return roundMoney(row?.wage || 0);
+  });
 }
 
 function workerAdvanceUsedUntil(worker, end) {
-  return roundMoney(Math.min(workerAdvanceAmountUntil(worker, end), workerGrossWageUntil(worker?.id, end)));
+  return cachedCalculation(cacheKey("workerAdvanceUsedUntil", worker?.id, end), () => roundMoney(Math.min(workerAdvanceAmountUntil(worker, end), workerGrossWageUntil(worker?.id, end))));
 }
 
 function rowAdvanceDeduction(row, start, end) {
   if (!row?.worker?.id || !start || !end) return 0;
-  const usedThroughEnd = workerAdvanceUsedUntil(row.worker, end);
-  const usedBeforeStart = workerAdvanceUsedUntil(row.worker, previousISODate(start));
-  return roundMoney(Math.min(Number(row.wage || 0), Math.max(0, usedThroughEnd - usedBeforeStart)));
+  return cachedCalculation(cacheKey("rowAdvanceDeduction", row.worker.id, start, end, row.wage), () => {
+    const usedThroughEnd = workerAdvanceUsedUntil(row.worker, end);
+    const usedBeforeStart = workerAdvanceUsedUntil(row.worker, previousISODate(start));
+    return roundMoney(Math.min(Number(row.wage || 0), Math.max(0, usedThroughEnd - usedBeforeStart)));
+  });
 }
 
 function rowFinalPayable(row, start, end) {
-  return roundMoney(Math.max(0, Number(row.wage || 0) - rowAdvanceDeduction(row, start, end)));
+  return cachedCalculation(cacheKey("rowFinalPayable", row.worker?.id, start, end, row.wage), () => roundMoney(Math.max(0, Number(row.wage || 0) - rowAdvanceDeduction(row, start, end))));
 }
 
 function workerRemainingAdvance(worker, end = todayISO()) {
-  return roundMoney(Math.max(0, workerAdvanceAmountUntil(worker, end) - workerAdvanceUsedUntil(worker, end)));
+  return cachedCalculation(cacheKey("workerRemainingAdvance", worker?.id, end), () => roundMoney(Math.max(0, workerAdvanceAmountUntil(worker, end) - workerAdvanceUsedUntil(worker, end))));
 }
 
 function rowPaidAmount(row, start, end) {
@@ -1503,6 +1526,7 @@ async function loadData() {
     if (!error && data?.data) {
       Object.assign(app, data.data);
       normalizeAppCollections();
+      clearCalculationCache();
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = "cloud";
       restoreSimpleLogin();
@@ -1518,6 +1542,7 @@ async function loadData() {
     try {
       Object.assign(app, JSON.parse(saved));
       normalizeAppCollections();
+      clearCalculationCache();
       const cleaned = purgeWorkersByExactName("Ayoub Rahman CZN 1");
       app.storageMode = supabaseClient ? "login required" : "local";
       resetHistory();
@@ -1617,6 +1642,7 @@ function scheduleCloudSave(show = false) {
 }
 
 async function saveData(show = true) {
+  clearCalculationCache();
   createDailyBackup();
   recordHistory();
   app.lastSaved = new Date().toISOString();
@@ -2521,50 +2547,50 @@ function recordsForRange(start, end, workerId = "all", shift = "all") {
 }
 
 function monthSummary(month, workerId = "all", shift = "all") {
-  const dates = daysInMonth(month);
   const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
-  return app.workers
-    .filter((worker) => workerMatchesSelection(worker, workerSelection))
-    .map((worker) => {
-      const shiftedDates = dates.filter((date) => {
-        const record = getAttendanceRecord(date, worker.id);
-        return record.status && recordMatchesShift(record, shift);
+  return cachedCalculation(cacheKey("monthSummary", month, workerSelection, shift), () => {
+    const dates = daysInMonth(month);
+    return app.workers
+      .filter((worker) => workerMatchesSelection(worker, workerSelection))
+      .map((worker) => {
+        const shiftedDates = dates.filter((date) => {
+          const record = getAttendanceRecord(date, worker.id);
+          return record.status && recordMatchesShift(record, shift);
+        });
+        const present = shiftedDates.filter((date) => getAttendance(date, worker.id) === "present").length;
+        const halfday = shiftedDates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
+        const absent = shiftedDates.filter((date) => getAttendance(date, worker.id) === "absent").length;
+        const off = shiftedDates.filter((date) => getAttendance(date, worker.id) === "off").length;
+        const hours = shiftedDates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).actual, 0);
+        const overtime = shiftedDates.reduce((sum, date) => {
+          const record = getAttendanceRecord(date, worker.id);
+          return sum + (record.status === "present" ? calculateHours(record).overtime : 0);
+        }, 0);
+        const baseWage = shiftedDates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id), date), 0);
+        const overtimeWage = shiftedDates.reduce((sum, date) => {
+          const status = getAttendance(date, worker.id);
+          const overtimeHours = status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0;
+          return sum + attendanceOvertimeWage(worker, overtimeHours, date, status);
+        }, 0);
+        const food = shiftedDates.reduce((sum, date) => sum + foodDeduction(getAttendanceRecord(date, worker.id), getAttendance(date, worker.id)), 0);
+        const paidAmount = paymentLedgerTotal(worker.id, dates[0], dates[dates.length - 1]);
+        return {
+          worker,
+          present,
+          halfday,
+          absent,
+          off,
+          hours,
+          overtime,
+          dailyWage: wageForDate(worker, dates[dates.length - 1] || todayISO()),
+          baseWage: roundMoney(baseWage),
+          overtimeWage: roundMoney(overtimeWage),
+          foodDeduction: roundMoney(food),
+          paidAmount,
+          wage: roundMoney(Math.max(0, baseWage + overtimeWage - food)),
+        };
       });
-      const present = shiftedDates.filter((date) => getAttendance(date, worker.id) === "present").length;
-      const halfday = shiftedDates.filter((date) => getAttendance(date, worker.id) === "halfday").length;
-      const absent = shiftedDates.filter((date) => getAttendance(date, worker.id) === "absent").length;
-      const off = shiftedDates.filter((date) => getAttendance(date, worker.id) === "off").length;
-      const hours = shiftedDates.reduce((sum, date) => sum + calculateHours(getAttendanceRecord(date, worker.id)).actual, 0);
-      const overtime = dates.reduce((sum, date) => {
-        const record = getAttendanceRecord(date, worker.id);
-        if (!record.status || !recordMatchesShift(record, shift)) return sum;
-        const status = record.status;
-        return sum + (status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0);
-      }, 0);
-      const baseWage = shiftedDates.reduce((sum, date) => sum + attendanceBaseWage(worker, getAttendance(date, worker.id), date), 0);
-      const overtimeWage = shiftedDates.reduce((sum, date) => {
-        const status = getAttendance(date, worker.id);
-        const overtimeHours = status === "present" ? calculateHours(getAttendanceRecord(date, worker.id)).overtime : 0;
-        return sum + attendanceOvertimeWage(worker, overtimeHours, date, status);
-      }, 0);
-      const food = shiftedDates.reduce((sum, date) => sum + foodDeduction(getAttendanceRecord(date, worker.id), getAttendance(date, worker.id)), 0);
-      const paidAmount = paymentLedgerTotal(worker.id, dates[0], dates[dates.length - 1]);
-      return {
-        worker,
-        present,
-        halfday,
-        absent,
-        off,
-        hours,
-        overtime,
-        dailyWage: wageForDate(worker, dates[dates.length - 1] || todayISO()),
-        baseWage: roundMoney(baseWage),
-        overtimeWage: roundMoney(overtimeWage),
-        foodDeduction: roundMoney(food),
-        paidAmount,
-        wage: roundMoney(Math.max(0, baseWage + overtimeWage - food)),
-      };
-    });
+  });
 }
 
 function renderAll() {
