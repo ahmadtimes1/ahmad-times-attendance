@@ -633,6 +633,7 @@ Object.assign(translations.en, {
   moneyGiven: "Money given",
   expenseUnpaid: "Expense unpaid",
   buyerBalance: "Buyer balance",
+  buyerTotals: "Buyer totals",
   buyerName: "Buyer name",
   buyerNamePlaceholder: "Who bought it",
   marketName: "Market / pump",
@@ -834,6 +835,7 @@ Object.assign(translations.ps, {
   moneyGiven: "ورکړل شوې پیسې",
   expenseUnpaid: "ناادا مصرف",
   buyerBalance: "د اخیستونکي باقي",
+  buyerTotals: "د اخیستونکو ټول حساب",
   buyerName: "اخیستونکی",
   buyerNamePlaceholder: "چا اخیستي",
   marketName: "مارکېټ / پمپ",
@@ -3631,6 +3633,22 @@ function expenseTotalsForRows(rows, category = "all") {
   }, { amount: 0, paid: 0, unpaid: 0, balance: 0 });
 }
 
+function expenseBuyerTotals(rows = []) {
+  const totals = new Map();
+  rows.forEach((expense) => {
+    const buyer = expenseBuyerName(expense);
+    if (!buyer || buyer === "-") return;
+    const ledger = expenseLedger(expense);
+    const current = totals.get(buyer) || { buyer, amount: 0, paid: 0, unpaid: 0, balance: 0 };
+    current.amount = roundMoney(current.amount + ledger.amount);
+    current.paid = roundMoney(current.paid + ledger.paid);
+    current.unpaid = roundMoney(current.unpaid + ledger.unpaid);
+    current.balance = roundMoney(current.balance + ledger.balance);
+    totals.set(buyer, current);
+  });
+  return Array.from(totals.values()).sort((a, b) => b.amount - a.amount || a.buyer.localeCompare(b.buyer));
+}
+
 function supplierEntryTotals(entry) {
   const workers = Math.max(0, Number(entry.workerCount || 0));
   const dailyWage = roundMoney(entry.dailyWage || 0);
@@ -4181,6 +4199,7 @@ function renderExpenses() {
     const monthEnd = monthDates[monthDates.length - 1];
     const weeklyRows = expenseRowsBetween(weekStart, weekEnd, buyerFilter);
     const monthlyRows = expenseRowsBetween(monthStart, monthEnd, buyerFilter);
+    const buyerTotals = expenseBuyerTotals(monthlyRows);
     const categories = [
       ["all", t("overallExpense")],
       ["fuel", t("fuelExpense")],
@@ -4207,6 +4226,22 @@ function renderExpenses() {
           </article>
         `;
       }).join("")}
+      ${buyerTotals.length ? `
+        <article class="expense-category-card">
+          <span>${t("buyerTotals")}</span>
+          <strong>${buyerTotals.length}</strong>
+          <small>${t("monthlyExpense")} · ${month}</small>
+        </article>
+        ${buyerTotals.map((buyer) => `
+          <article class="expense-category-card">
+            <span>${escapeHTML(buyer.buyer)}</span>
+            <strong>${money(buyer.amount)}</strong>
+            <small>${t("paid")}: ${money(buyer.paid)}</small>
+            <small>${t("unpaid")}: ${money(buyer.unpaid)}</small>
+            ${buyer.balance ? `<small>${t("buyerBalance")}: ${money(buyer.balance)}</small>` : ""}
+          </article>
+        `).join("")}
+      ` : ""}
     `;
   }
   list.innerHTML = rows.length ? rows.map((expense) => `
