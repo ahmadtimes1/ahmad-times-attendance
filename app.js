@@ -2573,22 +2573,74 @@ function renderAll() {
   applyTheme();
   renderLoginGate();
   renderAuthStatus();
-  renderDashboard();
-  renderControlCenter();
-  renderWorkers();
-  renderAttendanceWorkerPicker();
-  renderBulkAttendanceWorkerPicker();
+  renderActiveView();
+}
+
+function renderActiveView() {
+  const activeView = $(".view.active")?.id || "dashboard";
+  const pageTitle = $("#pageTitle");
+  if (pageTitle) pageTitle.textContent = t(activeView);
+
+  if (activeView === "dashboard") {
+    renderDashboard();
+    renderControlCenter();
+    return;
+  }
+  if (activeView === "workers") {
+    renderWorkers();
+    return;
+  }
+  if (activeView === "attendance") {
+    renderAttendanceWorkerPicker();
+    renderBulkAttendanceWorkerPicker();
+    renderActiveAttendancePanel();
+    return;
+  }
+  if (activeView === "supplierWorkers") {
+    renderSupplierWorkers();
+    return;
+  }
+  if (activeView === "expenses") {
+    renderExpenses();
+    return;
+  }
+  if (activeView === "reports") {
+    renderReport();
+    renderPaymentEntryPanel();
+    return;
+  }
+  if (activeView === "companyAssistant") {
+    renderCompanyAssistant();
+    return;
+  }
+  if (activeView === "backup") {
+    renderStorage();
+    return;
+  }
+  if (activeView === "logs") {
+    renderLogs();
+    return;
+  }
+  if (activeView === "safety") {
+    renderSafety();
+  }
+}
+
+function activeAttendanceMode() {
+  return $("#attendance .mode-tab.active")?.dataset.mode || "day";
+}
+
+function renderActiveAttendancePanel() {
+  const mode = activeAttendanceMode();
+  if (mode === "week") {
+    renderWeekAttendance();
+    return;
+  }
+  if (mode === "month") {
+    renderMonthAttendance();
+    return;
+  }
   renderDayAttendance();
-  renderWeekAttendance();
-  renderMonthAttendance();
-  renderSupplierWorkers();
-  renderExpenses();
-  renderReport();
-  renderPaymentEntryPanel();
-  renderCompanyAssistant();
-  renderStorage();
-  renderLogs();
-  renderSafety();
 }
 
 function renderControlCenter() {
@@ -5112,6 +5164,7 @@ function bindEvents() {
       $("#dayAttendancePanel").classList.toggle("hidden", tab.dataset.mode !== "day");
       $("#weekAttendancePanel").classList.toggle("hidden", tab.dataset.mode !== "week");
       $("#monthAttendancePanel").classList.toggle("hidden", tab.dataset.mode !== "month");
+      renderActiveAttendancePanel();
     });
   });
 
