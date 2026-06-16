@@ -652,6 +652,26 @@ Object.assign(translations.en, {
   editExpense: "Edit",
   saveExpenseChanges: "Save changes",
   expenseRemoved: "Expense removed",
+  projectsBudget: "Projects & Budget",
+  projectsBudgetHelp: "Track investor budget received, project expenses, and remaining balance in one simple place.",
+  projectName: "Project / site",
+  projectNamePlaceholder: "Project or site",
+  investorName: "Investor name",
+  investorNamePlaceholder: "Investor name",
+  budgetAmount: "Budget amount (AED)",
+  addBudgetEntry: "Add budget",
+  budgetEntrySaved: "Budget saved",
+  budgetEntryUpdated: "Budget updated",
+  budgetEntryRemoved: "Budget removed",
+  allProjects: "All projects",
+  budgetReceived: "Budget received",
+  budgetReceivedThisMonth: "Budget received this month",
+  projectExpenses: "Project expenses",
+  budgetRemaining: "Budget remaining",
+  noBudgetEntries: "No budget entries yet.",
+  printPartnerReport: "Print partner report",
+  partnerReport: "Partner report",
+  projectSummary: "Project summary",
   monthlyExpenses: "Company monthly expenses",
   grandTotal: "Grand total",
   pashtoName: "Pashto name",
@@ -829,6 +849,26 @@ Object.assign(translations.ps, {
   editExpense: "سمول",
   saveExpenseChanges: "بدلونونه ذخیره کړئ",
   expenseRemoved: "مصرف لرې شو",
+  projectsBudget: "پروژې او بودیجه",
+  projectsBudgetHelp: "د انویسټر بودیجه، د پروژې مصرفونه، او پاتې بیلنس په ساده ډول ثبت کړئ.",
+  projectName: "پروژه / سایټ",
+  projectNamePlaceholder: "پروژه یا سایټ",
+  investorName: "د انویسټر نوم",
+  investorNamePlaceholder: "د انویسټر نوم",
+  budgetAmount: "د بودیجې اندازه (AED)",
+  addBudgetEntry: "بودیجه اضافه کړئ",
+  budgetEntrySaved: "بودیجه ذخیره شوه",
+  budgetEntryUpdated: "بودیجه تازه شوه",
+  budgetEntryRemoved: "بودیجه لرې شوه",
+  allProjects: "ټولې پروژې",
+  budgetReceived: "ترلاسه شوې بودیجه",
+  budgetReceivedThisMonth: "د دې میاشتې بودیجه",
+  projectExpenses: "د پروژې مصرف",
+  budgetRemaining: "پاتې بودیجه",
+  noBudgetEntries: "تر اوسه بودیجه نشته.",
+  printPartnerReport: "د شریکانو راپور چاپ",
+  partnerReport: "د شریکانو راپور",
+  projectSummary: "د پروژې لنډیز",
   supplierWorkers: "د سپلایر کارکوونکي",
   supplierWorkersHelp: "د سپلایر مزدورانو ساده حساب، د مستقیمو کارکوونکو څخه جلا.",
   supplierName: "د سپلایر نوم",
@@ -866,6 +906,7 @@ const app = {
   attendance: {},
   payments: {},
   expenses: [],
+  projectBudgets: [],
   supplierEntries: [],
   supplierPayments: [],
   workerAdvances: [],
@@ -942,6 +983,7 @@ function snapshotAppData() {
     attendance: app.attendance || {},
     payments: app.payments || {},
     expenses: app.expenses || [],
+    projectBudgets: app.projectBudgets || [],
     supplierEntries: app.supplierEntries || [],
     supplierPayments: app.supplierPayments || [],
     workerAdvances: app.workerAdvances || [],
@@ -955,6 +997,7 @@ function normalizeAppCollections() {
   app.attendance ||= {};
   app.payments ||= [];
   app.expenses ||= [];
+  app.projectBudgets ||= [];
   app.supplierEntries ||= [];
   app.supplierPayments ||= [];
   app.workerAdvances ||= [];
@@ -995,6 +1038,7 @@ function restoreSnapshot(snapshot) {
   app.attendance = data.attendance || {};
   app.payments = data.payments || {};
   app.expenses = data.expenses || [];
+  app.projectBudgets = data.projectBudgets || [];
   app.supplierEntries = data.supplierEntries || [];
   app.supplierPayments = data.supplierPayments || [];
   app.workerAdvances = data.workerAdvances || [];
@@ -1118,6 +1162,7 @@ function createDailyBackup() {
     attendance: cloneData(app.attendance),
     payments: cloneData(app.payments),
     expenses: cloneData(app.expenses),
+    projectBudgets: cloneData(app.projectBudgets),
     supplierEntries: cloneData(app.supplierEntries),
     supplierPayments: cloneData(app.supplierPayments),
     workerAdvances: cloneData(app.workerAdvances),
@@ -1556,6 +1601,7 @@ async function loadData() {
   app.workers = [];
   app.payments = {};
   app.expenses = [];
+  app.projectBudgets = [];
   app.supplierEntries = [];
   app.supplierPayments = [];
   app.workerAdvances = [];
@@ -1574,6 +1620,7 @@ function persistentPayload({ includeDailyBackups = false } = {}) {
     attendance: app.attendance,
     payments: app.payments,
     expenses: app.expenses,
+    projectBudgets: app.projectBudgets,
     supplierEntries: app.supplierEntries,
     supplierPayments: app.supplierPayments,
     workerAdvances: app.workerAdvances,
@@ -1711,6 +1758,7 @@ function setDefaults() {
   $("#attendanceWeekDate").value = today;
   $("#quickAttendanceDate").value = today;
   $("#expenseDate").value = today;
+  if ($("#budgetDate")) $("#budgetDate").value = today;
   if ($("#supplierDate")) $("#supplierDate").value = today;
   $("#reportDate").value = today;
   if ($("#reportStartDate")) $("#reportStartDate").value = today;
@@ -1719,6 +1767,7 @@ function setDefaults() {
   $("#lockMonth").value = month;
   $("#attendanceMonth").value = month;
   $("#expenseMonth").value = month;
+  if ($("#budgetMonth")) $("#budgetMonth").value = month;
   if ($("#supplierMonth")) $("#supplierMonth").value = month;
   $("#reportMonth").value = month;
   if ($("#reportShiftFilter")) $("#reportShiftFilter").value = "all";
@@ -2630,6 +2679,10 @@ function renderActiveView() {
     renderExpenses();
     return;
   }
+  if (activeView === "projectsBudget") {
+    renderProjectsBudget();
+    return;
+  }
   if (activeView === "reports") {
     renderReport();
     renderPaymentEntryPanel();
@@ -2768,6 +2821,7 @@ function renderDashboardLegacyUnused() {
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthExpensesTotal = companyExpenseTotal(month);
+  const budgetSummary = projectBudgetSummary(month, "all");
   const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
     const ledger = expenseLedger(expense);
     acc.paid = roundMoney(acc.paid + ledger.paid);
@@ -3529,6 +3583,7 @@ function expenseBuyerName(expense) {
 
 function expenseSearchText(expense) {
   return [
+    expense.project,
     expense.category,
     expense.merchant,
     expense.location,
@@ -3696,6 +3751,201 @@ function filteredMonthExpenses(month = monthISO()) {
   });
 }
 
+function projectNameOf(value) {
+  return String(value || "").trim();
+}
+
+function projectNames() {
+  const names = [
+    ...(app.projectBudgets || []).map((entry) => projectNameOf(entry.project)),
+    ...(app.expenses || []).map((expense) => projectNameOf(expense.project)),
+  ];
+  return Array.from(new Set(names.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function budgetEntriesForMonth(month = monthISO()) {
+  return (app.projectBudgets || []).filter((entry) => String(entry.date || "").startsWith(month));
+}
+
+function projectExpenseRows(project = "all", month = monthISO()) {
+  return monthExpenses(month).filter((expense) => {
+    const name = projectNameOf(expense.project);
+    return project === "all" || (name && name === project);
+  });
+}
+
+function projectBudgetSummary(month = monthISO(), selectedProject = "all") {
+  const entries = budgetEntriesForMonth(month).filter((entry) => selectedProject === "all" || projectNameOf(entry.project) === selectedProject);
+  const expenses = projectExpenseRows(selectedProject, month);
+  const received = roundMoney(entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+  const spent = roundMoney(expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0));
+  const paid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).paid, 0));
+  const unpaid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).unpaid, 0));
+  return { entries, expenses, received, spent, paid, unpaid, remaining: roundMoney(received - spent) };
+}
+
+function projectSummaryRows(month = monthISO(), selectedProject = "all") {
+  const names = selectedProject === "all" ? projectNames() : [selectedProject];
+  return names.map((project) => ({ project, ...projectBudgetSummary(month, project) }))
+    .filter((row) => row.project && (row.received || row.spent || row.entries.length || row.expenses.length));
+}
+
+function renderProjectOptions() {
+  const names = projectNames();
+  const datalist = $("#projectNameOptions");
+  if (datalist) datalist.innerHTML = names.map((name) => `<option value="${escapeHTML(name)}"></option>`).join("");
+  const filter = $("#budgetProjectFilter");
+  if (filter) {
+    const current = filter.value || "all";
+    filter.innerHTML = `<option value="all">${t("allProjects")}</option>${names.map((name) => `<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`).join("")}`;
+    filter.value = names.includes(current) ? current : "all";
+  }
+}
+
+function renderProjectsBudget() {
+  if (!$("#budgetEntriesList")) return;
+  renderProjectOptions();
+  const month = $("#budgetMonth")?.value || monthISO();
+  const selectedProject = $("#budgetProjectFilter")?.value || "all";
+  const summary = projectBudgetSummary(month, selectedProject);
+  const rows = projectSummaryRows(month, selectedProject);
+  $("#budgetSummary").innerHTML = `
+    <article><span>${t("budgetReceived")}</span><strong>${money(summary.received)}</strong></article>
+    <article><span>${t("projectExpenses")}</span><strong>${money(summary.spent)}</strong></article>
+    <article><span>${t("paid")}</span><strong>${money(summary.paid)}</strong></article>
+    <article><span>${t("unpaid")}</span><strong>${money(summary.unpaid)}</strong></article>
+    <article><span>${t("budgetRemaining")}</span><strong>${money(summary.remaining)}</strong></article>
+    ${rows.map((row) => `
+      <article class="expense-category-card">
+        <span>${escapeHTML(row.project)}</span>
+        <strong>${money(row.remaining)}</strong>
+        <small>${t("budgetReceived")}: ${money(row.received)}</small>
+        <small>${t("projectExpenses")}: ${money(row.spent)}</small>
+      </article>
+    `).join("")}
+  `;
+  $("#budgetEntriesList").innerHTML = summary.entries
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
+    .map((entry) => `
+      <tr>
+        <td>${escapeHTML(entry.date || "-")}</td>
+        <td>${escapeHTML(entry.investor || "-")}</td>
+        <td>${escapeHTML(entry.project || "-")}</td>
+        <td><strong>${money(entry.amount)}</strong></td>
+        <td>${escapeHTML(entry.method || "-")}</td>
+        <td>${escapeHTML(entry.notes || "-")}</td>
+        <td>
+          <button class="ghost" data-edit-budget="${entry.id}">${t("editExpense")}</button>
+          <button class="danger ghost" data-remove-budget="${entry.id}">${t("remove")}</button>
+        </td>
+      </tr>
+    `).join("") || `<tr><td colspan="7">${t("noBudgetEntries")}</td></tr>`;
+}
+
+function resetBudgetForm(keepDate = true) {
+  const date = $("#budgetDate")?.value || todayISO();
+  $("#budgetForm")?.reset();
+  if ($("#budgetEditId")) $("#budgetEditId").value = "";
+  if (keepDate && $("#budgetDate")) $("#budgetDate").value = date;
+  if ($("#saveBudgetEntry")) $("#saveBudgetEntry").textContent = t("addBudgetEntry");
+  $("#cancelBudgetEdit")?.classList.add("hidden");
+}
+
+function addBudgetEntryFromForm() {
+  if (!requireAdmin()) return;
+  app.projectBudgets ||= [];
+  const editId = $("#budgetEditId")?.value || "";
+  const existing = editId ? app.projectBudgets.find((entry) => entry.id === editId) : null;
+  const entry = {
+    id: existing?.id || makeId(),
+    date: $("#budgetDate").value || todayISO(),
+    investor: $("#budgetInvestor").value.trim(),
+    project: $("#budgetProject").value.trim(),
+    amount: roundMoney($("#budgetAmount").value || 0),
+    method: $("#budgetMethod").value || "cash",
+    notes: $("#budgetNotes").value.trim(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    user: currentUserLabel(),
+  };
+  if (!entry.investor || !entry.project || entry.amount <= 0) {
+    toast(t("requiredFields"));
+    return;
+  }
+  if (existing) {
+    Object.assign(existing, entry);
+    addLog("Budget updated", `${entry.project} · ${entry.investor} · ${money(entry.amount)}`);
+  } else {
+    app.projectBudgets.unshift(entry);
+    addLog("Budget added", `${entry.project} · ${entry.investor} · ${money(entry.amount)}`);
+  }
+  resetBudgetForm(true);
+  saveData();
+  toast(existing ? t("budgetEntryUpdated") : t("budgetEntrySaved"));
+}
+
+function editBudgetEntry(id) {
+  if (!requireAdmin()) return;
+  const entry = (app.projectBudgets || []).find((item) => item.id === id);
+  if (!entry) return;
+  $("#budgetEditId").value = entry.id;
+  $("#budgetDate").value = entry.date || todayISO();
+  $("#budgetInvestor").value = entry.investor || "";
+  $("#budgetProject").value = entry.project || "";
+  $("#budgetAmount").value = Number(entry.amount || 0);
+  $("#budgetMethod").value = entry.method || "cash";
+  $("#budgetNotes").value = entry.notes || "";
+  if ($("#saveBudgetEntry")) $("#saveBudgetEntry").textContent = t("saveExpenseChanges");
+  $("#cancelBudgetEdit")?.classList.remove("hidden");
+  $("#budgetForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function removeBudgetEntry(id) {
+  if (!requireAdmin()) return;
+  const entry = (app.projectBudgets || []).find((item) => item.id === id);
+  app.projectBudgets = (app.projectBudgets || []).filter((item) => item.id !== id);
+  if ($("#budgetEditId")?.value === id) resetBudgetForm(true);
+  addLog("Budget removed", entry ? `${entry.project} · ${entry.investor} · ${money(entry.amount)}` : id);
+  saveData();
+  toast(t("budgetEntryRemoved"));
+}
+
+function budgetReportRows(month = $("#budgetMonth")?.value || monthISO(), selectedProject = $("#budgetProjectFilter")?.value || "all") {
+  return projectSummaryRows(month, selectedProject).map((row) => [
+    row.project,
+    money(row.received),
+    money(row.spent),
+    money(row.paid),
+    money(row.unpaid),
+    money(row.remaining),
+  ]);
+}
+
+function printBudgetReport() {
+  const month = $("#budgetMonth")?.value || monthISO();
+  const selectedProject = $("#budgetProjectFilter")?.value || "all";
+  const summary = projectBudgetSummary(month, selectedProject);
+  const rows = budgetReportRows(month, selectedProject);
+  const headers = [t("projectName"), t("budgetReceived"), t("projectExpenses"), t("paid"), t("unpaid"), t("budgetRemaining")];
+  const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  printPlainReport(t("partnerReport"), `
+    <p>${t("month")}: ${escapeHTML(month)} · ${selectedProject === "all" ? t("allProjects") : escapeHTML(selectedProject)}</p>
+    <div class="row"><span>${t("budgetReceived")}</span><strong>${money(summary.received)}</strong></div>
+    <div class="row"><span>${t("projectExpenses")}</span><strong>${money(summary.spent)}</strong></div>
+    <div class="row"><span>${t("budgetRemaining")}</span><strong>${money(summary.remaining)}</strong></div>
+    ${table}
+  `);
+  addLog("Partner budget report printed", `${month} · ${selectedProject}`);
+}
+
+function exportBudgetCSV() {
+  const headers = [t("projectName"), t("budgetReceived"), t("projectExpenses"), t("paid"), t("unpaid"), t("budgetRemaining")];
+  const rows = [headers, ...budgetReportRows()];
+  downloadFile(`project-budget-report-${todayISO()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
+  addLog("Budget CSV exported", `${rows.length - 1} projects`);
+  saveData(false);
+}
+
 function renderSupplierWorkers() {
   if (!$("#supplierEntriesList")) return;
   const month = $("#supplierMonth")?.value || monthISO();
@@ -3846,6 +4096,7 @@ function exportSupplierCSV() {
 function renderExpenses() {
   const list = $("#expensesList");
   if (!list) return;
+  renderProjectOptions();
   const month = $("#expenseMonth").value || monthISO();
   const allRows = monthExpenses(month);
   const buyers = Array.from(new Set(allRows.map(expenseBuyerName).filter((buyer) => buyer !== "-"))).sort((a, b) => a.localeCompare(b));
@@ -3907,6 +4158,7 @@ function renderExpenses() {
       <td>${escapeHTML(expense.date || "-")}</td>
       <td>${escapeHTML(expense.buyer || "-")}</td>
       <td>${escapeHTML(expense.category || "-")}</td>
+      <td>${escapeHTML(expense.project || "-")}</td>
       <td>${escapeHTML(expense.merchant || "-")}</td>
       <td>${escapeHTML(expense.location || "-")}</td>
       <td>${escapeHTML(expense.description || "-")}</td>
@@ -3923,7 +4175,7 @@ function renderExpenses() {
         `;
       })()}
     </tr>
-  `).join("") : `<tr><td colspan="13">${t("noExpenses")}</td></tr>`;
+  `).join("") : `<tr><td colspan="14">${t("noExpenses")}</td></tr>`;
 }
 
 function setExpenseReceiptPhoto(photo = "") {
@@ -4515,6 +4767,7 @@ function addExpenseFromForm() {
     date: $("#expenseDate").value || todayISO(),
     buyer: $("#expenseBuyer").value.trim(),
     category: $("#expenseCategory").value.trim(),
+    project: $("#expenseProject")?.value.trim() || "",
     merchant: $("#expenseMerchant").value.trim(),
     location: $("#expenseLocation").value.trim(),
     description: $("#expenseDescription").value.trim(),
@@ -4542,6 +4795,7 @@ function clearExpenseForm() {
   app.editingExpenseId = "";
   $("#expenseBuyer").value = "";
   $("#expenseCategory").value = "";
+  if ($("#expenseProject")) $("#expenseProject").value = "";
   $("#expenseMerchant").value = "";
   $("#expenseLocation").value = "";
   $("#expenseDescription").value = "";
@@ -4562,6 +4816,7 @@ function editExpense(expenseId) {
   $("#expenseDate").value = expense.date || todayISO();
   $("#expenseBuyer").value = expense.buyer || "";
   $("#expenseCategory").value = expense.category || "";
+  if ($("#expenseProject")) $("#expenseProject").value = expense.project || "";
   $("#expenseMerchant").value = expense.merchant || "";
   $("#expenseLocation").value = expense.location || "";
   $("#expenseDescription").value = expense.description || "";
@@ -4649,6 +4904,7 @@ function importBackup(file) {
       app.attendance = parsed.attendance;
       app.payments = parsed.payments || {};
       app.expenses = parsed.expenses || [];
+      app.projectBudgets = parsed.projectBudgets || [];
       app.supplierEntries = parsed.supplierEntries || [];
       app.supplierPayments = parsed.supplierPayments || [];
       app.workerAdvances = parsed.workerAdvances || [];
@@ -4980,6 +5236,12 @@ function bindEvents() {
     const viewExpenseButton = event.target.closest("[data-view-expense]");
     if (viewExpenseButton) viewExpenseReceipt(viewExpenseButton.dataset.viewExpense);
 
+    const editBudgetButton = event.target.closest("[data-edit-budget]");
+    if (editBudgetButton) editBudgetEntry(editBudgetButton.dataset.editBudget);
+
+    const removeBudgetButton = event.target.closest("[data-remove-budget]");
+    if (removeBudgetButton) removeBudgetEntry(removeBudgetButton.dataset.removeBudget);
+
     const statusButton = event.target.closest(".attendance-actions button");
     if (statusButton) {
       const parent = statusButton.closest(".attendance-actions");
@@ -5160,6 +5422,15 @@ function bindEvents() {
     addExpenseFromForm();
   });
   $("#cancelExpenseEdit")?.addEventListener("click", clearExpenseForm);
+  $("#budgetForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    addBudgetEntryFromForm();
+  });
+  $("#cancelBudgetEdit")?.addEventListener("click", () => resetBudgetForm(true));
+  $("#budgetMonth")?.addEventListener("change", renderProjectsBudget);
+  $("#budgetProjectFilter")?.addEventListener("change", renderProjectsBudget);
+  $("#printBudgetReport")?.addEventListener("click", printBudgetReport);
+  $("#exportBudgetReport")?.addEventListener("click", exportBudgetCSV);
   $("#supplierForm").addEventListener("submit", (event) => {
     event.preventDefault();
     addSupplierEntryFromForm();
@@ -5309,6 +5580,8 @@ function renderDashboard() {
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
   if ($("#statWorkerAdvance")) $("#statWorkerAdvance").textContent = money(workerAdvanceRemaining);
   if ($("#statAdvanceDeducted")) $("#statAdvanceDeducted").textContent = money(dashboardPayTotals.advance);
+  if ($("#statBudgetReceived")) $("#statBudgetReceived").textContent = money(budgetSummary.received);
+  if ($("#statBudgetRemaining")) $("#statBudgetRemaining").textContent = money(budgetSummary.remaining);
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
 
   $("#dashboardSummary").innerHTML = summary
