@@ -589,7 +589,7 @@ Object.assign(translations.en, {
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
   currentDailyWage: "Current daily wage",
-  advanceBalanceAed: "Opening advance balance (AED)",
+  advanceBalanceAed: "Opening advance only (AED)",
   workerAdvanceBalance: "Worker advance balance",
   addWorkerAdvance: "Add worker advance",
   advanceAmount: "Advance amount",
@@ -791,7 +791,7 @@ Object.assign(translations.ps, {
 
 Object.assign(translations.ps, {
   currentDailyWage: "اوسنۍ ورځنۍ مزدوري",
-  advanceBalanceAed: "لومړنی اډوانس بیلنس (AED)",
+  advanceBalanceAed: "یوازې لومړنی اډوانس (AED)",
   workerAdvanceBalance: "د کارکوونکو اډوانس بیلنس",
   addWorkerAdvance: "د کارکوونکي اډوانس اضافه کړئ",
   advanceAmount: "د اډوانس اندازه",
@@ -1348,9 +1348,13 @@ function workerAdvanceAmount(worker) {
   return workerAdvanceAmountUntil(worker, "9999-12-31");
 }
 
+function workerOpeningAdvance(worker) {
+  return roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+}
+
 function workerAdvanceAmountUntil(worker, end = todayISO()) {
   return cachedCalculation(cacheKey("workerAdvanceAmountUntil", worker?.id, end, worker?.advanceBalance, worker?.balance, worker?.openingBalance), () => {
-    const opening = roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
+    const opening = workerOpeningAdvance(worker);
     const entries = workerAdvanceEntries(worker?.id).filter((entry) => String(entry.date || "") <= String(end || todayISO()));
     return roundMoney(opening + entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
   });
@@ -4686,7 +4690,7 @@ function openWorkerDialog(workerId = "") {
   $("#workerPhone").value = worker?.phone || "";
   $("#workerEmiratesId").value = worker?.emiratesId || "";
   $("#workerDailyWage").value = worker ? currentDailyWage(worker) : "";
-  $("#workerAdvanceBalance").value = workerAdvanceAmount(worker || {});
+  $("#workerAdvanceBalance").value = worker ? workerOpeningAdvance(worker) : 0;
   $("#workerWageEffectiveDate").value = todayISO();
   $("#workerJoinDate").value = worker?.joinDate || todayISO();
   $("#workerStatus").value = worker?.status || "active";
