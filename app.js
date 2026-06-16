@@ -599,6 +599,7 @@ Object.assign(translations.en, {
   advanceHistory: "Advance history",
   noAdvanceHistory: "No advance history yet.",
   totalAdvanceGiven: "Total advance given",
+  shiftFilteredWarning: "This report is filtered by shift. Some worked days may be hidden.",
   advanceDeducted: "Advance deducted",
   advanceDeductedThisMonth: "Advance deducted this month",
   remainingAdvanceBalance: "Remaining advance balance",
@@ -775,6 +776,7 @@ Object.assign(translations.ps, {
   advanceHistory: "د اډوانس تاریخچه",
   noAdvanceHistory: "تر اوسه اډوانس نشته.",
   totalAdvanceGiven: "ټول ورکړل شوی اډوانس",
+  shiftFilteredWarning: "دا راپور د شفټ له مخې فلټر شوی. ځینې کاري ورځې پټېدای شي.",
   advanceDeducted: "کم شوی اډوانس",
   advanceDeductedThisMonth: "د دې میاشتې کم شوی اډوانس",
   remainingAdvanceBalance: "پاتې اډوانس بیلنس",
@@ -907,6 +909,12 @@ let undoStack = [];
 let redoStack = [];
 let historySnapshot = "";
 let historyPaused = false;
+let renderAllQueued = false;
+let cloudSaveTimer = null;
+let cloudSaveInFlight = false;
+let cloudSaveQueued = false;
+let pendingSaveToast = false;
+let lastRollingBackupAt = 0;
 
 function cloneData(value) {
   return JSON.parse(JSON.stringify(value || null));
@@ -1265,8 +1273,12 @@ function workerPaymentHistory(workerId, start, end) {
 }
 
 function workerAdvanceAmount(worker) {
+  return workerAdvanceAmountUntil(worker, "9999-12-31");
+}
+
+function workerAdvanceAmountUntil(worker, end = todayISO()) {
   const opening = roundMoney(Math.max(0, Number(worker?.advanceBalance ?? worker?.balance ?? worker?.openingBalance ?? 0)));
-  const entries = workerAdvanceEntries(worker?.id);
+  const entries = workerAdvanceEntries(worker?.id).filter((entry) => String(entry.date || "") <= String(end || todayISO()));
   return roundMoney(opening + entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
 }
 
@@ -1290,7 +1302,7 @@ function workerGrossWageUntil(workerId, end) {
 }
 
 function workerAdvanceUsedUntil(worker, end) {
-  return roundMoney(Math.min(workerAdvanceAmount(worker), workerGrossWageUntil(worker?.id, end)));
+  return roundMoney(Math.min(workerAdvanceAmountUntil(worker, end), workerGrossWageUntil(worker?.id, end)));
 }
 
 function rowAdvanceDeduction(row, start, end) {
@@ -1305,7 +1317,7 @@ function rowFinalPayable(row, start, end) {
 }
 
 function workerRemainingAdvance(worker, end = todayISO()) {
-  return roundMoney(Math.max(0, workerAdvanceAmount(worker) - workerAdvanceUsedUntil(worker, end)));
+  return roundMoney(Math.max(0, workerAdvanceAmountUntil(worker, end) - workerAdvanceUsedUntil(worker, end)));
 }
 
 function rowPaidAmount(row, start, end) {
@@ -1527,44 +1539,96 @@ async function loadData() {
   saveData(false);
 }
 
+function cloudSaveAllowed() {
+  return Boolean(supabaseClient && app.user && app.profile?.active && ["admin", "manager"].includes(app.profile.role));
+}
+
+function persistentPayload({ includeDailyBackups = false } = {}) {
+  return {
+    workers: app.workers,
+    attendance: app.attendance,
+    payments: app.payments,
+    expenses: app.expenses,
+    supplierEntries: app.supplierEntries,
+    supplierPayments: app.supplierPayments,
+    workerAdvances: app.workerAdvances,
+    payrollLocks: app.payrollLocks,
+    dailyBackups: includeDailyBackups ? app.dailyBackups : {},
+    logs: (app.logs || []).slice(0, 300),
+    lastSaved: app.lastSaved,
+  };
+}
+
+function scheduleRenderAll() {
+  if (renderAllQueued) return;
+  renderAllQueued = true;
+  window.requestAnimationFrame(() => {
+    renderAllQueued = false;
+    renderAll();
+  });
+}
+
+async function flushCloudSave(show = false) {
+  if (!cloudSaveAllowed()) {
+    if (show) toast(supabaseClient ? t("savedLocalLogin") : t("savedLocal"));
+    return;
+  }
+  if (cloudSaveInFlight) {
+    cloudSaveQueued = true;
+    pendingSaveToast ||= show;
+    return;
+  }
+  cloudSaveInFlight = true;
+  try {
+    const { error } = await supabaseClient
+      .from("app_data")
+      .upsert({ id: "main", data: persistentPayload(), updated_by: app.user.id || null, updated_at: new Date().toISOString() });
+    if (error) {
+      app.lastCloudSaveError = `${new Date().toLocaleString()}: ${error.message}`;
+      app.storageMode = "cloud save failed";
+      setBrowserBackup(true);
+      toast(`${t("cloudSaveFailed")}: ${error.message}`);
+    } else {
+      app.lastCloudSaveError = "";
+      app.storageMode = "cloud";
+      if (show || pendingSaveToast) toast(t("savedOnline"));
+    }
+  } finally {
+    cloudSaveInFlight = false;
+    const shouldRunAgain = cloudSaveQueued;
+    const shouldToast = pendingSaveToast;
+    cloudSaveQueued = false;
+    pendingSaveToast = false;
+    if (shouldRunAgain) {
+      window.setTimeout(() => flushCloudSave(shouldToast), 250);
+    } else {
+      scheduleRenderAll();
+    }
+  }
+}
+
+function scheduleCloudSave(show = false) {
+  pendingSaveToast ||= show;
+  if (cloudSaveTimer) window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = window.setTimeout(() => {
+    cloudSaveTimer = null;
+    flushCloudSave(pendingSaveToast);
+  }, 700);
+}
+
 async function saveData(show = true) {
   createDailyBackup();
   recordHistory();
   app.lastSaved = new Date().toISOString();
   setBrowserBackup();
 
-  if (supabaseClient && app.user && app.profile?.active && ["admin", "manager"].includes(app.profile.role)) {
-    const payload = {
-      workers: app.workers,
-      attendance: app.attendance,
-      payments: app.payments,
-      expenses: app.expenses,
-      supplierEntries: app.supplierEntries,
-      supplierPayments: app.supplierPayments,
-      workerAdvances: app.workerAdvances,
-      payrollLocks: app.payrollLocks,
-      dailyBackups: {},
-      logs: (app.logs || []).slice(0, 300),
-      lastSaved: app.lastSaved,
-    };
-    const { error } = await supabaseClient
-      .from("app_data")
-      .upsert({ id: "main", data: payload, updated_by: app.user.id || null, updated_at: new Date().toISOString() });
-    if (error) {
-      app.lastCloudSaveError = `${new Date().toLocaleString()}: ${error.message}`;
-      app.storageMode = "cloud save failed";
-      setBrowserBackup();
-      toast(`${t("cloudSaveFailed")}: ${error.message}`);
-    } else {
-      app.lastCloudSaveError = "";
-      app.storageMode = "cloud";
-      if (show) toast(t("savedOnline"));
-    }
+  if (cloudSaveAllowed()) {
+    scheduleCloudSave(show);
   } else if (show) {
     toast(supabaseClient ? t("savedLocalLogin") : t("savedLocal"));
   }
 
-  renderAll();
+  scheduleRenderAll();
 }
 
 function getBrowserBackup() {
@@ -1575,27 +1639,22 @@ function getBrowserBackup() {
   }
 }
 
-function setBrowserBackup() {
+function setBrowserBackup(forceRolling = false) {
   try {
     const payload = {
-      workers: app.workers,
-      attendance: app.attendance,
-      payments: app.payments,
-      expenses: app.expenses,
-      supplierEntries: app.supplierEntries,
-      supplierPayments: app.supplierPayments,
-      workerAdvances: app.workerAdvances,
-      payrollLocks: app.payrollLocks,
-      dailyBackups: app.dailyBackups,
+      ...persistentPayload({ includeDailyBackups: true }),
       logs: app.logs,
       lastCloudSaveError: app.lastCloudSaveError,
-      lastSaved: app.lastSaved,
     };
     const serialized = JSON.stringify(payload);
     localStorage.setItem(STORAGE_KEY, serialized);
-    const rolling = JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]");
-    rolling.unshift({ at: new Date().toISOString(), data: payload });
-    localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(rolling.slice(0, 5)));
+    const now = Date.now();
+    if (forceRolling || now - lastRollingBackupAt > 30000) {
+      const rolling = JSON.parse(localStorage.getItem(ROLLING_BACKUPS_KEY) || "[]");
+      rolling.unshift({ at: new Date().toISOString(), data: payload });
+      localStorage.setItem(ROLLING_BACKUPS_KEY, JSON.stringify(rolling.slice(0, 5)));
+      lastRollingBackupAt = now;
+    }
   } catch {
     // Browser storage can be disabled; cloud storage is primary after login.
   }
@@ -1636,6 +1695,7 @@ function setDefaults() {
   $("#expenseMonth").value = month;
   if ($("#supplierMonth")) $("#supplierMonth").value = month;
   $("#reportMonth").value = month;
+  if ($("#reportShiftFilter")) $("#reportShiftFilter").value = "all";
   if ($("#bulkAttendanceRestType")) $("#bulkAttendanceRestType").value = "default";
   if ($("#bulkAttendanceRestMinutes")) $("#bulkAttendanceRestMinutes").value = 60;
   $("#workerJoinDate").value = today;
@@ -3227,6 +3287,7 @@ function renderReport() {
       <span>${t("shift")}: ${reportShift === "all" ? t("allShifts") : attendanceShiftLabel(reportShift)}</span>
       <span>${t("serialNo")}: ATBM-${start.replaceAll("-", "")}-${end.replaceAll("-", "")}</span>
     </div>
+    ${reportShift !== "all" ? `<p class="help-text report-warning">${t("shiftFilteredWarning")}</p>` : ""}
     <h3>${title}</h3>
     <p class="help-text">${reportSubject} ${t("wageAttendanceReport")}</p>
     <div class="summary-strip">
@@ -5215,6 +5276,18 @@ function renderDashboard() {
 
 setDefaults();
 bindEvents();
+window.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "hidden" || !cloudSaveTimer) return;
+  window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  flushCloudSave(false);
+});
+window.addEventListener("beforeunload", () => {
+  if (!cloudSaveTimer) return;
+  window.clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  flushCloudSave(false);
+});
 initCloud()
   .then(loadData)
   .then(renderAll)
