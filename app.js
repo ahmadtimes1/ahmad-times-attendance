@@ -659,6 +659,8 @@ Object.assign(translations.en, {
   investorName: "Investor name",
   investorNamePlaceholder: "Investor name",
   budgetAmount: "Budget amount (AED)",
+  fromMonth: "From month",
+  toMonth: "To month",
   addBudgetEntry: "Add budget",
   budgetEntrySaved: "Budget saved",
   budgetEntryUpdated: "Budget updated",
@@ -667,6 +669,8 @@ Object.assign(translations.en, {
   budgetReceived: "Budget received",
   budgetReceivedThisMonth: "Budget received this month",
   projectExpenses: "Project expenses",
+  companyExpenseCost: "Company expenses",
+  workerWageCost: "Worker wages",
   budgetRemaining: "Budget remaining",
   noBudgetEntries: "No budget entries yet.",
   printPartnerReport: "Print partner report",
@@ -856,6 +860,8 @@ Object.assign(translations.ps, {
   investorName: "د انویسټر نوم",
   investorNamePlaceholder: "د انویسټر نوم",
   budgetAmount: "د بودیجې اندازه (AED)",
+  fromMonth: "له میاشتې",
+  toMonth: "تر میاشتې",
   addBudgetEntry: "بودیجه اضافه کړئ",
   budgetEntrySaved: "بودیجه ذخیره شوه",
   budgetEntryUpdated: "بودیجه تازه شوه",
@@ -864,6 +870,8 @@ Object.assign(translations.ps, {
   budgetReceived: "ترلاسه شوې بودیجه",
   budgetReceivedThisMonth: "د دې میاشتې بودیجه",
   projectExpenses: "د پروژې مصرف",
+  companyExpenseCost: "د شرکت مصارف",
+  workerWageCost: "د مزدورانو مزدوري",
   budgetRemaining: "پاتې بودیجه",
   noBudgetEntries: "تر اوسه بودیجه نشته.",
   printPartnerReport: "د شریکانو راپور چاپ",
@@ -1767,7 +1775,8 @@ function setDefaults() {
   $("#lockMonth").value = month;
   $("#attendanceMonth").value = month;
   $("#expenseMonth").value = month;
-  if ($("#budgetMonth")) $("#budgetMonth").value = month;
+  if ($("#budgetFromMonth")) $("#budgetFromMonth").value = month;
+  if ($("#budgetToMonth")) $("#budgetToMonth").value = month;
   if ($("#supplierMonth")) $("#supplierMonth").value = month;
   $("#reportMonth").value = month;
   if ($("#reportShiftFilter")) $("#reportShiftFilter").value = "all";
@@ -3759,6 +3768,7 @@ function projectNames() {
   const names = [
     ...(app.projectBudgets || []).map((entry) => projectNameOf(entry.project)),
     ...(app.expenses || []).map((expense) => projectNameOf(expense.project)),
+    ...(app.workers || []).map((worker) => projectNameOf(worker.project)),
   ];
   return Array.from(new Set(names.filter(Boolean))).sort((a, b) => a.localeCompare(b));
 }
@@ -3767,27 +3777,67 @@ function budgetEntriesForMonth(month = monthISO()) {
   return (app.projectBudgets || []).filter((entry) => String(entry.date || "").startsWith(month));
 }
 
-function projectExpenseRows(project = "all", month = monthISO()) {
-  return monthExpenses(month).filter((expense) => {
+function monthsBetweenRange(startMonth = monthISO(), endMonth = startMonth) {
+  const start = String(startMonth || monthISO()).slice(0, 7);
+  const end = String(endMonth || start).slice(0, 7);
+  const first = start <= end ? start : end;
+  const last = start <= end ? end : start;
+  const months = [];
+  const cursor = new Date(`${first}-01T00:00:00`);
+  while (cursor.toISOString().slice(0, 7) <= last) {
+    months.push(cursor.toISOString().slice(0, 7));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return months;
+}
+
+function budgetEntriesForRange(startMonth = monthISO(), endMonth = startMonth) {
+  const months = new Set(monthsBetweenRange(startMonth, endMonth));
+  return (app.projectBudgets || []).filter((entry) => months.has(String(entry.date || "").slice(0, 7)));
+}
+
+function expensesForMonthRange(startMonth = monthISO(), endMonth = startMonth) {
+  const months = new Set(monthsBetweenRange(startMonth, endMonth));
+  return (app.expenses || []).filter((expense) => months.has(String(expense.date || "").slice(0, 7)));
+}
+
+function projectExpenseRows(project = "all", startMonth = monthISO(), endMonth = startMonth) {
+  return expensesForMonthRange(startMonth, endMonth).filter((expense) => {
     const name = projectNameOf(expense.project);
     return project === "all" || (name && name === project);
   });
 }
 
-function projectBudgetSummary(month = monthISO(), selectedProject = "all") {
-  const entries = budgetEntriesForMonth(month).filter((entry) => selectedProject === "all" || projectNameOf(entry.project) === selectedProject);
-  const expenses = projectExpenseRows(selectedProject, month);
-  const received = roundMoney(entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
-  const spent = roundMoney(expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0));
-  const paid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).paid, 0));
-  const unpaid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).unpaid, 0));
-  return { entries, expenses, received, spent, paid, unpaid, remaining: roundMoney(received - spent) };
+function projectWorkerWageRows(project = "all", startMonth = monthISO(), endMonth = startMonth) {
+  return monthsBetweenRange(startMonth, endMonth).flatMap((month) => {
+    const dates = daysInMonth(month);
+    return monthSummary(month)
+      .filter((row) => project === "all" || projectNameOf(row.worker?.project) === project)
+      .map((row) => ({
+        month,
+        worker: row.worker,
+        amount: rowFinalPayable(row, dates[0], dates[dates.length - 1]),
+      }));
+  });
 }
 
-function projectSummaryRows(month = monthISO(), selectedProject = "all") {
+function projectBudgetSummary(startMonth = monthISO(), selectedProject = "all", endMonth = startMonth) {
+  const entries = budgetEntriesForRange(startMonth, endMonth).filter((entry) => selectedProject === "all" || projectNameOf(entry.project) === selectedProject);
+  const expenses = projectExpenseRows(selectedProject, startMonth, endMonth);
+  const workerWages = projectWorkerWageRows(selectedProject, startMonth, endMonth);
+  const received = roundMoney(entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+  const companySpent = roundMoney(expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0));
+  const workerSpent = roundMoney(workerWages.reduce((sum, item) => sum + Number(item.amount || 0), 0));
+  const spent = roundMoney(companySpent + workerSpent);
+  const paid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).paid, 0));
+  const unpaid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).unpaid, 0));
+  return { entries, expenses, workerWages, received, spent, companySpent, workerSpent, paid, unpaid, remaining: roundMoney(received - spent) };
+}
+
+function projectSummaryRows(startMonth = monthISO(), selectedProject = "all", endMonth = startMonth) {
   const names = selectedProject === "all" ? projectNames() : [selectedProject];
-  return names.map((project) => ({ project, ...projectBudgetSummary(month, project) }))
-    .filter((row) => row.project && (row.received || row.spent || row.entries.length || row.expenses.length));
+  return names.map((project) => ({ project, ...projectBudgetSummary(startMonth, project, endMonth) }))
+    .filter((row) => row.project && (row.received || row.spent || row.workerSpent || row.entries.length || row.expenses.length || row.workerWages.length));
 }
 
 function renderProjectOptions() {
@@ -3805,13 +3855,16 @@ function renderProjectOptions() {
 function renderProjectsBudget() {
   if (!$("#budgetEntriesList")) return;
   renderProjectOptions();
-  const month = $("#budgetMonth")?.value || monthISO();
+  const startMonth = $("#budgetFromMonth")?.value || monthISO();
+  const endMonth = $("#budgetToMonth")?.value || startMonth;
   const selectedProject = $("#budgetProjectFilter")?.value || "all";
-  const summary = projectBudgetSummary(month, selectedProject);
-  const rows = projectSummaryRows(month, selectedProject);
+  const summary = projectBudgetSummary(startMonth, selectedProject, endMonth);
+  const rows = projectSummaryRows(startMonth, selectedProject, endMonth);
   $("#budgetSummary").innerHTML = `
     <article><span>${t("budgetReceived")}</span><strong>${money(summary.received)}</strong></article>
     <article><span>${t("projectExpenses")}</span><strong>${money(summary.spent)}</strong></article>
+    <article><span>${t("companyExpenseCost")}</span><strong>${money(summary.companySpent)}</strong></article>
+    <article><span>${t("workerWageCost")}</span><strong>${money(summary.workerSpent)}</strong></article>
     <article><span>${t("paid")}</span><strong>${money(summary.paid)}</strong></article>
     <article><span>${t("unpaid")}</span><strong>${money(summary.unpaid)}</strong></article>
     <article><span>${t("budgetRemaining")}</span><strong>${money(summary.remaining)}</strong></article>
@@ -3820,7 +3873,8 @@ function renderProjectsBudget() {
         <span>${escapeHTML(row.project)}</span>
         <strong>${money(row.remaining)}</strong>
         <small>${t("budgetReceived")}: ${money(row.received)}</small>
-        <small>${t("projectExpenses")}: ${money(row.spent)}</small>
+        <small>${t("companyExpenseCost")}: ${money(row.companySpent)}</small>
+        <small>${t("workerWageCost")}: ${money(row.workerSpent)}</small>
       </article>
     `).join("")}
   `;
@@ -3910,10 +3964,12 @@ function removeBudgetEntry(id) {
   toast(t("budgetEntryRemoved"));
 }
 
-function budgetReportRows(month = $("#budgetMonth")?.value || monthISO(), selectedProject = $("#budgetProjectFilter")?.value || "all") {
-  return projectSummaryRows(month, selectedProject).map((row) => [
+function budgetReportRows(startMonth = $("#budgetFromMonth")?.value || monthISO(), selectedProject = $("#budgetProjectFilter")?.value || "all", endMonth = $("#budgetToMonth")?.value || startMonth) {
+  return projectSummaryRows(startMonth, selectedProject, endMonth).map((row) => [
     row.project,
     money(row.received),
+    money(row.companySpent),
+    money(row.workerSpent),
     money(row.spent),
     money(row.paid),
     money(row.unpaid),
@@ -3922,24 +3978,27 @@ function budgetReportRows(month = $("#budgetMonth")?.value || monthISO(), select
 }
 
 function printBudgetReport() {
-  const month = $("#budgetMonth")?.value || monthISO();
+  const startMonth = $("#budgetFromMonth")?.value || monthISO();
+  const endMonth = $("#budgetToMonth")?.value || startMonth;
   const selectedProject = $("#budgetProjectFilter")?.value || "all";
-  const summary = projectBudgetSummary(month, selectedProject);
-  const rows = budgetReportRows(month, selectedProject);
-  const headers = [t("projectName"), t("budgetReceived"), t("projectExpenses"), t("paid"), t("unpaid"), t("budgetRemaining")];
+  const summary = projectBudgetSummary(startMonth, selectedProject, endMonth);
+  const rows = budgetReportRows(startMonth, selectedProject, endMonth);
+  const headers = [t("projectName"), t("budgetReceived"), t("companyExpenseCost"), t("workerWageCost"), t("projectExpenses"), t("paid"), t("unpaid"), t("budgetRemaining")];
   const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   printPlainReport(t("partnerReport"), `
-    <p>${t("month")}: ${escapeHTML(month)} · ${selectedProject === "all" ? t("allProjects") : escapeHTML(selectedProject)}</p>
+    <p>${t("fromMonth")}: ${escapeHTML(startMonth)} · ${t("toMonth")}: ${escapeHTML(endMonth)} · ${selectedProject === "all" ? t("allProjects") : escapeHTML(selectedProject)}</p>
     <div class="row"><span>${t("budgetReceived")}</span><strong>${money(summary.received)}</strong></div>
+    <div class="row"><span>${t("companyExpenseCost")}</span><strong>${money(summary.companySpent)}</strong></div>
+    <div class="row"><span>${t("workerWageCost")}</span><strong>${money(summary.workerSpent)}</strong></div>
     <div class="row"><span>${t("projectExpenses")}</span><strong>${money(summary.spent)}</strong></div>
     <div class="row"><span>${t("budgetRemaining")}</span><strong>${money(summary.remaining)}</strong></div>
     ${table}
   `);
-  addLog("Partner budget report printed", `${month} · ${selectedProject}`);
+  addLog("Partner budget report printed", `${startMonth} to ${endMonth} · ${selectedProject}`);
 }
 
 function exportBudgetCSV() {
-  const headers = [t("projectName"), t("budgetReceived"), t("projectExpenses"), t("paid"), t("unpaid"), t("budgetRemaining")];
+  const headers = [t("projectName"), t("budgetReceived"), t("companyExpenseCost"), t("workerWageCost"), t("projectExpenses"), t("paid"), t("unpaid"), t("budgetRemaining")];
   const rows = [headers, ...budgetReportRows()];
   downloadFile(`project-budget-report-${todayISO()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
   addLog("Budget CSV exported", `${rows.length - 1} projects`);
@@ -4584,6 +4643,7 @@ function openWorkerDialog(workerId = "") {
   $("#workerName").value = worker?.name || "";
   $("#workerNamePs").value = worker?.namePs || "";
   $("#workerRole").value = worker?.role || "";
+  if ($("#workerProject")) $("#workerProject").value = worker?.project || "";
   $("#workerCity").value = worker?.city || "";
   $("#workerNationality").value = worker?.nationality || "";
   $("#workerPerformance").value = worker?.performance || "good";
@@ -4617,6 +4677,7 @@ function saveWorkerFromForm() {
     name: $("#workerName").value.trim(),
     namePs: $("#workerNamePs").value.trim(),
     role: $("#workerRole").value.trim(),
+    project: $("#workerProject")?.value.trim() || "",
     city: $("#workerCity").value.trim(),
     nationality: $("#workerNationality").value.trim(),
     performance: $("#workerPerformance").value,
@@ -5427,7 +5488,8 @@ function bindEvents() {
     addBudgetEntryFromForm();
   });
   $("#cancelBudgetEdit")?.addEventListener("click", () => resetBudgetForm(true));
-  $("#budgetMonth")?.addEventListener("change", renderProjectsBudget);
+  $("#budgetFromMonth")?.addEventListener("change", renderProjectsBudget);
+  $("#budgetToMonth")?.addEventListener("change", renderProjectsBudget);
   $("#budgetProjectFilter")?.addEventListener("change", renderProjectsBudget);
   $("#printBudgetReport")?.addEventListener("click", printBudgetReport);
   $("#exportBudgetReport")?.addEventListener("click", exportBudgetCSV);

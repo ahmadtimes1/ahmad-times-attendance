@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=project-budget-1">
+    <link rel="stylesheet" href="styles.css?v=budget-range-worker-wages-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -501,7 +501,8 @@
                 <p class="help-text" data-i18n="projectsBudgetHelp">Track investor budget received, project expenses, and remaining balance in one simple place.</p>
               </div>
               <div class="panel-actions">
-                <input id="budgetMonth" type="month">
+                <label class="compact-select"><span data-i18n="fromMonth">From month</span><input id="budgetFromMonth" type="month"></label>
+                <label class="compact-select"><span data-i18n="toMonth">To month</span><input id="budgetToMonth" type="month"></label>
                 <select id="budgetProjectFilter">
                   <option value="all" data-i18n="allProjects">All projects</option>
                 </select>
@@ -861,6 +862,7 @@
           <label><span data-i18n="fullName">Full name</span><input id="workerName" required data-i18n-placeholder="workerNamePlaceholder" placeholder="Worker name"></label>
           <label><span data-i18n="pashtoName">Pashto name</span><input id="workerNamePs" data-i18n-placeholder="pashtoNamePlaceholder" placeholder="Worker name in Pashto"></label>
           <label><span data-i18n="roleTrade">Role / trade</span><input id="workerRole" data-i18n-placeholder="rolePlaceholder" placeholder="Electrician, plumber, helper"></label>
+          <label><span data-i18n="projectName">Project / site</span><input id="workerProject" list="projectNameOptions" data-i18n-placeholder="projectNamePlaceholder" placeholder="Project or site"></label>
           <label><span data-i18n="city">City</span><input id="workerCity" data-i18n-placeholder="cityPlaceholder" placeholder="Dubai, Sharjah..."></label>
           <label><span data-i18n="nationality">Nationality</span><input id="workerNationality" data-i18n-placeholder="nationalityPlaceholder" placeholder="Afghan, Pakistani..."></label>
           <label><span data-i18n="performance">Performance</span>
@@ -939,6 +941,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=project-budget-1"></script>
+    <script src="app.js?v=budget-range-worker-wages-1"></script>
   </body>
 </html>
