@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=expense-buyer-totals-1">
+    <link rel="stylesheet" href="styles.css?v=expense-report-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -89,11 +89,8 @@
         </header>
 
         <section id="dashboard" class="view active">
-          <div class="stat-grid">
-            <article class="stat-card">
-              <span data-i18n="totalActiveLabour">Total active labour</span>
-              <strong id="statTotalWorkers">0</strong>
-            </article>
+          <div class="stat-grid dashboard-metrics">
+            <h3 class="dashboard-section-title" data-i18n="dashboardWorkersGroup">Workers</h3>
             <article class="stat-card green">
               <span data-i18n="activeWorkers">Active workers</span>
               <strong id="statActiveWorkers">0</strong>
@@ -106,33 +103,41 @@
               <span data-i18n="presentToday">Present today</span>
               <strong id="statPresentToday">0</strong>
             </article>
+            <article class="stat-card">
+              <span data-i18n="monthlyOvertime">Monthly overtime</span>
+              <strong id="statAttendanceDays">0</strong>
+            </article>
+
+            <h3 class="dashboard-section-title" data-i18n="dashboardWagesGroup">Direct labour wages</h3>
             <article class="stat-card blue">
               <span data-i18n="directWorkersTotalAmount">Direct workers total</span>
               <strong id="statMonthWages">AED 0</strong>
             </article>
-            <article class="stat-card blue">
-              <span data-i18n="supplierWorkersTotalAmount">Supplier workers total</span>
-              <strong id="statSupplierTotal">AED 0</strong>
-            </article>
-            <article class="stat-card">
-              <span data-i18n="monthlyExpenses">Company monthly expenses</span>
-              <strong id="statMonthExpenses">AED 0</strong>
-            </article>
-            <article class="stat-card blue">
-              <span data-i18n="grandTotalAmount">Grand total amount</span>
-              <strong id="statGrandTotal">AED 0</strong>
-            </article>
-            <article class="stat-card">
-              <span data-i18n="monthlyOvertime">Monthly overtime</span>
-              <strong id="statAttendanceDays">0</strong>
+            <article class="stat-card green">
+              <span data-i18n="directWorkersPaidAmount">Direct workers paid</span>
+              <strong id="statPaidWages">AED 0</strong>
             </article>
             <article class="stat-card amber">
               <span data-i18n="directWorkersUnpaidAmount">Direct workers unpaid</span>
               <strong id="statUnpaidWages">AED 0</strong>
             </article>
-            <article class="stat-card green">
-              <span data-i18n="directWorkersPaidAmount">Direct workers paid</span>
-              <strong id="statPaidWages">AED 0</strong>
+            <article class="stat-card amber">
+              <span data-i18n="totalUnpaidBalance">Total unpaid balance</span>
+              <strong id="statTotalUnpaidBalance">AED 0</strong>
+            </article>
+            <article class="stat-card blue">
+              <span data-i18n="workerAdvanceBalance">Worker advance balance</span>
+              <strong id="statWorkerAdvance">AED 0</strong>
+            </article>
+            <article class="stat-card amber">
+              <span data-i18n="advanceDeductedThisMonth">Advance deducted this month</span>
+              <strong id="statAdvanceDeducted">AED 0</strong>
+            </article>
+
+            <h3 class="dashboard-section-title" data-i18n="dashboardSupplierGroup">Supplier labour</h3>
+            <article class="stat-card blue">
+              <span data-i18n="supplierWorkersTotalAmount">Supplier workers total</span>
+              <strong id="statSupplierTotal">AED 0</strong>
             </article>
             <article class="stat-card green">
               <span data-i18n="supplierWorkersPaidAmount">Supplier workers paid</span>
@@ -142,13 +147,15 @@
               <span data-i18n="supplierWorkersUnpaidAmount">Supplier workers unpaid</span>
               <strong id="statSupplierUnpaid">AED 0</strong>
             </article>
-            <article class="stat-card blue">
-              <span data-i18n="workerAdvanceBalance">Worker advance balance</span>
-              <strong id="statWorkerAdvance">AED 0</strong>
+
+            <h3 class="dashboard-section-title" data-i18n="dashboardExpensesBudgetGroup">Expenses and budget</h3>
+            <article class="stat-card">
+              <span data-i18n="monthlyExpenses">Company monthly expenses</span>
+              <strong id="statMonthExpenses">AED 0</strong>
             </article>
-            <article class="stat-card amber">
-              <span data-i18n="advanceDeductedThisMonth">Advance deducted this month</span>
-              <strong id="statAdvanceDeducted">AED 0</strong>
+            <article class="stat-card blue">
+              <span data-i18n="grandTotalAmount">Grand total amount</span>
+              <strong id="statGrandTotal">AED 0</strong>
             </article>
             <article class="stat-card green">
               <span data-i18n="budgetReceivedThisMonth">Budget received this month</span>
@@ -445,6 +452,11 @@
                 <input id="expenseMonth" type="month">
                 <input id="expenseBuyerFilter" list="expenseBuyerOptions" data-i18n-placeholder="allBuyers" placeholder="All buyers">
                 <datalist id="expenseBuyerOptions"></datalist>
+                <label class="compact-select expense-report-buyers">
+                  <span data-i18n="expenseReportBuyers">Report buyers</span>
+                  <select id="expenseReportBuyers" multiple></select>
+                </label>
+                <button type="button" id="printExpenseReport" data-i18n="printExpenseReport">Print expense report</button>
               </div>
             </div>
             <div id="expenseSummary" class="expense-summary"></div>
@@ -941,6 +953,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=expense-buyer-totals-1"></script>
+    <script src="app.js?v=expense-report-1"></script>
   </body>
 </html>

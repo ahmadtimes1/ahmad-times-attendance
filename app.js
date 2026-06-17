@@ -590,7 +590,7 @@ Object.assign(translations.en, {
   addPaymentAmountFirst: "Enter a paid amount first.",
   currentDailyWage: "Current daily wage",
   advanceBalanceAed: "Opening advance only (AED)",
-  workerAdvanceBalance: "Worker advance balance",
+  workerAdvanceBalance: "Worker advance remaining",
   addWorkerAdvance: "Add worker advance",
   advanceAmount: "Advance amount",
   advanceDate: "Advance date",
@@ -611,6 +611,10 @@ Object.assign(translations.en, {
   expenses: "Expenses",
   companyExpenses: "Company expenses",
   companyExpensesHelp: "Store daily company expenses such as worker food, car oil, fuel, tools, or site costs.",
+  expenseReport: "Expense report",
+  expenseReportBuyers: "Report buyers",
+  printExpenseReport: "Print expense report",
+  selectedBuyers: "Selected buyers",
   expenseDate: "Expense date",
   expenseCategory: "Category",
   expenseCategoryPlaceholder: "Food, car oil, tools...",
@@ -701,12 +705,17 @@ Object.assign(translations.en, {
   supplierWorkersTotalAmount: "Supplier workers total",
   supplierWorkersPaidAmount: "Supplier workers paid",
   supplierWorkersUnpaidAmount: "Supplier workers unpaid",
-  directWorkersTotalAmount: "Direct workers final payable",
+  directWorkersTotalAmount: "Direct labour payable after advance",
   directWorkersPaidAmount: "Direct workers paid",
   directWorkersUnpaidAmount: "Direct workers unpaid",
-  grandTotalAmount: "Grand total amount",
+  grandTotalAmount: "Total company cost this month",
   grandTotalPaid: "Grand total paid",
   grandTotalUnpaid: "Grand total unpaid",
+  totalUnpaidBalance: "Total unpaid balance",
+  dashboardWorkersGroup: "Workers",
+  dashboardWagesGroup: "Direct labour wages",
+  dashboardSupplierGroup: "Supplier labour",
+  dashboardExpensesBudgetGroup: "Expenses and budget",
   noSupplierEntries: "No supplier worker entries.",
 });
 
@@ -792,7 +801,7 @@ Object.assign(translations.ps, {
 Object.assign(translations.ps, {
   currentDailyWage: "اوسنۍ ورځنۍ مزدوري",
   advanceBalanceAed: "یوازې لومړنی اډوانس (AED)",
-  workerAdvanceBalance: "د کارکوونکو اډوانس بیلنس",
+  workerAdvanceBalance: "د کارکوونکو پاتې اډوانس",
   addWorkerAdvance: "د کارکوونکي اډوانس اضافه کړئ",
   advanceAmount: "د اډوانس اندازه",
   advanceDate: "د اډوانس نېټه",
@@ -813,6 +822,10 @@ Object.assign(translations.ps, {
   expenses: "مصارف",
   companyExpenses: "د شرکت مصارف",
   companyExpensesHelp: "د شرکت ورځني مصارف لکه د مزدور خوراک، د موټر تېل، سامان، یا د سایټ مصرفونه ذخیره کړئ.",
+  expenseReport: "د مصارفو راپور",
+  expenseReportBuyers: "د راپور اخیستونکي",
+  printExpenseReport: "د مصارفو راپور چاپ",
+  selectedBuyers: "ټاکل شوي اخیستونکي",
   expenseDate: "د مصرف نېټه",
   expenseCategory: "قسم",
   expenseCategoryPlaceholder: "خوراک، د موټر تېل، سامان...",
@@ -898,12 +911,17 @@ Object.assign(translations.ps, {
   supplierWorkersTotalAmount: "د سپلایر ټول مبلغ",
   supplierWorkersPaidAmount: "د سپلایر ادا شوی",
   supplierWorkersUnpaidAmount: "د سپلایر ناادا",
-  directWorkersTotalAmount: "د مستقیمو کارکوونکو وروستۍ ورکړه",
+  directWorkersTotalAmount: "له اډوانس وروسته د مستقیمو مزدورانو ورکړه",
   directWorkersPaidAmount: "د مستقیمو کارکوونکو ادا شوی",
   directWorkersUnpaidAmount: "د مستقیمو کارکوونکو ناادا",
-  grandTotalAmount: "ټول مجموعه",
+  grandTotalAmount: "د دې میاشتې ټول شرکت لګښت",
   grandTotalPaid: "ټول ادا شوی",
   grandTotalUnpaid: "ټول ناادا",
+  totalUnpaidBalance: "ټول پاتې ناادا",
+  dashboardWorkersGroup: "کارکوونکي",
+  dashboardWagesGroup: "د مستقیمو مزدورانو مزدوري",
+  dashboardSupplierGroup: "د سپلایر مزدوران",
+  dashboardExpensesBudgetGroup: "مصارف او بودیجه",
   noSupplierEntries: "د سپلایر کارکوونکو ریکارډ نشته.",
   monthlyExpenses: "د شرکت میاشتني مصارف",
   grandTotal: "ټول مجموعه",
@@ -3782,6 +3800,96 @@ function filteredMonthExpenses(month = monthISO()) {
   });
 }
 
+function selectedExpenseReportBuyers() {
+  const select = $("#expenseReportBuyers");
+  if (!select) return [];
+  return Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+}
+
+function expenseReportRows(month = monthISO(), buyers = []) {
+  const buyerSet = new Set((buyers || []).map((buyer) => String(buyer || "").toLowerCase()));
+  const fallbackBuyer = ($("#expenseBuyerFilter")?.value || "").trim().toLowerCase();
+  return monthExpenses(month)
+    .filter((expense) => {
+      const buyer = expenseBuyerName(expense).toLowerCase();
+      if (buyerSet.size) return buyerSet.has(buyer);
+      if (fallbackBuyer) return buyer === fallbackBuyer;
+      return true;
+    })
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+}
+
+function printExpenseReport() {
+  const month = $("#expenseMonth")?.value || monthISO();
+  const buyers = selectedExpenseReportBuyers();
+  const rows = expenseReportRows(month, buyers);
+  const totals = expenseTotalsForRows(rows, "all");
+  const buyerTotals = expenseBuyerTotals(rows);
+  const fallbackBuyer = ($("#expenseBuyerFilter")?.value || "").trim();
+  const buyerLabel = buyers.length
+    ? buyers.join(", ")
+    : fallbackBuyer
+      ? fallbackBuyer
+      : t("allBuyers");
+  const headers = [
+    t("date"),
+    t("buyerName"),
+    t("expenseCategory"),
+    t("projectName"),
+    t("marketName"),
+    t("expenseLocation"),
+    t("expenseDescription"),
+    t("expenseAmount"),
+    t("paid"),
+    t("unpaid"),
+    t("status"),
+  ];
+  const detailRows = rows.map((expense) => {
+    const ledger = expenseLedger(expense);
+    return [
+      expense.date || "-",
+      expenseBuyerName(expense),
+      expense.category || "-",
+      expense.project || "-",
+      expense.merchant || "-",
+      expense.location || "-",
+      expense.description || "-",
+      money(ledger.amount),
+      money(ledger.paid),
+      money(ledger.unpaid),
+      expenseStatusLabel(ledger.status),
+    ];
+  });
+  const detailTable = detailRows.length
+    ? `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${detailRows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : `<p>${t("noExpenses")}</p>`;
+  const buyerSummary = buyerTotals.length
+    ? `<h2>${t("buyerTotals")}</h2><table><thead><tr><th>${t("buyerName")}</th><th>${t("totalExpenses")}</th><th>${t("paid")}</th><th>${t("unpaid")}</th><th>${t("buyerBalance")}</th></tr></thead><tbody>${buyerTotals.map((buyer) => `
+      <tr>
+        <td>${escapeHTML(buyer.buyer)}</td>
+        <td>${money(buyer.amount)}</td>
+        <td>${money(buyer.paid)}</td>
+        <td>${money(buyer.unpaid)}</td>
+        <td>${money(buyer.balance)}</td>
+      </tr>
+    `).join("")}</tbody></table>`
+    : "";
+  printPlainReport(t("expenseReport"), `
+    <p>${t("monthlyExpense")}: ${escapeHTML(month)} · ${t("selectedBuyers")}: ${escapeHTML(buyerLabel)}</p>
+    <div class="summary-grid">
+      <div class="row"><span>${t("totalExpenses")}</span><strong>${money(totals.amount)}</strong></div>
+      <div class="row"><span>${t("paid")}</span><strong>${money(totals.paid)}</strong></div>
+      <div class="row"><span>${t("unpaid")}</span><strong>${money(totals.unpaid)}</strong></div>
+      <div class="row"><span>${t("buyerBalance")}</span><strong>${money(totals.balance)}</strong></div>
+    </div>
+    ${buyerSummary}
+    <h2>${t("companyExpenses")}</h2>
+    ${detailTable}
+  `);
+  addLog("Expense report printed", `${month} · ${buyerLabel} · ${rows.length} rows`);
+  saveData(false);
+}
+
 function projectNameOf(value) {
   return String(value || "").trim();
 }
@@ -4183,6 +4291,11 @@ function renderExpenses() {
   const buyers = Array.from(new Set(allRows.map(expenseBuyerName).filter((buyer) => buyer !== "-"))).sort((a, b) => a.localeCompare(b));
   const buyerOptions = $("#expenseBuyerOptions");
   if (buyerOptions) buyerOptions.innerHTML = buyers.map((buyer) => `<option value="${escapeHTML(buyer)}"></option>`).join("");
+  const reportBuyerSelect = $("#expenseReportBuyers");
+  if (reportBuyerSelect) {
+    const selected = new Set(selectedExpenseReportBuyers());
+    reportBuyerSelect.innerHTML = buyers.map((buyer) => `<option value="${escapeHTML(buyer)}" ${selected.has(buyer) ? "selected" : ""}>${escapeHTML(buyer)}</option>`).join("");
+  }
   const rows = filteredMonthExpenses(month).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const totals = rows.reduce((sum, expense) => {
     const ledger = expenseLedger(expense);
@@ -4971,7 +5084,25 @@ function unlockPayrollMonth() {
 function printPlainReport(title, bodyHtml) {
   const win = window.open("", "_blank");
   if (!win) return;
-  win.document.write(`<!doctype html><html><head><title>${escapeHTML(title)}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#1d2433}h1{font-size:24px}.row{padding:10px;border-bottom:1px solid #ddd}strong{display:block;margin-top:4px}</style></head><body><h1>${escapeHTML(title)}</h1>${bodyHtml}<script>window.print()</script></body></html>`);
+  const logoUrl = new URL("ahmad-times-logo.png", window.location.href).href;
+  win.document.write(`<!doctype html><html><head><title>${escapeHTML(title)}</title><style>
+    body{font-family:Arial,sans-serif;padding:24px;color:#1d2433;background:#fff}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #bce7f7}
+    .brand img{width:58px;height:58px;object-fit:contain;border-radius:50%}
+    .brand strong{display:block;font-size:19px}
+    .brand span{display:block;margin-top:3px;color:#667085}
+    h1{margin:0 0 12px;font-size:24px}
+    h2{margin:22px 0 10px;font-size:16px}
+    p{color:#667085}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:8px;margin:14px 0}
+    .row{padding:10px;border:1px solid #d9eef5;border-radius:8px;background:#f7fbfd}
+    .row span{color:#667085;font-size:12px;font-weight:700}
+    .row strong{display:block;margin-top:4px;font-size:16px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+    th,td{padding:8px;border-bottom:1px solid #e4e7ec;text-align:left;vertical-align:top}
+    th{background:#f7fbfd;color:#667085;font-size:11px;text-transform:uppercase}
+    @media print{body{padding:12px}.summary-grid{grid-template-columns:repeat(4,1fr)}}
+  </style></head><body><div class="brand"><img src="${logoUrl}" alt="Ahmad Times logo"><div><strong>Ahmad Times For Building Maintenance L.L.C</strong><span>${escapeHTML(title)} · ${new Date().toLocaleString()}</span></div></div><h1>${escapeHTML(title)}</h1>${bodyHtml}<script>window.print()</script></body></html>`);
   win.document.close();
 }
 
@@ -5483,7 +5614,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
@@ -5494,6 +5625,7 @@ function bindEvents() {
   $(".payment-entry-panel")?.addEventListener("toggle", renderPaymentEntryPanel);
   $("#addPaymentEntry")?.addEventListener("click", addPaymentEntryFromPanel);
   $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
+  $("#printExpenseReport")?.addEventListener("click", printExpenseReport);
 
   $("#attendanceWorkerFilter").addEventListener("change", () => {
     app.attendanceWorkerFilter = $("#attendanceWorkerFilter").value;
@@ -5664,9 +5796,10 @@ function renderDashboard() {
   const monthWages = dashboardPayTotals.finalPayable;
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
+  const totalUnpaidBalance = roundMoney(directUnpaid + supplierDashboardTotals.unpaid + monthExpenseLedger.unpaid);
   const workerAdvanceRemaining = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, monthDates[monthDates.length - 1]), 0));
 
-  $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
+  if ($("#statTotalWorkers")) $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
@@ -5676,6 +5809,7 @@ function renderDashboard() {
   $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(directUnpaid);
+  if ($("#statTotalUnpaidBalance")) $("#statTotalUnpaidBalance").textContent = money(totalUnpaidBalance);
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);

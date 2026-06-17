@@ -529,6 +529,20 @@ textarea {
   margin-bottom: 18px;
 }
 
+.dashboard-section-title {
+  grid-column: 1 / -1;
+  margin: 8px 0 -4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.dashboard-section-title:first-child {
+  margin-top: 0;
+}
+
 .stat-card,
 .panel,
 .worker-card {
@@ -1654,6 +1668,14 @@ tbody tr:last-child td {
   gap: 10px;
   align-items: end;
   margin: 16px 0;
+}
+
+.expense-report-buyers {
+  min-width: 210px;
+}
+
+.expense-report-buyers select {
+  min-height: 78px;
 }
 
 .expense-form label {
