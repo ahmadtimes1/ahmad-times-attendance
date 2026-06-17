@@ -611,6 +611,38 @@ Object.assign(translations.en, {
   expenses: "Expenses",
   companyExpenses: "Company expenses",
   companyExpensesHelp: "Store daily company expenses such as worker food, car oil, fuel, tools, or site costs.",
+  companyExpenseReport: "Company Expense Report",
+  investorExpenseReport: "Investor expense report",
+  companyExpenseReportHelp: "Full company expense report for investors.",
+  printCompanyExpenseReport: "Investor expense report",
+  exportCompanyExpenseReport: "Export investor CSV",
+  projectWiseReport: "Project-wise report",
+  workerWiseReport: "Worker-wise report",
+  supplierWiseReport: "Supplier-wise report",
+  labourWages: "Labour wages",
+  supplierWorkerWages: "Supplier worker wages",
+  paymentSummary: "Payment summary",
+  role: "Profession",
+  attendanceDays: "Attendance days",
+  records: "Records",
+  totalCompanyExpenses: "Total company expenses",
+  normalHours: "Normal hours",
+  overtimeAmount: "Overtime amount",
+  totalWage: "Total wage",
+  totalLabourWages: "Total labour wages",
+  totalSupplierWorkerWages: "Total supplier worker wages",
+  totalPaidAmount: "Total paid amount",
+  totalUnpaidAmount: "Total unpaid amount",
+  grandTotalExpense: "Grand total expense",
+  materialExpenses: "Material expenses",
+  transportExpenses: "Transport expenses",
+  fuelExpenses: "Fuel expenses",
+  carRent: "Car rent",
+  toolsEquipment: "Tools and equipment",
+  foodGroceryExpenses: "Food / grocery expenses",
+  otherSmallExpenses: "Other small expenses",
+  workersProvided: "Workers provided",
+  dailyRate: "Daily rate",
   expenseReport: "Expense report",
   expenseReportBuyers: "Report buyers",
   printExpenseReport: "Print expense report",
@@ -822,6 +854,38 @@ Object.assign(translations.ps, {
   expenses: "مصارف",
   companyExpenses: "د شرکت مصارف",
   companyExpensesHelp: "د شرکت ورځني مصارف لکه د مزدور خوراک، د موټر تېل، سامان، یا د سایټ مصرفونه ذخیره کړئ.",
+  companyExpenseReport: "د شرکت د مصارفو راپور",
+  investorExpenseReport: "د انویسټر د مصارفو راپور",
+  companyExpenseReportHelp: "د انویسټرانو لپاره د شرکت بشپړ مصارفو راپور.",
+  printCompanyExpenseReport: "د انویسټر راپور چاپ",
+  exportCompanyExpenseReport: "د انویسټر CSV وباسئ",
+  projectWiseReport: "د پروژې له مخې راپور",
+  workerWiseReport: "د کارکوونکي له مخې راپور",
+  supplierWiseReport: "د سپلایر له مخې راپور",
+  labourWages: "د مزدورانو مزدوري",
+  supplierWorkerWages: "د سپلایر مزدورانو مزدوري",
+  paymentSummary: "د تادیاتو لنډیز",
+  role: "مسلک",
+  attendanceDays: "د حاضري ورځې",
+  records: "ریکارډونه",
+  totalCompanyExpenses: "د شرکت ټول مصارف",
+  normalHours: "عادي ساعتونه",
+  overtimeAmount: "د اضافي وخت اندازه",
+  totalWage: "ټوله مزدوري",
+  totalLabourWages: "د مزدورانو ټولې مزدورۍ",
+  totalSupplierWorkerWages: "د سپلایر مزدورانو ټولې مزدورۍ",
+  totalPaidAmount: "ټول ادا شوی مبلغ",
+  totalUnpaidAmount: "ټول ناادا مبلغ",
+  grandTotalExpense: "د ټول لګښت مجموعه",
+  materialExpenses: "د موادو مصارف",
+  transportExpenses: "د ټرانسپورټ مصارف",
+  fuelExpenses: "د تېلو مصارف",
+  carRent: "د موټر کرایه",
+  toolsEquipment: "اوزار او سامان",
+  foodGroceryExpenses: "خوراک / سودا مصارف",
+  otherSmallExpenses: "نور واړه مصارف",
+  workersProvided: "ورکړل شوي مزدوران",
+  dailyRate: "ورځنی نرخ",
   expenseReport: "د مصارفو راپور",
   expenseReportBuyers: "د راپور اخیستونکي",
   printExpenseReport: "د مصارفو راپور چاپ",
@@ -3393,6 +3457,7 @@ function renderReport() {
   const selectedReportIds = selectedReportWorkerIds();
   const reportShift = selectedReportShift();
   const { month, start, end, title } = currentReportPeriod();
+  renderCompanyExpenseReportFilters();
   const reportDates = datesBetween(start, end);
 
   const reportWorkers = app.workers.filter((worker) => {
@@ -3777,6 +3842,7 @@ function supplierReportRows(entries = filteredSupplierEntries()) {
     return [
       entry.date || "",
       entry.supplierName || "",
+      entry.project || "",
       totals.workers,
       money(totals.dailyWage),
       formatHours(totals.overtimeHours),
@@ -3890,6 +3956,289 @@ function printExpenseReport() {
   saveData(false);
 }
 
+function reportProjectFilter() {
+  return $("#companyExpenseProjectFilter")?.value || "all";
+}
+
+function selectedCompanyExpenseSuppliers() {
+  const select = $("#companyExpenseSupplierFilter");
+  if (!select) return [];
+  return Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
+}
+
+function renderCompanyExpenseReportFilters() {
+  const projectSelect = $("#companyExpenseProjectFilter");
+  if (projectSelect) {
+    const current = projectSelect.value || "all";
+    const options = [`<option value="all">${t("allProjects")}</option>`]
+      .concat(projectNames().map((project) => `<option value="${escapeHTML(project)}" ${project === current ? "selected" : ""}>${escapeHTML(project)}</option>`));
+    projectSelect.innerHTML = options.join("");
+    if (!Array.from(projectSelect.options).some((option) => option.value === current)) projectSelect.value = "all";
+  }
+
+  const supplierSelect = $("#companyExpenseSupplierFilter");
+  if (supplierSelect) {
+    const selected = new Set(selectedCompanyExpenseSuppliers());
+    const names = Array.from(new Set((app.supplierEntries || []).map((entry) => String(entry.supplierName || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    supplierSelect.innerHTML = names.map((name) => `<option value="${escapeHTML(name)}" ${selected.has(name) ? "selected" : ""}>${escapeHTML(name)}</option>`).join("");
+  }
+}
+
+function investorExpenseCategoryKey(expense) {
+  const text = [
+    expense.category,
+    expense.merchant,
+    expense.location,
+    expense.description,
+    expense.project,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/(fuel|petrol|diesel|gasoline|pump|engine oil|car oil|تیل|پمپ)/i.test(text)) return "fuelExpenses";
+  if (/(transport|transportation|taxi|bus|pickup|delivery|driver|د ټرانسپورټ|ټرانسپورټ)/i.test(text)) return "transportExpenses";
+  if (/(car rent|vehicle rent|rent car|car hire|موټر کرایه)/i.test(text)) return "carRent";
+  if (/(tool|tools|equipment|machine|drill|ladder|safety|اوزار|سامان)/i.test(text)) return "toolsEquipment";
+  if (/(food|grocery|meal|lunch|dinner|breakfast|restaurant|kitchen|خوراک|ناشته|ډوډۍ|غذا|سودا)/i.test(text)) return "foodGroceryExpenses";
+  if (/(material|cement|steel|sand|paint|block|pipe|wood|tile|مواد|سیمنټ|رنګ)/i.test(text)) return "materialExpenses";
+  if (projectNameOf(expense.project)) return "projectExpenses";
+  return "otherSmallExpenses";
+}
+
+function companyExpenseReportData() {
+  const { start, end, title } = currentReportPeriod();
+  const project = reportProjectFilter();
+  const shift = selectedReportShift();
+  const selectedSuppliers = selectedCompanyExpenseSuppliers();
+  const supplierFilter = new Set(selectedSuppliers.map((name) => name.toLowerCase()));
+  const selectedWorkers = selectedReportWorkerIds();
+  const workerSelection = selectedWorkers.includes("all") ? ["all"] : selectedWorkers;
+
+  const labourRows = summarizeRecords(recordsForRange(start, end, workerSelection, shift))
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end))
+    .filter((row) => project === "all" || projectNameOf(row.worker?.project) === project)
+    .sort((a, b) => displayWorkerName(a.worker).localeCompare(displayWorkerName(b.worker)));
+  const labourTotals = paymentTotals(labourRows, start, end);
+
+  const supplierEntries = (app.supplierEntries || [])
+    .filter((entry) => String(entry.date || "") >= start && String(entry.date || "") <= end)
+    .filter((entry) => project === "all" || projectNameOf(entry.project) === project)
+    .filter((entry) => !supplierFilter.size || supplierFilter.has(String(entry.supplierName || "").trim().toLowerCase()));
+  const supplierRows = Array.from(supplierEntries.reduce((map, entry) => {
+    const name = String(entry.supplierName || "-").trim() || "-";
+    const current = map.get(name) || { name, projects: new Set(), workers: 0, dailyRates: new Set(), overtimeHours: 0, total: 0, paidFromEntries: 0, normal: 0, overtimeAmount: 0 };
+    const totals = supplierEntryTotals(entry);
+    if (projectNameOf(entry.project)) current.projects.add(projectNameOf(entry.project));
+    current.workers += totals.workers;
+    if (totals.dailyWage) current.dailyRates.add(money(totals.dailyWage));
+    current.overtimeHours += totals.overtimeHours;
+    current.normal = roundMoney(current.normal + totals.normalAmount);
+    current.overtimeAmount = roundMoney(current.overtimeAmount + totals.overtimeAmount);
+    current.total = roundMoney(current.total + totals.total);
+    current.paidFromEntries = roundMoney(current.paidFromEntries + totals.paid);
+    map.set(name, current);
+    return map;
+  }, new Map()).values()).map((row) => {
+    const ledgerPaid = supplierPaymentTotal(row.name, start, end);
+    const paid = roundMoney(row.paidFromEntries + ledgerPaid);
+    return {
+      ...row,
+      projectText: row.projects.size ? Array.from(row.projects).join(" / ") : "-",
+      dailyRateText: row.dailyRates.size ? Array.from(row.dailyRates).join(" / ") : money(0),
+      paid,
+      unpaid: roundMoney(Math.max(0, row.total - paid)),
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  const supplierTotalsData = supplierTotals(supplierEntries, start, end);
+
+  const expenseRows = expenseRowsBetween(start, end)
+    .filter((expense) => project === "all" || projectNameOf(expense.project) === project)
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+  const expenseTotalsData = expenseTotalsForRows(expenseRows, "all");
+  const expenseCategories = [
+    "materialExpenses",
+    "transportExpenses",
+    "fuelExpenses",
+    "carRent",
+    "toolsEquipment",
+    "foodGroceryExpenses",
+    "projectExpenses",
+    "otherSmallExpenses",
+  ].map((key) => {
+    const rows = expenseRows.filter((expense) => investorExpenseCategoryKey(expense) === key);
+    const totals = expenseTotalsForRows(rows, "all");
+    return { key, label: t(key), rows, ...totals };
+  });
+
+  const totalPaid = roundMoney(labourTotals.paid + supplierTotalsData.paid + expenseTotalsData.paid);
+  const totalUnpaid = roundMoney(labourTotals.pending + supplierTotalsData.unpaid + expenseTotalsData.unpaid);
+  const grandTotal = roundMoney(labourTotals.gross + supplierTotalsData.total + expenseTotalsData.amount);
+
+  return {
+    start,
+    end,
+    title,
+    project,
+    shift,
+    supplierNames: selectedSuppliers,
+    labourRows,
+    labourTotals,
+    supplierRows,
+    supplierTotals: supplierTotalsData,
+    expenseRows,
+    expenseTotals: expenseTotalsData,
+    expenseCategories,
+    summary: { totalPaid, totalUnpaid, grandTotal },
+  };
+}
+
+function reportTable(headers, rows, emptyText = "") {
+  if (!rows.length) return `<p>${escapeHTML(emptyText || t("noRecordsReport"))}</p>`;
+  return `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function companyExpenseReportHtml(data) {
+  const projectLabel = data.project === "all" ? t("allProjects") : data.project;
+  const supplierLabel = data.supplierNames.length ? data.supplierNames.join(", ") : t("all");
+  const labourRows = data.labourRows.map((row) => {
+    const paid = rowPaidAmount(row, data.start, data.end);
+    const unpaid = rowUnpaidAmount(row, data.start, data.end);
+    const normalHours = Math.max(0, Number(row.hours || 0) - Number(row.overtime || 0));
+    return [
+      displayWorkerName(row.worker),
+      row.worker.role || t("roleWorker"),
+      money(row.dailyWage || currentDailyWage(row.worker)),
+      String(row.present + ((row.halfday || 0) * 0.5)),
+      formatHours(normalHours),
+      formatHours(row.overtime || 0),
+      money(row.overtimeWage || 0),
+      money(paid),
+      money(unpaid),
+      money(row.wage || 0),
+    ];
+  });
+  const supplierRows = data.supplierRows.map((row) => [
+    row.name,
+    row.projectText,
+    String(row.workers),
+    row.dailyRateText,
+    formatHours(row.overtimeHours),
+    money(row.paid),
+    money(row.unpaid),
+    money(row.total),
+  ]);
+  const expenseCategoryRows = data.expenseCategories.map((item) => [
+    item.label,
+    money(item.amount),
+    money(item.paid),
+    money(item.unpaid),
+    String(item.rows.length),
+  ]);
+  const expenseRows = data.expenseRows.map((expense) => {
+    const ledger = expenseLedger(expense);
+    return [
+      expense.date || "-",
+      expenseBuyerName(expense),
+      t(investorExpenseCategoryKey(expense)),
+      expense.project || "-",
+      expense.merchant || "-",
+      expense.description || "-",
+      money(ledger.amount),
+      money(ledger.paid),
+      money(ledger.unpaid),
+    ];
+  });
+
+  return `
+    <p>${escapeHTML(data.title)} · ${t("fromDate")}: ${escapeHTML(data.start)} · ${t("toDate")}: ${escapeHTML(data.end)} · ${t("projectName")}: ${escapeHTML(projectLabel)} · ${t("supplierName")}: ${escapeHTML(supplierLabel)}</p>
+    <div class="summary-grid">
+      <div class="row"><span>${t("totalCompanyExpenses") || t("totalExpenses")}</span><strong>${money(data.expenseTotals.amount)}</strong></div>
+      <div class="row"><span>${t("totalLabourWages")}</span><strong>${money(data.labourTotals.gross)}</strong></div>
+      <div class="row"><span>${t("totalSupplierWorkerWages")}</span><strong>${money(data.supplierTotals.total)}</strong></div>
+      <div class="row"><span>${t("totalPaidAmount")}</span><strong>${money(data.summary.totalPaid)}</strong></div>
+      <div class="row"><span>${t("totalUnpaidAmount")}</span><strong>${money(data.summary.totalUnpaid)}</strong></div>
+      <div class="row"><span>${t("grandTotalExpense")}</span><strong>${money(data.summary.grandTotal)}</strong></div>
+    </div>
+    <h2>${t("labourWages")}</h2>
+    ${reportTable([t("worker"), t("role"), t("dailyWage"), t("attendanceDays"), t("normalHours"), t("overtime"), t("overtimeAmount"), t("paid"), t("unpaid"), t("totalWage")], labourRows, t("noRecordsReport"))}
+    <h2>${t("supplierWorkerWages")}</h2>
+    ${reportTable([t("supplierName"), t("projectName"), t("workersProvided"), t("dailyRate"), t("overtime"), t("paid"), t("unpaid"), t("totalSupplierAmount")], supplierRows, t("noSupplierEntries"))}
+    <h2>${t("companyExpenses")}</h2>
+    ${reportTable([t("expenseCategory"), t("expenseAmount"), t("paid"), t("unpaid"), t("records")], expenseCategoryRows, t("noExpenses"))}
+    <h2>${t("companyExpenses")} · ${t("details")}</h2>
+    ${reportTable([t("date"), t("buyerName"), t("expenseCategory"), t("projectName"), t("marketName"), t("expenseDescription"), t("expenseAmount"), t("paid"), t("unpaid")], expenseRows, t("noExpenses"))}
+    <h2>${t("paymentSummary")}</h2>
+    <div class="summary-grid">
+      <div class="row"><span>${t("totalExpenses")}</span><strong>${money(data.expenseTotals.amount)}</strong></div>
+      <div class="row"><span>${t("totalLabourWages")}</span><strong>${money(data.labourTotals.gross)}</strong></div>
+      <div class="row"><span>${t("totalSupplierWorkerWages")}</span><strong>${money(data.supplierTotals.total)}</strong></div>
+      <div class="row"><span>${t("totalPaidAmount")}</span><strong>${money(data.summary.totalPaid)}</strong></div>
+      <div class="row"><span>${t("totalUnpaidAmount")}</span><strong>${money(data.summary.totalUnpaid)}</strong></div>
+      <div class="row"><span>${t("grandTotalExpense")}</span><strong>${money(data.summary.grandTotal)}</strong></div>
+    </div>
+  `;
+}
+
+function printCompanyExpenseReport() {
+  return withLanguage(reportLanguage(), () => {
+    renderReport();
+    const data = companyExpenseReportData();
+    printPlainReport(t("companyExpenseReport"), companyExpenseReportHtml(data));
+    addLog("Investor company expense report printed", `${data.start} to ${data.end} · ${data.project}`);
+    saveData(false);
+  });
+}
+
+function exportCompanyExpenseReportCSV() {
+  return withLanguage(reportLanguage(), () => {
+    renderReport();
+    const data = companyExpenseReportData();
+    const rows = [];
+    rows.push([t("companyExpenseReport"), data.title]);
+    rows.push([t("fromDate"), data.start, t("toDate"), data.end, t("projectName"), data.project === "all" ? t("allProjects") : data.project]);
+    rows.push([]);
+    rows.push([t("paymentSummary")]);
+    rows.push([t("totalExpenses"), money(data.expenseTotals.amount)]);
+    rows.push([t("totalLabourWages"), money(data.labourTotals.gross)]);
+    rows.push([t("totalSupplierWorkerWages"), money(data.supplierTotals.total)]);
+    rows.push([t("totalPaidAmount"), money(data.summary.totalPaid)]);
+    rows.push([t("totalUnpaidAmount"), money(data.summary.totalUnpaid)]);
+    rows.push([t("grandTotalExpense"), money(data.summary.grandTotal)]);
+    rows.push([]);
+    rows.push([t("labourWages")]);
+    rows.push([t("worker"), t("role"), t("dailyWage"), t("attendanceDays"), t("normalHours"), t("overtime"), t("overtimeAmount"), t("paid"), t("unpaid"), t("totalWage")]);
+    data.labourRows.forEach((row) => {
+      rows.push([
+        displayWorkerName(row.worker),
+        row.worker.role || t("roleWorker"),
+        money(row.dailyWage || currentDailyWage(row.worker)),
+        String(row.present + ((row.halfday || 0) * 0.5)),
+        formatHours(Math.max(0, Number(row.hours || 0) - Number(row.overtime || 0))),
+        formatHours(row.overtime || 0),
+        money(row.overtimeWage || 0),
+        money(rowPaidAmount(row, data.start, data.end)),
+        money(rowUnpaidAmount(row, data.start, data.end)),
+        money(row.wage || 0),
+      ]);
+    });
+    rows.push([]);
+    rows.push([t("supplierWorkerWages")]);
+    rows.push([t("supplierName"), t("projectName"), t("workersProvided"), t("dailyRate"), t("overtime"), t("paid"), t("unpaid"), t("totalSupplierAmount")]);
+    data.supplierRows.forEach((row) => rows.push([row.name, row.projectText, row.workers, row.dailyRateText, formatHours(row.overtimeHours), money(row.paid), money(row.unpaid), money(row.total)]));
+    rows.push([]);
+    rows.push([t("companyExpenses")]);
+    rows.push([t("expenseCategory"), t("expenseAmount"), t("paid"), t("unpaid"), t("records")]);
+    data.expenseCategories.forEach((item) => rows.push([item.label, money(item.amount), money(item.paid), money(item.unpaid), item.rows.length]));
+    rows.push([]);
+    rows.push([t("companyExpenses"), t("details")]);
+    rows.push([t("date"), t("buyerName"), t("expenseCategory"), t("projectName"), t("marketName"), t("expenseDescription"), t("expenseAmount"), t("paid"), t("unpaid")]);
+    data.expenseRows.forEach((expense) => {
+      const ledger = expenseLedger(expense);
+      rows.push([expense.date || "-", expenseBuyerName(expense), t(investorExpenseCategoryKey(expense)), expense.project || "-", expense.merchant || "-", expense.description || "-", money(ledger.amount), money(ledger.paid), money(ledger.unpaid)]);
+    });
+    downloadFile(`company-expense-report-${data.start}-${data.end}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
+    addLog("Investor company expense CSV exported", `${data.start} to ${data.end} · ${data.project}`);
+    saveData(false);
+  });
+}
+
 function projectNameOf(value) {
   return String(value || "").trim();
 }
@@ -3898,6 +4247,7 @@ function projectNames() {
   const names = [
     ...(app.projectBudgets || []).map((entry) => projectNameOf(entry.project)),
     ...(app.expenses || []).map((expense) => projectNameOf(expense.project)),
+    ...(app.supplierEntries || []).map((entry) => projectNameOf(entry.project)),
     ...(app.workers || []).map((worker) => projectNameOf(worker.project)),
   ];
   return Array.from(new Set(names.filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -4137,6 +4487,7 @@ function exportBudgetCSV() {
 
 function renderSupplierWorkers() {
   if (!$("#supplierEntriesList")) return;
+  renderProjectOptions();
   const month = $("#supplierMonth")?.value || monthISO();
   const allMonthEntries = monthSupplierEntries(month);
   const filtered = filteredSupplierEntries();
@@ -4162,6 +4513,7 @@ function renderSupplierWorkers() {
     return `<tr>
       <td>${entry.date || "-"}</td>
       <td>${escapeHTML(entry.supplierName || "-")}</td>
+      <td>${escapeHTML(entry.project || "-")}</td>
       <td>${totals.workers}</td>
       <td>${money(totals.dailyWage)}</td>
       <td>${formatHours(totals.overtimeHours)}</td>
@@ -4178,7 +4530,7 @@ function renderSupplierWorkers() {
         <button class="danger ghost" data-remove-supplier="${entry.id}">${t("remove")}</button>
       </td>
     </tr>`;
-  }).join("") || `<tr><td colspan="14">${t("noSupplierEntries")}</td></tr>`;
+  }).join("") || `<tr><td colspan="15">${t("noSupplierEntries")}</td></tr>`;
 }
 
 function resetSupplierForm(keepDate = true) {
@@ -4209,6 +4561,7 @@ function addSupplierEntryFromForm() {
     id: existing?.id || makeId(),
     date,
     supplierName,
+    project: $("#supplierProject")?.value.trim() || "",
     workerCount,
     dailyWage,
     overtimeHours: Math.max(0, Number($("#supplierOvertimeHours").value || 0)),
@@ -4238,6 +4591,7 @@ function editSupplierEntry(id) {
   $("#supplierEditId").value = entry.id;
   $("#supplierDate").value = entry.date || todayISO();
   $("#supplierName").value = entry.supplierName || "";
+  if ($("#supplierProject")) $("#supplierProject").value = entry.project || "";
   $("#supplierWorkerCount").value = Number(entry.workerCount || 0);
   $("#supplierDailyWage").value = Number(entry.dailyWage || 0);
   $("#supplierOvertimeHours").value = Number(entry.overtimeHours || 0);
@@ -4263,7 +4617,7 @@ function printSupplierReport() {
   const entries = filteredSupplierEntries();
   const rows = supplierReportRows(entries);
   const totals = supplierTotals(entries);
-  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("transportationCharges"), t("previousLoan"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
+  const headers = [t("date"), t("supplierName"), t("projectName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("transportationCharges"), t("previousLoan"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
   const table = `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   printPlainReport(t("supplierWorkers"), `
     <div class="row"><span>${t("totalSupplierAmount")}</span><strong>${money(totals.total)}</strong></div>
@@ -4275,7 +4629,7 @@ function printSupplierReport() {
 }
 
 function exportSupplierCSV() {
-  const headers = [t("date"), t("supplierName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("transportationCharges"), t("previousLoan"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
+  const headers = [t("date"), t("supplierName"), t("projectName"), t("supplierWorkerCount"), t("supplierDailyWage"), t("supplierOvertimeHours"), t("normalAmount"), t("overtimeAmount"), t("transportationCharges"), t("previousLoan"), t("totalSupplierAmount"), t("paidAmount"), t("unpaidAmount"), t("paymentNote")];
   const rows = [headers, ...supplierReportRows()];
   downloadFile(`supplier-workers-report-${todayISO()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\n")}`, "text/csv;charset=utf-8");
   addLog("Supplier CSV exported", `${rows.length - 1} rows`);
@@ -5085,8 +5439,9 @@ function printPlainReport(title, bodyHtml) {
   const win = window.open("", "_blank");
   if (!win) return;
   const logoUrl = new URL("ahmad-times-logo.png", window.location.href).href;
-  win.document.write(`<!doctype html><html><head><title>${escapeHTML(title)}</title><style>
-    body{font-family:Arial,sans-serif;padding:24px;color:#1d2433;background:#fff}
+  const dir = app.language === "ps" ? "rtl" : "ltr";
+  win.document.write(`<!doctype html><html lang="${escapeHTML(app.language || "en")}" dir="${dir}"><head><title>${escapeHTML(title)}</title><style>
+    body{font-family:Arial,sans-serif;padding:24px;color:#1d2433;background:#fff;direction:${dir}}
     .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #bce7f7}
     .brand img{width:58px;height:58px;object-fit:contain;border-radius:50%}
     .brand strong{display:block;font-size:19px}
@@ -5099,7 +5454,7 @@ function printPlainReport(title, bodyHtml) {
     .row span{color:#667085;font-size:12px;font-weight:700}
     .row strong{display:block;margin-top:4px;font-size:16px}
     table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
-    th,td{padding:8px;border-bottom:1px solid #e4e7ec;text-align:left;vertical-align:top}
+    th,td{padding:8px;border-bottom:1px solid #e4e7ec;text-align:inherit;vertical-align:top}
     th{background:#f7fbfd;color:#667085;font-size:11px;text-transform:uppercase}
     @media print{body{padding:12px}.summary-grid{grid-template-columns:repeat(4,1fr)}}
   </style></head><body><div class="brand"><img src="${logoUrl}" alt="Ahmad Times logo"><div><strong>Ahmad Times For Building Maintenance L.L.C</strong><span>${escapeHTML(title)} · ${new Date().toLocaleString()}</span></div></div><h1>${escapeHTML(title)}</h1>${bodyHtml}<script>window.print()</script></body></html>`);
@@ -5614,7 +5969,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
@@ -5703,6 +6058,8 @@ function bindEvents() {
   $("#clearMonth").addEventListener("click", () => bulkSetMonth(""));
   $("#printReport").addEventListener("click", printReportOnly);
   $("#pdfReport").addEventListener("click", openPdfReport);
+  $("#printCompanyExpenseReport")?.addEventListener("click", printCompanyExpenseReport);
+  $("#exportCompanyExpenseReport")?.addEventListener("click", exportCompanyExpenseReportCSV);
   $("#printAllWages").addEventListener("click", () => {
     Array.from($("#reportWorker").options).forEach((option) => {
       option.selected = option.value === "all";

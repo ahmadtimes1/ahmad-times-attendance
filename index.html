@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=expense-report-1">
+    <link rel="stylesheet" href="styles.css?v=investor-report-2">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -391,6 +391,7 @@
               <input id="supplierEditId" type="hidden">
               <label><span data-i18n="date">Date</span><input id="supplierDate" type="date" required></label>
               <label><span data-i18n="supplierName">Supplier name</span><input id="supplierName" required></label>
+              <label><span data-i18n="projectName">Project / site</span><input id="supplierProject" list="projectNameOptions" data-i18n-placeholder="projectNamePlaceholder" placeholder="Project or site"></label>
               <label><span data-i18n="supplierWorkerCount">Workers provided today</span><input id="supplierWorkerCount" type="number" min="0" step="1" required></label>
               <label><span data-i18n="supplierDailyWage">Daily wage per worker</span><input id="supplierDailyWage" type="number" min="0" step="0.01" required></label>
               <label><span data-i18n="supplierOvertimeHours">Overtime hours per worker</span><input id="supplierOvertimeHours" type="number" min="0" step="0.25" value="0"></label>
@@ -421,6 +422,7 @@
                   <tr>
                     <th data-i18n="date">Date</th>
                     <th data-i18n="supplierName">Supplier name</th>
+                    <th data-i18n="projectName">Project / site</th>
                     <th data-i18n="supplierWorkerCount">Workers</th>
                     <th data-i18n="supplierDailyWage">Daily wage</th>
                     <th data-i18n="supplierOvertimeHours">Overtime hours</th>
@@ -604,6 +606,16 @@
               </select>
             </label>
             <label>
+              <span data-i18n="projectWiseReport">Project-wise report</span>
+              <select id="companyExpenseProjectFilter">
+                <option value="all" data-i18n="allProjects">All projects</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="supplierWiseReport">Supplier-wise report</span>
+              <select id="companyExpenseSupplierFilter" multiple size="5"></select>
+            </label>
+            <label>
               <span data-i18n="reportLanguage">Report language</span>
               <select id="reportLanguage">
                 <option value="en">English</option>
@@ -615,6 +627,8 @@
             <button id="printAllWages" data-i18n="printAllWages">Print all wages</button>
             <button id="printSelectedWage" data-i18n="printSelectedWage">Print selected wage</button>
             <button id="exportReport" data-i18n="exportCsv">Export CSV</button>
+            <button id="printCompanyExpenseReport" data-i18n="printCompanyExpenseReport">Investor expense report</button>
+            <button id="exportCompanyExpenseReport" data-i18n="exportCompanyExpenseReport">Export investor CSV</button>
           </div>
           <details class="panel payment-entry-panel" open>
             <summary data-i18n="addPaymentEntry">Add payment entry</summary>
@@ -953,6 +967,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=expense-report-1"></script>
+    <script src="app.js?v=investor-report-2"></script>
   </body>
 </html>
