@@ -110,6 +110,24 @@ const translations = {
     buildingMaintenance: "Building Maintenance",
     payrollLock: "Payroll lock",
     payrollLockHelp: "Lock a finished month so attendance, wages, and payments cannot be changed by mistake.",
+    payrollApproval: "Monthly payroll approval",
+    payrollApprovalHelp: "A manager submits the month for review. An admin verifies it, approves it, and locks it.",
+    submitForApproval: "Submit for approval",
+    approveAndLock: "Approve and lock",
+    returnToDraft: "Return to draft",
+    approvalDraft: "Draft",
+    approvalSubmitted: "Submitted",
+    approvalApproved: "Approved and locked",
+    approvalReturned: "Returned for correction",
+    payrollSubmitted: "Payroll submitted for approval",
+    payrollApproved: "Payroll approved and locked",
+    payrollReturned: "Payroll returned to draft",
+    approvalBlocked: "Fix payroll verification problems before submitting or approving.",
+    monthSubmittedLocked: "This month is submitted for approval. Return it to draft before changing records.",
+    monthlyReconciliation: "Monthly reconciliation",
+    balanced: "Balanced",
+    difference: "Difference",
+    overpaidAmount: "Overpaid amount",
     lockMonth: "Lock month",
     unlockMonth: "Unlock month",
     dailyBackups: "Daily backups",
@@ -357,6 +375,24 @@ const translations = {
     buildingMaintenance: "بلډنګ مینټیننس",
     payrollLock: "د معاش بندول",
     payrollLockHelp: "ختمه میاشت بنده کړئ چې معلومات په غلطۍ بدل نه شي.",
+    payrollApproval: "د میاشتني معاش تایید",
+    payrollApprovalHelp: "منیجر میاشت د کتنې لپاره سپاري، اډمین یې تاییدوي او بندوي.",
+    submitForApproval: "د تایید لپاره وسپارئ",
+    approveAndLock: "تایید او بند کړئ",
+    returnToDraft: "مسودې ته ستنول",
+    approvalDraft: "مسوده",
+    approvalSubmitted: "سپارل شوی",
+    approvalApproved: "تایید او بند شوی",
+    approvalReturned: "د سمون لپاره ستنول شوی",
+    payrollSubmitted: "معاش د تایید لپاره وسپارل شو",
+    payrollApproved: "معاش تایید او بند شو",
+    payrollReturned: "معاش مسودې ته ستون شو",
+    approvalBlocked: "د سپارلو یا تایید څخه مخکې د معاش ستونزې سمې کړئ.",
+    monthSubmittedLocked: "دا میاشت د تایید لپاره سپارل شوې؛ د بدلون مخکې یې مسودې ته ستنه کړئ.",
+    monthlyReconciliation: "میاشتنی حساب برابرول",
+    balanced: "برابر",
+    difference: "توپیر",
+    overpaidAmount: "زیاته ورکړه",
     lockMonth: "میاشت بنده کړئ",
     unlockMonth: "میاشت خلاصه کړئ",
     dailyBackups: "ورځني بیک اپونه",
@@ -1004,6 +1040,7 @@ const app = {
   workerAdvances: [],
   logs: [],
   payrollLocks: {},
+  payrollApprovals: {},
   dailyBackups: {},
   lastSaved: null,
   lastCloudSaveError: "",
@@ -1080,6 +1117,7 @@ function snapshotAppData() {
     supplierPayments: app.supplierPayments || [],
     workerAdvances: app.workerAdvances || [],
     payrollLocks: app.payrollLocks || {},
+    payrollApprovals: app.payrollApprovals || {},
     dailyBackups: app.dailyBackups || {},
   });
 }
@@ -1095,6 +1133,7 @@ function normalizeAppCollections() {
   app.workerAdvances ||= [];
   app.logs ||= [];
   app.payrollLocks ||= {};
+  app.payrollApprovals ||= {};
   app.dailyBackups ||= {};
   normalizePaymentLedger();
 }
@@ -1134,6 +1173,9 @@ function restoreSnapshot(snapshot) {
   app.supplierEntries = data.supplierEntries || [];
   app.supplierPayments = data.supplierPayments || [];
   app.workerAdvances = data.workerAdvances || [];
+  app.payrollLocks = data.payrollLocks || {};
+  app.payrollApprovals = data.payrollApprovals || {};
+  app.dailyBackups = data.dailyBackups || {};
   normalizeAppCollections();
   clearCalculationCache();
 }
@@ -1237,6 +1279,11 @@ function canChangePayrollDate(date, action = "change") {
     addLog("Blocked locked payroll change", `${action} · ${date}`);
     return false;
   }
+  if (app.payrollApprovals?.[monthFromDate(date)]?.status === "submitted") {
+    toast(t("monthSubmittedLocked"));
+    addLog("Blocked submitted payroll change", `${action} · ${date}`);
+    return false;
+  }
   if (date < todayISO() && !confirm(t("oldChangeWarning"))) {
     addLog("Old record change cancelled", `${action} · ${date}`);
     return false;
@@ -1259,6 +1306,7 @@ function createDailyBackup() {
     supplierPayments: cloneData(app.supplierPayments),
     workerAdvances: cloneData(app.workerAdvances),
     payrollLocks: cloneData(app.payrollLocks),
+    payrollApprovals: cloneData(app.payrollApprovals),
   };
   const dates = Object.keys(app.dailyBackups).sort();
   while (dates.length > 45) delete app.dailyBackups[dates.shift()];
@@ -1721,6 +1769,7 @@ function persistentPayload({ includeDailyBackups = false } = {}) {
     supplierPayments: app.supplierPayments,
     workerAdvances: app.workerAdvances,
     payrollLocks: app.payrollLocks,
+    payrollApprovals: app.payrollApprovals,
     dailyBackups: includeDailyBackups ? app.dailyBackups : {},
     logs: (app.logs || []).slice(0, 300),
     lastSaved: app.lastSaved,
@@ -1861,6 +1910,7 @@ function setDefaults() {
   if ($("#reportEndDate")) $("#reportEndDate").value = today;
   $("#dashboardMonth").value = month;
   $("#lockMonth").value = month;
+  if ($("#approvalMonth")) $("#approvalMonth").value = month;
   $("#attendanceMonth").value = month;
   $("#expenseMonth").value = month;
   if ($("#budgetFromMonth")) $("#budgetFromMonth").value = month;
@@ -2433,6 +2483,7 @@ function saveSupplierPayment(supplierName, start, end, paidAmount, paymentDate, 
     toast(t("addPaymentAmountFirst"));
     return;
   }
+  if (!canChangePayrollDate(date, "Supplier payment")) return;
   app.supplierPayments ||= [];
   app.supplierPayments.push({
     id: `supplier_payment__${date}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
@@ -4553,6 +4604,8 @@ function addSupplierEntryFromForm() {
   const dailyWage = roundMoney($("#supplierDailyWage").value || 0);
   const editId = $("#supplierEditId")?.value || "";
   const existing = editId ? app.supplierEntries.find((item) => item.id === editId) : null;
+  if (!canChangePayrollDate(existing?.date || date, "Supplier entry")) return;
+  if (existing?.date && existing.date !== date && !canChangePayrollDate(date, "Supplier entry date")) return;
   if (!supplierName || workerCount <= 0 || dailyWage <= 0) {
     toast(t("requiredFields"));
     return;
@@ -4606,6 +4659,7 @@ function editSupplierEntry(id) {
 
 function removeSupplierEntry(id) {
   const entry = app.supplierEntries.find((item) => item.id === id);
+  if (!entry || !canChangePayrollDate(entry.date || todayISO(), "Remove supplier entry")) return;
   app.supplierEntries = app.supplierEntries.filter((item) => item.id !== id);
   if ($("#supplierEditId")?.value === id) resetSupplierForm(true);
   addLog("Supplier entry removed", `${entry?.supplierName || id} · ${entry?.date || "-"}`);
@@ -5006,9 +5060,88 @@ function workerLifetimeSummary(workerId) {
   };
 }
 
+function payrollApprovalStatusLabel(status) {
+  if (status === "submitted") return t("approvalSubmitted");
+  if (status === "approved") return t("approvalApproved");
+  if (status === "returned") return t("approvalReturned");
+  return t("approvalDraft");
+}
+
+function monthlyReconciliation(month = monthISO()) {
+  const dates = daysInMonth(month);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const direct = monthSummary(month).reduce((result, row) => {
+    const total = rowFinalPayable(row, start, end);
+    const paid = rowPaidAmount(row, start, end);
+    result.total = roundMoney(result.total + total);
+    result.paid = roundMoney(result.paid + Math.min(paid, total));
+    result.unpaid = roundMoney(result.unpaid + Math.max(0, total - paid));
+    result.overpaid = roundMoney(result.overpaid + Math.max(0, paid - total));
+    return result;
+  }, { total: 0, paid: 0, unpaid: 0, overpaid: 0 });
+  const supplierEntries = monthSupplierEntries(month);
+  const supplierNames = new Set([
+    ...supplierEntries.map((entry) => String(entry.supplierName || "").trim()).filter(Boolean),
+    ...supplierPaymentEntries()
+      .filter((payment) => paymentAppliesToRange(payment, start, end))
+      .map((payment) => payment.supplierName),
+  ]);
+  const supplier = Array.from(supplierNames).reduce((result, supplierName) => {
+    const entries = supplierEntries.filter((entry) => String(entry.supplierName || "").trim().toLowerCase() === supplierName.toLowerCase());
+    const entryAmounts = entries.reduce((sum, entry) => {
+      const totals = supplierEntryTotals(entry);
+      sum.total = roundMoney(sum.total + totals.total);
+      sum.paid = roundMoney(sum.paid + totals.paid);
+      return sum;
+    }, { total: 0, paid: 0 });
+    const paid = roundMoney(entryAmounts.paid + supplierPaymentTotal(supplierName, start, end));
+    result.total = roundMoney(result.total + entryAmounts.total);
+    result.paid = roundMoney(result.paid + Math.min(paid, entryAmounts.total));
+    result.unpaid = roundMoney(result.unpaid + Math.max(0, entryAmounts.total - paid));
+    result.overpaid = roundMoney(result.overpaid + Math.max(0, paid - entryAmounts.total));
+    return result;
+  }, { total: 0, paid: 0, unpaid: 0, overpaid: 0 });
+  const expenses = monthExpenses(month).reduce((result, expense) => {
+    const ledger = expenseLedger(expense);
+    result.total = roundMoney(result.total + ledger.amount);
+    result.paid = roundMoney(result.paid + ledger.paid);
+    result.unpaid = roundMoney(result.unpaid + ledger.unpaid);
+    result.overpaid = roundMoney(result.overpaid + ledger.balance);
+    return result;
+  }, { total: 0, paid: 0, unpaid: 0, overpaid: 0 });
+
+  const total = roundMoney(direct.total + supplier.total + expenses.total);
+  const paidApplied = roundMoney(direct.paid + supplier.paid + expenses.paid);
+  const unpaid = roundMoney(direct.unpaid + supplier.unpaid + expenses.unpaid);
+  const overpaid = roundMoney(direct.overpaid + supplier.overpaid + expenses.overpaid);
+  return {
+    month,
+    total,
+    paidApplied,
+    unpaid,
+    overpaid,
+    difference: roundMoney(total - paidApplied - unpaid),
+  };
+}
+
 function renderSafety() {
   if (!$("#payrollLocksList")) return;
   const month = $("#lockMonth").value || monthISO();
+  const approvalMonth = $("#approvalMonth")?.value || month;
+  const approval = app.payrollApprovals?.[approvalMonth] || { status: "draft" };
+  const approvalStatus = isMonthLocked(approvalMonth) ? "approved" : (approval.status || "draft");
+  if ($("#payrollApprovalList")) {
+    const activityAt = approval.approvedAt || approval.submittedAt || approval.returnedAt;
+    const activityBy = approval.approvedBy || approval.submittedBy || approval.returnedBy;
+    $("#payrollApprovalList").innerHTML = `
+      <div><span>${escapeHTML(approvalMonth)}</span><strong>${escapeHTML(payrollApprovalStatusLabel(approvalStatus))}</strong></div>
+      <div><span>${t("user")}</span><strong>${escapeHTML(activityBy || "-")}${activityAt ? ` · ${new Date(activityAt).toLocaleString()}` : ""}</strong></div>
+    `;
+  }
+  if ($("#submitPayrollMonth")) $("#submitPayrollMonth").disabled = isMonthLocked(approvalMonth) || approvalStatus === "submitted" || approvalStatus === "approved";
+  if ($("#approvePayrollMonth")) $("#approvePayrollMonth").disabled = !isAdmin() || approvalStatus !== "submitted";
+  if ($("#returnPayrollMonth")) $("#returnPayrollMonth").disabled = !isAdmin() || !["submitted", "approved"].includes(approvalStatus);
   const locks = Object.entries(app.payrollLocks || {}).sort((a, b) => b[0].localeCompare(a[0]));
   $("#payrollLocksList").innerHTML = locks.length
     ? locks.map(([lockMonth, lock]) => `<div><span>${lockMonth}</span><strong>${escapeHTML(lock.user || "-")} · ${new Date(lock.at).toLocaleString()}</strong></div>`).join("")
@@ -5025,12 +5158,20 @@ function renderSafety() {
     : `<div><span>${t("mistakeAlerts")}</span><strong>${t("noAlerts")}</strong></div>`;
 
   const verification = verifyPayrollCalculations(month);
+  const reconciliation = monthlyReconciliation(month);
   const latestBackup = backups[0];
   const verificationItems = [
     {
       label: t("payrollVerification"),
       value: verification.issueCount ? `${t("needsReview")} · ${verification.issueCount}` : `${t("verified")} · ${verification.rowCount} ${t("workers")}`,
       bad: verification.issueCount > 0,
+    },
+    {
+      label: t("monthlyReconciliation"),
+      value: Math.abs(reconciliation.difference) <= 0.01 && reconciliation.overpaid <= 0.01
+        ? `${t("balanced")} · ${money(reconciliation.total)} = ${money(reconciliation.paidApplied)} + ${money(reconciliation.unpaid)}`
+        : `${t("needsReview")} · ${t("difference")}: ${money(reconciliation.difference)} · ${t("overpaidAmount")}: ${money(reconciliation.overpaid)}`,
+      bad: Math.abs(reconciliation.difference) > 0.01 || reconciliation.overpaid > 0.01,
     },
     {
       label: t("dataSafety"),
@@ -5419,10 +5560,86 @@ function downloadLatestDailyBackup() {
   addLog("Daily backup downloaded", latest[0]);
 }
 
+function submitPayrollMonth() {
+  const month = $("#approvalMonth")?.value || monthISO();
+  if (isMonthLocked(month)) {
+    toast(t("monthLocked"));
+    return;
+  }
+  const verification = verifyPayrollCalculations(month);
+  if (verification.issueCount) {
+    toast(t("approvalBlocked"));
+    return;
+  }
+  const previous = app.payrollApprovals?.[month] || {};
+  app.payrollApprovals[month] = {
+    ...previous,
+    status: "submitted",
+    submittedAt: new Date().toISOString(),
+    submittedBy: currentUserLabel(),
+    approvedAt: "",
+    approvedBy: "",
+  };
+  addLog("Payroll submitted for approval", month);
+  saveData();
+  toast(t("payrollSubmitted"));
+}
+
+function approvePayrollMonth() {
+  if (!requireAdmin()) return;
+  const month = $("#approvalMonth")?.value || monthISO();
+  const approval = app.payrollApprovals?.[month];
+  if (approval?.status !== "submitted") return;
+  const verification = verifyPayrollCalculations(month);
+  if (verification.issueCount) {
+    toast(t("approvalBlocked"));
+    return;
+  }
+  const now = new Date().toISOString();
+  app.payrollApprovals[month] = {
+    ...approval,
+    status: "approved",
+    approvedAt: now,
+    approvedBy: currentUserLabel(),
+  };
+  app.payrollLocks[month] = { at: now, user: currentUserLabel(), source: "approval" };
+  addLog("Payroll approved and locked", month);
+  saveData();
+  toast(t("payrollApproved"));
+}
+
+function returnPayrollMonthToDraft() {
+  if (!requireAdmin()) return;
+  const month = $("#approvalMonth")?.value || monthISO();
+  const previous = app.payrollApprovals?.[month] || {};
+  delete app.payrollLocks[month];
+  app.payrollApprovals[month] = {
+    ...previous,
+    status: "returned",
+    returnedAt: new Date().toISOString(),
+    returnedBy: currentUserLabel(),
+  };
+  addLog("Payroll returned to draft", month);
+  saveData();
+  toast(t("payrollReturned"));
+}
+
 function lockPayrollMonth() {
   if (!requireAdmin()) return;
   const month = $("#lockMonth").value || monthISO();
-  app.payrollLocks[month] = { at: new Date().toISOString(), user: currentUserLabel() };
+  const verification = verifyPayrollCalculations(month);
+  if (verification.issueCount) {
+    toast(t("approvalBlocked"));
+    return;
+  }
+  const now = new Date().toISOString();
+  app.payrollLocks[month] = { at: now, user: currentUserLabel(), source: "manual" };
+  app.payrollApprovals[month] = {
+    ...(app.payrollApprovals?.[month] || {}),
+    status: "approved",
+    approvedAt: now,
+    approvedBy: currentUserLabel(),
+  };
   addLog("Payroll month locked", month);
   saveData();
 }
@@ -5431,6 +5648,12 @@ function unlockPayrollMonth() {
   if (!requireAdmin()) return;
   const month = $("#lockMonth").value || monthISO();
   delete app.payrollLocks[month];
+  app.payrollApprovals[month] = {
+    ...(app.payrollApprovals?.[month] || {}),
+    status: "returned",
+    returnedAt: new Date().toISOString(),
+    returnedBy: currentUserLabel(),
+  };
   addLog("Payroll month unlocked", month);
   saveData();
 }
@@ -5495,6 +5718,7 @@ function importBackup(file) {
       app.supplierPayments = parsed.supplierPayments || [];
       app.workerAdvances = parsed.workerAdvances || [];
       app.payrollLocks = parsed.payrollLocks || {};
+      app.payrollApprovals = parsed.payrollApprovals || {};
       app.dailyBackups = parsed.dailyBackups || {};
       app.logs = parsed.logs || app.logs || [];
       app.lastSaved = parsed.lastSaved || new Date().toISOString();
@@ -5969,7 +6193,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
@@ -6080,6 +6304,9 @@ function bindEvents() {
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
   $("#downloadLatestBackup").addEventListener("click", downloadLatestDailyBackup);
+  $("#submitPayrollMonth")?.addEventListener("click", submitPayrollMonth);
+  $("#approvePayrollMonth")?.addEventListener("click", approvePayrollMonth);
+  $("#returnPayrollMonth")?.addEventListener("click", returnPayrollMonthToDraft);
   $("#lockPayrollMonth").addEventListener("click", lockPayrollMonth);
   $("#unlockPayrollMonth").addEventListener("click", unlockPayrollMonth);
   $("#printSettlement").addEventListener("click", printSettlement);
@@ -6111,6 +6338,10 @@ function bulkSetMonth(status) {
   const dates = daysInMonth(month);
   if (isMonthLocked(month)) {
     toast(t("monthLocked"));
+    return;
+  }
+  if (app.payrollApprovals?.[month]?.status === "submitted") {
+    toast(t("monthSubmittedLocked"));
     return;
   }
   if (month < monthISO() && !confirm(t("oldChangeWarning"))) return;

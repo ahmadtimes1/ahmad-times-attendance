@@ -700,6 +700,22 @@
             <section class="panel">
               <div class="panel-head">
                 <div>
+                  <h3 data-i18n="payrollApproval">Monthly payroll approval</h3>
+                  <p class="help-text" data-i18n="payrollApprovalHelp">A manager submits the month for review. An admin verifies it, approves it, and locks it.</p>
+                </div>
+                <input id="approvalMonth" type="month">
+              </div>
+              <div class="button-row">
+                <button id="submitPayrollMonth" data-i18n="submitForApproval">Submit for approval</button>
+                <button class="primary" id="approvePayrollMonth" data-i18n="approveAndLock">Approve and lock</button>
+                <button id="returnPayrollMonth" data-i18n="returnToDraft">Return to draft</button>
+              </div>
+              <div id="payrollApprovalList" class="storage-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
                   <h3 data-i18n="payrollLock">Payroll lock</h3>
                   <p class="help-text" data-i18n="payrollLockHelp">Lock a finished month so attendance, wages, and payments cannot be changed by mistake.</p>
                 </div>
