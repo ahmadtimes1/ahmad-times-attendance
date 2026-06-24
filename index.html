@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=investor-report-2">
+    <link rel="stylesheet" href="styles.css?v=responsive-mobile-app-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -876,6 +876,47 @@
           </section>
         </section>
       </main>
+    </div>
+
+    <nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+      <button type="button" class="mobile-nav-item active" data-mobile-view="dashboard">
+        <span class="mobile-nav-icon" aria-hidden="true">⌂</span>
+        <span data-i18n="dashboard">Dashboard</span>
+      </button>
+      <button type="button" class="mobile-nav-item" data-mobile-view="workers">
+        <span class="mobile-nav-icon" aria-hidden="true">◎</span>
+        <span data-i18n="workers">Workers</span>
+      </button>
+      <button type="button" class="mobile-nav-item" data-mobile-view="attendance">
+        <span class="mobile-nav-icon" aria-hidden="true">✓</span>
+        <span data-i18n="attendance">Attendance</span>
+      </button>
+      <button type="button" class="mobile-nav-item" data-mobile-view="reports">
+        <span class="mobile-nav-icon" aria-hidden="true">▤</span>
+        <span data-i18n="reports">Reports</span>
+      </button>
+      <button type="button" class="mobile-nav-item" id="mobileMoreButton" aria-expanded="false" aria-controls="mobileMoreSheet">
+        <span class="mobile-nav-icon" aria-hidden="true">•••</span>
+        <span data-i18n="more">More</span>
+      </button>
+    </nav>
+
+    <div class="mobile-more-backdrop" id="mobileMoreBackdrop" hidden>
+      <section class="mobile-more-sheet" id="mobileMoreSheet" aria-label="More navigation">
+        <div class="mobile-more-head">
+          <strong data-i18n="more">More</strong>
+          <button type="button" class="icon-button" id="closeMobileMore" aria-label="Close" data-i18n-aria-label="close">×</button>
+        </div>
+        <div class="mobile-more-grid">
+          <button type="button" data-mobile-view="supplierWorkers" data-i18n="supplierWorkers">Supplier Workers</button>
+          <button type="button" data-mobile-view="expenses" data-i18n="expenses">Expenses</button>
+          <button type="button" data-mobile-view="projectsBudget" data-i18n="projectsBudget">Projects & Budget</button>
+          <button type="button" data-mobile-view="companyAssistant" data-i18n="companyAssistant">Company Assistant</button>
+          <button type="button" data-mobile-view="safety" data-i18n="safety">Safety</button>
+          <button type="button" data-mobile-view="logs" data-i18n="logs">Logs</button>
+          <button type="button" data-mobile-view="backup" data-i18n="backup">Backup</button>
+        </div>
+      </section>
     </div>
 
     <dialog id="workerDialog">

@@ -106,6 +106,7 @@ const translations = {
     safety: "Safety",
     logs: "Logs",
     backup: "Backup",
+    more: "More",
     appSubtitle: "Automatic attendance and daily wage system",
     buildingMaintenance: "Building Maintenance",
     payrollLock: "Payroll lock",
@@ -371,6 +372,7 @@ const translations = {
     safety: "خوندیتوب",
     logs: "لاګونه",
     backup: "بیک اپ",
+    more: "نور",
     appSubtitle: "اتومات حاضري او ورځنۍ مزدوري سیستم",
     buildingMaintenance: "بلډنګ مینټیننس",
     payrollLock: "د معاش بندول",
@@ -2790,13 +2792,81 @@ function monthSummary(month, workerId = "all", shift = "all") {
   });
 }
 
+const MOBILE_PRIMARY_VIEWS = new Set(["dashboard", "workers", "attendance", "reports"]);
+let responsiveTableFrame = 0;
+
+function activeViewId() {
+  return $(".view.active")?.id || "dashboard";
+}
+
+function closeMobileMore() {
+  const backdrop = $("#mobileMoreBackdrop");
+  const button = $("#mobileMoreButton");
+  if (!backdrop) return;
+  backdrop.classList.remove("open");
+  if (button) button.setAttribute("aria-expanded", "false");
+  window.setTimeout(() => {
+    if (!backdrop.classList.contains("open")) backdrop.hidden = true;
+  }, 180);
+}
+
+function openMobileMore() {
+  const backdrop = $("#mobileMoreBackdrop");
+  const button = $("#mobileMoreButton");
+  if (!backdrop) return;
+  backdrop.hidden = false;
+  window.requestAnimationFrame(() => backdrop.classList.add("open"));
+  if (button) button.setAttribute("aria-expanded", "true");
+}
+
+function syncNavigation(viewId = activeViewId()) {
+  $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === viewId));
+  $$(".mobile-nav-item[data-mobile-view]").forEach((item) => item.classList.toggle("active", item.dataset.mobileView === viewId));
+  $("#mobileMoreButton")?.classList.toggle("active", !MOBILE_PRIMARY_VIEWS.has(viewId));
+}
+
+function switchView(viewId) {
+  const target = $(`#${viewId}`);
+  if (!target) return;
+  $$(".view").forEach((view) => view.classList.remove("active"));
+  target.classList.add("active");
+  closeMobileMore();
+  renderAll();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function decorateResponsiveTables() {
+  $$(".table-wrap table, #reportOutput table").forEach((table) => {
+    if (table.classList.contains("dashboard-wage-table") || table.classList.contains("weekly-attendance-table") || table.classList.contains("month-grid-table")) return;
+    table.classList.add("mobile-card-table");
+    table.closest(".table-wrap")?.classList.add("mobile-card-wrap");
+    const headers = Array.from(table.querySelectorAll("thead th")).map((header) => header.textContent.trim());
+    table.querySelectorAll("tbody tr").forEach((row) => {
+      Array.from(row.children).forEach((cell, index) => {
+        if (cell.tagName !== "TD") return;
+        const label = headers[index] || "";
+        if (cell.dataset.label !== label) cell.dataset.label = label;
+      });
+    });
+  });
+}
+
+function scheduleResponsiveTableDecoration() {
+  if (responsiveTableFrame) return;
+  responsiveTableFrame = window.requestAnimationFrame(() => {
+    responsiveTableFrame = 0;
+    decorateResponsiveTables();
+  });
+}
+
 function renderAll() {
   applyTheme();
   applyLanguage();
-  applyTheme();
   renderLoginGate();
   renderAuthStatus();
   renderActiveView();
+  syncNavigation();
+  scheduleResponsiveTableDecoration();
 }
 
 function renderActiveView() {
@@ -5870,22 +5940,28 @@ async function logout() {
 
 function bindEvents() {
   $$(".nav-item").forEach((button) => {
-    button.addEventListener("click", () => {
-      $$(".nav-item").forEach((item) => item.classList.remove("active"));
-      $$(".view").forEach((view) => view.classList.remove("active"));
-      button.classList.add("active");
-      $(`#${button.dataset.view}`).classList.add("active");
-      $("#pageTitle").textContent = t(button.dataset.view);
-      renderAll();
-    });
+    button.addEventListener("click", () => switchView(button.dataset.view));
+  });
+
+  $$('[data-mobile-view]').forEach((button) => {
+    button.addEventListener("click", () => switchView(button.dataset.mobileView));
+  });
+  $("#mobileMoreButton")?.addEventListener("click", () => {
+    if ($("#mobileMoreBackdrop")?.classList.contains("open")) closeMobileMore();
+    else openMobileMore();
+  });
+  $("#closeMobileMore")?.addEventListener("click", closeMobileMore);
+  $("#mobileMoreBackdrop")?.addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeMobileMore();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMobileMore();
   });
 
   document.addEventListener("click", (event) => {
     const jumpButton = event.target.closest("[data-jump-view]");
     if (!jumpButton) return;
-    const targetView = jumpButton.dataset.jumpView;
-    const navButton = $(`.nav-item[data-view="${targetView}"]`);
-    if (navButton) navButton.click();
+    switchView(jumpButton.dataset.jumpView);
   });
 
   $("#quickAddWorker").addEventListener("click", () => openWorkerDialog());
@@ -6451,6 +6527,8 @@ function renderDashboard() {
 
 setDefaults();
 bindEvents();
+const responsiveTableObserver = new MutationObserver(scheduleResponsiveTableDecoration);
+if ($(".main")) responsiveTableObserver.observe($(".main"), { childList: true, subtree: true });
 window.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "hidden" || !cloudSaveTimer) return;
   window.clearTimeout(cloudSaveTimer);
