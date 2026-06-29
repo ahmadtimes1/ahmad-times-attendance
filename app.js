@@ -12,6 +12,7 @@ const SIMPLE_USERS = [
   { username: "admin", password: "Dubai@#123", role: "admin", name: "Admin" },
   { username: "Ahmadadmin", password: "Ahmad@dxb", role: "admin", name: "Ahmad Admin" },
   { username: "Najib", password: "Najib@dxb", role: "manager", name: "Najib" },
+  { username: "Raees Khan", password: "Raeeskhan@dxb", role: "manager", name: "Raees Khan" },
 ];
 
 const translations = {
