@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=wage-history-fix-1">
+    <link rel="stylesheet" href="styles.css?v=monthly-wage-ui-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -971,11 +971,21 @@
           <label><span data-i18n="advanceBalanceAed">Balance / advance payment (AED)</span><input id="workerAdvanceBalance" type="number" min="0" step="0.01" value="0"></label>
           <label><span data-i18n="wageEffectiveDate">Wage effective from</span><input id="workerWageEffectiveDate" type="date"></label>
           <label><span data-i18n="joiningDate">Joining date</span><input id="workerJoinDate" type="date"></label>
-          <label class="full wage-history-field">
-            <span data-i18n="monthlyWageHistory">Monthly wage history</span>
-            <textarea id="workerWageHistory" rows="3" placeholder="2026-06-08 = 115&#10;2026-07-01 = 120"></textarea>
-            <small data-i18n="wageHistoryHelp">One line per wage rate, for example: 2026-06-08 = 115</small>
-          </label>
+          <div class="full wage-history-field">
+            <input type="hidden" id="workerWageHistoryData">
+            <div class="wage-history-head">
+              <div>
+                <strong data-i18n="monthlyWageHistory">Monthly wage history</strong>
+                <small data-i18n="wageHistoryHelp">Set the wage from the month it starts. Old months keep old rates.</small>
+              </div>
+            </div>
+            <div class="wage-history-controls">
+              <label><span data-i18n="wageMonth">Month</span><input id="workerWageMonth" type="month"></label>
+              <label><span data-i18n="dailyWageAed">Daily wage (AED)</span><input id="workerMonthlyWage" type="number" min="0" step="0.01"></label>
+              <button type="button" id="addWorkerWageRate" class="secondary" data-i18n="addWageRate">Add / update rate</button>
+            </div>
+            <div id="workerWageHistoryList" class="wage-history-list"></div>
+          </div>
           <label><span data-i18n="status">Status</span>
             <select id="workerStatus">
               <option value="active" data-i18n="active">Active</option>
@@ -1032,6 +1042,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=wage-history-fix-1"></script>
+    <script src="app.js?v=monthly-wage-ui-1"></script>
   </body>
 </html>

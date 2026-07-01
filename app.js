@@ -658,7 +658,12 @@ Object.assign(translations.en, {
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
   monthlyWageHistory: "Monthly wage history",
-  wageHistoryHelp: "One line per wage rate, for example: 2026-06-08 = 115",
+  wageHistoryHelp: "Set the wage from the month it starts. Old months keep old rates.",
+  wageMonth: "Month",
+  addWageRate: "Add / update rate",
+  removeWageRate: "Remove rate",
+  noWageRates: "No monthly wage rates yet.",
+  wageRateSaved: "Wage rate saved",
   effectiveFrom: "from",
   expenses: "Expenses",
   companyExpenses: "Company expenses",
@@ -914,7 +919,12 @@ Object.assign(translations.ps, {
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
   monthlyWageHistory: "د میاشتني مزدورۍ تاریخچه",
-  wageHistoryHelp: "د هر نرخ لپاره یوه کرښه ولیکئ، مثال: 2026-06-08 = 115",
+  wageHistoryHelp: "مزدوري له هغې میاشتې څخه وټاکئ چې شروع کېږي. پخوانۍ میاشتې خپل زاړه نرخونه ساتي.",
+  wageMonth: "میاشت",
+  addWageRate: "نرخ اضافه / تازه کړئ",
+  removeWageRate: "نرخ لرې کړئ",
+  noWageRates: "تر اوسه میاشتنی نرخ نشته.",
+  wageRateSaved: "د مزدورۍ نرخ ذخیره شو",
   effectiveFrom: "له",
   expenses: "مصارف",
   companyExpenses: "د شرکت مصارف",
@@ -1441,6 +1451,56 @@ function buildUpdatedWageHistory(existing, { dailyWage, joinDate, effectiveDate,
   return Array.from(historyMap, ([date, dailyWage]) => ({ date, dailyWage }))
     .filter((entry) => entry.date && Number.isFinite(entry.dailyWage))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function readWorkerWageHistoryEditor() {
+  try {
+    const value = $("#workerWageHistoryData")?.value || "[]";
+    const entries = JSON.parse(value);
+    return normalizeWageHistory({ wageHistory: Array.isArray(entries) ? entries : [] });
+  } catch {
+    return [];
+  }
+}
+
+function setWorkerWageHistoryEditor(entries) {
+  const history = normalizeWageHistory({ wageHistory: entries || [] });
+  if ($("#workerWageHistoryData")) $("#workerWageHistoryData").value = JSON.stringify(history);
+  const list = $("#workerWageHistoryList");
+  if (!list) return;
+  list.innerHTML = history.length
+    ? history.map((entry) => `
+      <div class="wage-rate-row">
+        <div>
+          <strong>${escapeHTML(monthFromDate(entry.date))}</strong>
+          <span>${money(entry.dailyWage)} ${t("effectiveFrom")} ${escapeHTML(entry.date)}</span>
+        </div>
+        <button type="button" class="mini-button" data-remove-worker-wage-rate="${escapeHTML(entry.date)}">${t("removeWageRate")}</button>
+      </div>
+    `).join("")
+    : `<p class="empty-inline">${t("noWageRates")}</p>`;
+}
+
+function addWorkerWageRateFromForm() {
+  const month = $("#workerWageMonth")?.value || monthISO();
+  const dailyWage = Number($("#workerMonthlyWage")?.value || $("#workerDailyWage")?.value || 0);
+  if (!month || !Number.isFinite(dailyWage) || dailyWage <= 0) {
+    toast(t("requiredFields"));
+    return;
+  }
+  const date = `${month}-01`;
+  const historyMap = new Map(readWorkerWageHistoryEditor().map((entry) => [entry.date, entry.dailyWage]));
+  historyMap.set(date, roundMoney(dailyWage));
+  const history = Array.from(historyMap, ([date, dailyWage]) => ({ date, dailyWage }));
+  setWorkerWageHistoryEditor(history);
+  $("#workerWageEffectiveDate").value = date;
+  $("#workerDailyWage").value = dailyWage;
+  toast(t("wageRateSaved"));
+}
+
+function removeWorkerWageRate(date) {
+  const history = readWorkerWageHistoryEditor().filter((entry) => entry.date !== date);
+  setWorkerWageHistoryEditor(history);
 }
 
 function reportSerial(worker, start, end) {
@@ -5674,7 +5734,9 @@ function openWorkerDialog(workerId = "") {
   $("#workerDailyWage").value = worker ? currentDailyWage(worker) : "";
   $("#workerAdvanceBalance").value = worker ? workerOpeningAdvance(worker) : 0;
   $("#workerWageEffectiveDate").value = todayISO();
-  if ($("#workerWageHistory")) $("#workerWageHistory").value = worker ? wageHistoryFormText(worker) : "";
+  if ($("#workerWageMonth")) $("#workerWageMonth").value = monthISO();
+  if ($("#workerMonthlyWage")) $("#workerMonthlyWage").value = worker ? currentDailyWage(worker) : "";
+  setWorkerWageHistoryEditor(worker ? normalizeWageHistory(worker) : []);
   $("#workerJoinDate").value = worker?.joinDate || todayISO();
   $("#workerStatus").value = worker?.status || "active";
   $("#workerNotes").value = worker?.notes || "";
@@ -5689,7 +5751,7 @@ function saveWorkerFromForm() {
   const dailyWage = Number($("#workerDailyWage").value || 0);
   const joinDate = $("#workerJoinDate").value || todayISO();
   const wageEffectiveDate = $("#workerWageEffectiveDate").value || joinDate;
-  const typedWageHistory = parseWageHistoryText($("#workerWageHistory")?.value || "");
+  const typedWageHistory = readWorkerWageHistoryEditor();
   const updatedWageHistory = buildUpdatedWageHistory(existing, {
     dailyWage,
     joinDate,
@@ -6478,6 +6540,7 @@ function bindEvents() {
     event.preventDefault();
     saveWorkerFromForm();
   });
+  $("#addWorkerWageRate")?.addEventListener("click", addWorkerWageRateFromForm);
   $("#deleteWorkerBtn").addEventListener("click", removeWorker);
 
   document.addEventListener("click", (event) => {
@@ -6494,6 +6557,12 @@ function bindEvents() {
 
     const editButton = event.target.closest("[data-edit-worker]");
     if (editButton) openWorkerDialog(editButton.dataset.editWorker);
+
+    const removeWageRateButton = event.target.closest("[data-remove-worker-wage-rate]");
+    if (removeWageRateButton) {
+      removeWorkerWageRate(removeWageRateButton.dataset.removeWorkerWageRate);
+      return;
+    }
 
     const moveButton = event.target.closest("[data-move-worker]");
     if (moveButton) moveWorker(moveButton.dataset.moveWorker, moveButton.dataset.moveDirection);

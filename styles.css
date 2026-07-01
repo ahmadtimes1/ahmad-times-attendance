@@ -462,16 +462,64 @@ textarea:focus-visible {
   font-weight: 700;
 }
 
-.wage-history-field textarea {
-  min-height: 86px;
-  resize: vertical;
-  font-family: inherit;
-  line-height: 1.45;
+.wage-history-field {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 88%, var(--accent-soft));
 }
 
-.wage-history-field small {
+.wage-history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wage-history-head strong {
+  display: block;
+  color: var(--text);
+}
+
+.wage-history-field small,
+.wage-rate-row span {
   color: var(--muted);
   font-weight: 600;
+}
+
+.wage-history-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.wage-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.wage-rate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.wage-rate-row strong,
+.wage-rate-row span {
+  display: block;
+}
+
+.empty-inline {
+  margin: 0;
+  color: var(--muted);
 }
 
 .compact-select {
@@ -2673,6 +2721,15 @@ dialog::backdrop {
   .report-controls label,
   .worker-form label {
     font-size: 12px;
+  }
+
+  .wage-history-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .wage-rate-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .stat-grid {
