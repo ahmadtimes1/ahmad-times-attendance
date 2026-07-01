@@ -657,6 +657,8 @@ Object.assign(translations.en, {
   balanceAfterPayment: "Balance after payment",
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
+  monthlyWageHistory: "Monthly wage history",
+  wageHistoryHelp: "One line per wage rate, for example: 2026-06-08 = 115",
   effectiveFrom: "from",
   expenses: "Expenses",
   companyExpenses: "Company expenses",
@@ -911,6 +913,8 @@ Object.assign(translations.ps, {
   balanceAfterPayment: "له تادیې وروسته پاتې حساب",
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
+  monthlyWageHistory: "د میاشتني مزدورۍ تاریخچه",
+  wageHistoryHelp: "د هر نرخ لپاره یوه کرښه ولیکئ، مثال: 2026-06-08 = 115",
   effectiveFrom: "له",
   expenses: "مصارف",
   companyExpenses: "د شرکت مصارف",
@@ -1348,24 +1352,27 @@ function withLanguage(language, callback) {
 }
 
 function normalizeWageHistory(worker) {
+  if (!worker) return [];
   const fallbackDate = worker.joinDate || (worker.createdAt ? worker.createdAt.slice(0, 10) : todayISO());
   const entries = Array.isArray(worker.wageHistory) ? worker.wageHistory : [];
   const map = new Map();
   entries.forEach((entry) => {
-    if (!entry?.date) return;
+    const date = normalizeDateValue(entry?.date);
+    if (!date) return;
     const dailyWage = Number(entry.dailyWage ?? entry.wage ?? 0);
-    if (Number.isFinite(dailyWage)) map.set(entry.date, dailyWage);
+    if (Number.isFinite(dailyWage) && dailyWage >= 0) map.set(date, roundMoney(dailyWage));
   });
-  if (!map.size && Number(worker.dailyWage || 0)) map.set(fallbackDate, Number(worker.dailyWage || 0));
+  if (!map.size && Number(worker.dailyWage || 0)) map.set(normalizeDateValue(fallbackDate) || todayISO(), roundMoney(worker.dailyWage || 0));
   return Array.from(map, ([date, dailyWage]) => ({ date, dailyWage }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function wageForDate(worker, date = todayISO()) {
   const history = normalizeWageHistory(worker);
-  let wage = Number(worker.dailyWage || 0);
+  const targetDate = normalizeDateValue(date) || todayISO();
+  let wage = history[0]?.dailyWage ?? Number(worker?.dailyWage || 0);
   history.forEach((entry) => {
-    if (entry.date <= date) wage = Number(entry.dailyWage || 0);
+    if (entry.date <= targetDate) wage = Number(entry.dailyWage || 0);
   });
   return wage;
 }
@@ -1378,6 +1385,62 @@ function wageHistoryText(worker) {
   const history = normalizeWageHistory(worker);
   if (!history.length) return "-";
   return history.map((entry) => `${money(entry.dailyWage)} ${t("effectiveFrom")} ${entry.date}`).join(" | ");
+}
+
+function normalizeDateValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const slash = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (slash) {
+    const [, day, month, year] = slash;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  return "";
+}
+
+function wageHistoryFormText(worker) {
+  return normalizeWageHistory(worker)
+    .map((entry) => `${entry.date} = ${entry.dailyWage}`)
+    .join("\n");
+}
+
+function parseWageHistoryText(text) {
+  const entries = [];
+  String(text || "").split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const parts = trimmed.split(/[=,|:]+/).map((part) => part.trim()).filter(Boolean);
+    const date = normalizeDateValue(parts[0]);
+    const dailyWage = Number(parts[1]);
+    if (!date || !Number.isFinite(dailyWage) || dailyWage < 0) return;
+    entries.push({ date, dailyWage: roundMoney(dailyWage) });
+  });
+  return normalizeWageHistory({ wageHistory: entries });
+}
+
+function buildUpdatedWageHistory(existing, { dailyWage, joinDate, effectiveDate, typedHistory }) {
+  const baseWorker = existing || { dailyWage, joinDate };
+  const historyMap = new Map();
+  normalizeWageHistory(baseWorker).forEach((entry) => historyMap.set(entry.date, entry.dailyWage));
+
+  if (!historyMap.size && existing && Number(existing.dailyWage || 0)) {
+    const seedDate = normalizeDateValue(existing.joinDate || existing.createdAt?.slice(0, 10) || joinDate || effectiveDate) || todayISO();
+    historyMap.set(seedDate, roundMoney(existing.dailyWage || 0));
+  }
+
+  typedHistory.forEach((entry) => historyMap.set(entry.date, entry.dailyWage));
+
+  const date = normalizeDateValue(effectiveDate || joinDate) || todayISO();
+  if (Number.isFinite(dailyWage) && dailyWage >= 0) historyMap.set(date, roundMoney(dailyWage));
+
+  if (!historyMap.size && Number.isFinite(dailyWage) && dailyWage >= 0) {
+    historyMap.set(normalizeDateValue(joinDate) || todayISO(), roundMoney(dailyWage));
+  }
+
+  return Array.from(historyMap, ([date, dailyWage]) => ({ date, dailyWage }))
+    .filter((entry) => entry.date && Number.isFinite(entry.dailyWage))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function reportSerial(worker, start, end) {
@@ -5611,6 +5674,7 @@ function openWorkerDialog(workerId = "") {
   $("#workerDailyWage").value = worker ? currentDailyWage(worker) : "";
   $("#workerAdvanceBalance").value = worker ? workerOpeningAdvance(worker) : 0;
   $("#workerWageEffectiveDate").value = todayISO();
+  if ($("#workerWageHistory")) $("#workerWageHistory").value = worker ? wageHistoryFormText(worker) : "";
   $("#workerJoinDate").value = worker?.joinDate || todayISO();
   $("#workerStatus").value = worker?.status || "active";
   $("#workerNotes").value = worker?.notes || "";
@@ -5625,11 +5689,13 @@ function saveWorkerFromForm() {
   const dailyWage = Number($("#workerDailyWage").value || 0);
   const joinDate = $("#workerJoinDate").value || todayISO();
   const wageEffectiveDate = $("#workerWageEffectiveDate").value || joinDate;
-  const wageHistory = normalizeWageHistory(existing || { dailyWage, joinDate });
-  const historyMap = new Map(wageHistory.map((entry) => [entry.date, entry.dailyWage]));
-  historyMap.set(wageEffectiveDate, dailyWage);
-  const updatedWageHistory = Array.from(historyMap, ([date, dailyWage]) => ({ date, dailyWage }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const typedWageHistory = parseWageHistoryText($("#workerWageHistory")?.value || "");
+  const updatedWageHistory = buildUpdatedWageHistory(existing, {
+    dailyWage,
+    joinDate,
+    effectiveDate: wageEffectiveDate,
+    typedHistory: typedWageHistory,
+  });
   const worker = {
     id,
     name: $("#workerName").value.trim(),
@@ -5643,7 +5709,7 @@ function saveWorkerFromForm() {
     phone: $("#workerPhone").value.trim(),
     emiratesId: $("#workerEmiratesId").value.trim(),
     photo: $("#workerPhoto").value || "",
-    dailyWage,
+    dailyWage: wageForDate({ dailyWage, joinDate, wageHistory: updatedWageHistory }, todayISO()),
     advanceBalance: roundMoney($("#workerAdvanceBalance").value || 0),
     wageHistory: updatedWageHistory,
     joinDate,
