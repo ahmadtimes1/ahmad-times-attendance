@@ -2194,6 +2194,25 @@ tbody tr:last-child td {
   background: rgba(255, 255, 255, 0.6);
 }
 
+.payment-history-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.payment-history-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mini-button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
 .payment-history-list strong {
   margin: 0;
   font-size: 14px;

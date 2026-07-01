@@ -629,6 +629,9 @@ Object.assign(translations.en, {
   noPaymentHistory: "No payment history yet.",
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
+  editPayment: "Edit payment",
+  paymentUpdated: "Payment updated",
+  paymentRemoved: "Payment removed",
   currentDailyWage: "Current daily wage",
   advanceBalanceAed: "Opening advance only (AED)",
   workerAdvanceBalance: "Worker advance remaining",
@@ -877,6 +880,9 @@ Object.assign(translations.ps, {
   noPaymentHistory: "تر اوسه تادیه نشته.",
   noPaymentTarget: "کارکوونکی یا سپلایر نه دی ټاکل شوی.",
   addPaymentAmountFirst: "لومړی د تادیې اندازه ولیکئ.",
+  editPayment: "تادیه اصلاح کړئ",
+  paymentUpdated: "تادیه تازه شوه",
+  paymentRemoved: "تادیه لرې شوه",
 });
 
 Object.assign(translations.ps, {
@@ -2434,12 +2440,22 @@ function supplierEntriesForRange(start, end, supplierName = "") {
   });
 }
 
-function renderPaymentHistory(history = []) {
+function renderPaymentHistory(history = [], options = {}) {
   if (!history.length) return `<p class="help-text">${t("noPaymentHistory")}</p>`;
+  const editable = Boolean(options.editable);
+  const type = options.type || "worker";
   return `<div class="payment-history-list">${history.map((payment) => `
     <div>
-      <strong>${money(payment.amount)}</strong>
-      <span>${escapeHTML(payment.date || "-")} · ${escapeHTML(payment.method || "cash")} · ${escapeHTML(payment.note || "-")}</span>
+      <span class="payment-history-main">
+        <strong>${money(payment.amount)}</strong>
+        <span>${escapeHTML(payment.date || "-")} · ${escapeHTML(payment.method || "cash")} · ${escapeHTML(payment.note || "-")}</span>
+      </span>
+      ${editable ? `
+        <span class="payment-history-actions">
+          <button type="button" class="ghost mini-button" data-edit-payment-entry="${escapeHTML(payment.id)}" data-payment-entry-type="${escapeHTML(type)}">${t("editPayment")}</button>
+          <button type="button" class="ghost danger mini-button" data-remove-payment-entry="${escapeHTML(payment.id)}" data-payment-entry-type="${escapeHTML(type)}">${t("remove")}</button>
+        </span>
+      ` : ""}
     </div>
   `).join("")}</div>`;
 }
@@ -2510,7 +2526,7 @@ function renderPaymentEntryPanel() {
     <div><span>${t("workerBalance")}</span><strong>${money(unpaid)}</strong></div>
     <div><span>${t("extraPaidBalance")}</span><strong>${money(extraPaid)}</strong></div>
     ${selectedWorker ? `<div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>` : ""}
-    <div class="wide"><span>${t("paymentHistory")}</span>${renderPaymentHistory(history)}</div>
+    <div class="wide"><span>${t("paymentHistory")}</span>${renderPaymentHistory(history, { editable: true, type })}</div>
   `;
 }
 
@@ -2589,6 +2605,68 @@ function savePayment(workerId, start, end, paidAmount, paymentDate, method, note
   addLog("Payment saved", `${worker?.name || workerId} · ${start} to ${end} · ${money(paidAmount)}`);
   saveData();
   toast(t("paymentSaved"));
+}
+
+function paymentEntryList(type) {
+  if (type === "supplier") {
+    app.supplierPayments ||= [];
+    return app.supplierPayments;
+  }
+  normalizePaymentLedger();
+  app.payments ||= [];
+  return app.payments;
+}
+
+function findPaymentEntry(type, id) {
+  return paymentEntryList(type).find((payment) => payment.id === id);
+}
+
+function editPaymentEntry(type, id) {
+  const payment = findPaymentEntry(type, id);
+  if (!payment) return;
+  const amountText = prompt(t("paidAmount"), String(roundMoney(payment.amount || 0)));
+  if (amountText === null) return;
+  const amount = roundMoney(amountText);
+  if (amount <= 0) {
+    toast(t("addPaymentAmountFirst"));
+    return;
+  }
+  const date = prompt(t("paymentDate"), payment.date || todayISO());
+  if (date === null) return;
+  if (!canChangePayrollDate(date || payment.date || todayISO(), "Payment")) return;
+  const method = prompt(t("paymentMethod"), payment.method || "cash");
+  if (method === null) return;
+  const note = prompt(t("paymentNote"), payment.note || "");
+  if (note === null) return;
+  payment.amount = amount;
+  payment.date = date || payment.date || todayISO();
+  payment.method = method || "cash";
+  payment.note = note || "";
+  payment.updatedAt = new Date().toISOString();
+  payment.user = currentUserLabel();
+  clearCalculationCache();
+  addLog("Payment updated", `${type} · ${payment.date} · ${money(amount)}`);
+  saveData();
+  renderAll();
+  toast(t("paymentUpdated"));
+}
+
+function removePaymentEntry(type, id) {
+  const payment = findPaymentEntry(type, id);
+  if (!payment) return;
+  if (!confirm(`${t("remove")} ${money(payment.amount)}?`)) return;
+  if (!canChangePayrollDate(payment.date || todayISO(), "Payment")) return;
+  if (type === "supplier") {
+    app.supplierPayments = (app.supplierPayments || []).filter((item) => item.id !== id);
+  } else {
+    normalizePaymentLedger();
+    app.payments = (app.payments || []).filter((item) => item.id !== id);
+  }
+  clearCalculationCache();
+  addLog("Payment removed", `${type} · ${payment.date || "-"} · ${money(payment.amount)}`);
+  saveData();
+  renderAll();
+  toast(t("paymentRemoved"));
 }
 
 function saveWorkerAdvance(workerId, date, amount, note = "") {
@@ -3833,7 +3911,7 @@ function renderReport() {
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
               <p>${t("grossPayable")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)} · ${t("workerBalance")}: ${money(extraPaid)} · ${t("balanceOnCompany")}: ${money(pending)}</p>
-              <div class="payment-row-history">${renderPaymentHistory(history)}</div>
+              <div class="payment-row-history">${renderPaymentHistory(history, { editable: true, type: "worker" })}</div>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
             <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${$("#todayInput")?.value || todayISO()}"></label>
@@ -6430,6 +6508,16 @@ function bindEvents() {
         getField("note"),
       );
       renderAll();
+    }
+
+    const editPaymentButton = event.target.closest("[data-edit-payment-entry]");
+    if (editPaymentButton) {
+      editPaymentEntry(editPaymentButton.dataset.paymentEntryType || "worker", editPaymentButton.dataset.editPaymentEntry);
+    }
+
+    const removePaymentButton = event.target.closest("[data-remove-payment-entry]");
+    if (removePaymentButton) {
+      removePaymentEntry(removePaymentButton.dataset.paymentEntryType || "worker", removePaymentButton.dataset.removePaymentEntry);
     }
 
     const whatsappButton = event.target.closest("[data-whatsapp-worker]");
