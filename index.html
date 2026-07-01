@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=monthly-wage-single-rate-1">
+    <link rel="stylesheet" href="styles.css?v=previous-month-report-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -156,6 +156,14 @@
             <article class="stat-card blue">
               <span data-i18n="grandTotalAmount">Grand total amount</span>
               <strong id="statGrandTotal">AED 0</strong>
+            </article>
+            <article class="stat-card">
+              <span data-i18n="previousMonthCompanyCost">Previous month company cost</span>
+              <strong id="statPreviousMonthCost">AED 0</strong>
+            </article>
+            <article class="stat-card blue">
+              <span data-i18n="twoMonthCompanyCost">Selected + previous month cost</span>
+              <strong id="statTwoMonthCost">AED 0</strong>
             </article>
             <article class="stat-card green">
               <span data-i18n="budgetReceivedThisMonth">Budget received this month</span>
@@ -623,6 +631,10 @@
                 <option value="ps">پښتو</option>
               </select>
             </label>
+            <label class="checkbox-line report-option">
+              <input id="includePreviousMonthReport" type="checkbox">
+              <span data-i18n="includePreviousMonth">Include previous month</span>
+            </label>
             <button id="printReport" data-i18n="print">Print</button>
             <button id="pdfReport" data-i18n="pdfReport">PDF report</button>
             <button id="printAllWages" data-i18n="printAllWages">Print all wages</button>
@@ -1042,6 +1054,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=monthly-wage-single-rate-1"></script>
+    <script src="app.js?v=previous-month-report-1"></script>
   </body>
 </html>

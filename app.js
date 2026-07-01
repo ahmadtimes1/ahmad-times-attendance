@@ -798,6 +798,10 @@ Object.assign(translations.en, {
   directWorkersPaidAmount: "Direct workers paid",
   directWorkersUnpaidAmount: "Direct workers unpaid",
   grandTotalAmount: "Total company cost this month",
+  previousMonthCompanyCost: "Previous month company cost",
+  twoMonthCompanyCost: "Selected + previous month cost",
+  includePreviousMonth: "Include previous month",
+  previousMonthDetails: "Previous month details",
   grandTotalPaid: "Grand total paid",
   grandTotalUnpaid: "Grand total unpaid",
   totalUnpaidBalance: "Total unpaid balance",
@@ -1054,6 +1058,10 @@ Object.assign(translations.ps, {
   directWorkersPaidAmount: "د مستقیمو کارکوونکو ادا شوی",
   directWorkersUnpaidAmount: "د مستقیمو کارکوونکو ناادا",
   grandTotalAmount: "د دې میاشتې ټول شرکت لګښت",
+  previousMonthCompanyCost: "د تېرې میاشتې د شرکت لګښت",
+  twoMonthCompanyCost: "ټاکل شوې + تېره میاشت لګښت",
+  includePreviousMonth: "تېره میاشت هم شامل کړئ",
+  previousMonthDetails: "د تېرې میاشتې تفصیل",
   grandTotalPaid: "ټول ادا شوی",
   grandTotalUnpaid: "ټول ناادا",
   totalUnpaidBalance: "ټول پاتې ناادا",
@@ -1306,6 +1314,26 @@ function requireAdmin() {
 
 function monthFromDate(date) {
   return String(date || todayISO()).slice(0, 7);
+}
+
+function shiftMonth(month, offset) {
+  const [year, monthIndex] = String(month || monthISO()).split("-").map(Number);
+  const date = new Date(year, (monthIndex || 1) - 1 + offset, 1);
+  return date.toISOString().slice(0, 7);
+}
+
+function previousMonth(month) {
+  return shiftMonth(month, -1);
+}
+
+function companyCostForMonth(month) {
+  const dates = daysInMonth(month);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const direct = paymentTotals(monthSummary(month), start, end).finalPayable;
+  const supplier = supplierTotals(monthSupplierEntries(month), start, end).total;
+  const expenses = companyExpenseTotal(month);
+  return roundMoney(direct + supplier + expenses);
 }
 
 function isMonthLocked(dateOrMonth) {
@@ -3410,6 +3438,7 @@ function renderAuthStatus() {
 function renderDashboardLegacyUnused() {
   const date = $("#todayInput").value || todayISO();
   const month = $("#dashboardMonth").value || monthISO();
+  const previous = previousMonth(month);
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthExpensesTotal = companyExpenseTotal(month);
@@ -3946,6 +3975,87 @@ function workerReportDetails(worker, start, end) {
   `;
 }
 
+function wageReportRowsForPeriod(type, month, start, end, selection, shift) {
+  const sourceRows = type === "monthly"
+    ? monthSummary(month, selection, shift)
+    : summarizeRecords(recordsForRange(start, end, selection, shift));
+  return sourceRows.filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end));
+}
+
+function wageReportTotals(rows, start, end) {
+  const totals = rows.reduce((acc, row) => {
+    acc.present += row.present;
+    acc.halfday += row.halfday || 0;
+    acc.absent += row.absent;
+    acc.off += row.off;
+    acc.hours += row.hours || 0;
+    acc.overtime += row.overtime || 0;
+    acc.baseWage += row.baseWage || 0;
+    acc.overtimeWage += row.overtimeWage || 0;
+    acc.foodDeduction += row.foodDeduction || 0;
+    acc.wage += row.wage || 0;
+    return acc;
+  }, { present: 0, halfday: 0, absent: 0, off: 0, hours: 0, overtime: 0, baseWage: 0, overtimeWage: 0, foodDeduction: 0, wage: 0 });
+  return { ...totals, pay: paymentTotals(rows, start, end) };
+}
+
+function compactWageReportSection({ title, start, end, rows, shift }) {
+  const totals = wageReportTotals(rows, start, end);
+  return `
+    <section class="previous-report-section">
+      <h3>${escapeHTML(title)}</h3>
+      <div class="summary-strip">
+        <div><span>${t("present")} ${t("days")}</span><strong>${totals.present}</strong></div>
+        <div><span>${t("halfDays")}</span><strong>${totals.halfday}</strong></div>
+        <div><span>${t("absent")} ${t("days")}</span><strong>${totals.absent}</strong></div>
+        <div><span>${t("off")} ${t("days")}</span><strong>${totals.off}</strong></div>
+        <div><span>${t("overtime")}</span><strong>${formatHours(totals.overtime)}</strong></div>
+        <div><span>${t("grossPayable")}</span><strong>${money(totals.wage)}</strong></div>
+        <div><span>${t("paid")}</span><strong>${money(totals.pay.paid)}</strong></div>
+        <div><span>${t("unpaid")}</span><strong>${money(totals.pay.pending)}</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>${t("worker")}</th>
+              <th>${t("shift")}</th>
+              <th>${t("present")}</th>
+              <th>${t("halfday")}</th>
+              <th>${t("absent")}</th>
+              <th>${t("overtime")}</th>
+              <th>${t("dailyWage")}</th>
+              <th>${t("baseWage")}</th>
+              <th>${t("overtimeWage")}</th>
+              <th>${t("grossPayable")}</th>
+              <th>${t("paid")}</th>
+              <th>${t("unpaid")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td>${escapeHTML(displayWorkerName(row.worker))}</td>
+                <td>${shift === "all" ? t("allShifts") : attendanceShiftLabel(shift)}</td>
+                <td>${row.present}</td>
+                <td>${row.halfday || 0}</td>
+                <td>${row.absent}</td>
+                <td>${formatHours(row.overtime || 0)}</td>
+                <td>${money(row.dailyWage || currentDailyWage(row.worker))}</td>
+                <td>${money(row.baseWage || 0)}</td>
+                <td>${money(row.overtimeWage || 0)}</td>
+                <td><strong>${money(row.wage || 0)}</strong></td>
+                <td>${money(rowPaidAmount(row, start, end))}</td>
+                <td><strong>${money(rowWorkerBalance(row, start, end))}</strong></td>
+              </tr>
+            `).join("") || `<tr><td colspan="12">${t("noRecordsReport")}</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
 function renderReport() {
   const language = reportLanguage();
   return withLanguage(language, () => {
@@ -3975,9 +4085,7 @@ function renderReport() {
   if (selectedWorkerIds.includes("all")) $("#reportWorker").querySelector('option[value="all"]').selected = true;
 
   const reportSelection = selectedWorkerIds.includes("all") ? ["all"] : selectedWorkerIds;
-  const reportRows = type === "monthly" ? monthSummary(month, reportSelection, reportShift) : summarizeRecords(recordsForRange(start, end, reportSelection, reportShift));
-  const rows = reportRows
-    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end));
+  const rows = wageReportRowsForPeriod(type, month, start, end, reportSelection, reportShift);
   const totals = rows.reduce((acc, row) => {
     acc.present += row.present;
     acc.halfday += row.halfday || 0;
@@ -4001,6 +4109,21 @@ function renderReport() {
     : selectedWorker
       ? escapeHTML(displayWorkerName(selectedWorker))
       : `${t("selectedWorkerReports")} (${rows.length})`;
+  const includePreviousMonth = type === "monthly" && Boolean($("#includePreviousMonthReport")?.checked);
+  const previousReportMonth = previousMonth(month);
+  const previousDates = daysInMonth(previousReportMonth);
+  const previousRows = includePreviousMonth
+    ? wageReportRowsForPeriod("monthly", previousReportMonth, previousDates[0], previousDates[previousDates.length - 1], reportSelection, reportShift)
+    : [];
+  const previousReportHtml = includePreviousMonth
+    ? compactWageReportSection({
+      title: `${t("previousMonthDetails")} · ${previousReportMonth}`,
+      start: previousDates[0],
+      end: previousDates[previousDates.length - 1],
+      rows: previousRows,
+      shift: reportShift,
+    })
+    : "";
 
   $("#reportOutput").innerHTML = `
     <div class="report-brand">
@@ -4127,6 +4250,7 @@ function renderReport() {
         </tbody>
       </table>
     </div>
+    ${previousReportHtml}
     <footer class="report-footer">
       <div class="report-stamp-box">
         <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
@@ -6785,7 +6909,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
@@ -6962,9 +7086,11 @@ function bulkSetMonth(status) {
 function renderDashboard() {
   const date = $("#todayInput").value || todayISO();
   const month = $("#dashboardMonth").value || monthISO();
+  const previous = previousMonth(month);
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthExpensesTotal = companyExpenseTotal(month);
+  const budgetSummary = projectBudgetSummary(month, "all");
   const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
     const ledger = expenseLedger(expense);
     acc.paid = roundMoney(acc.paid + ledger.paid);
@@ -6976,6 +7102,8 @@ function renderDashboard() {
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
   const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month), monthDates[0], monthDates[monthDates.length - 1]);
   const monthWages = dashboardPayTotals.finalPayable;
+  const selectedMonthCompanyCost = roundMoney(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
+  const previousMonthCompanyCost = companyCostForMonth(previous);
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
   const totalUnpaidBalance = roundMoney(directUnpaid + supplierDashboardTotals.unpaid + monthExpenseLedger.unpaid);
@@ -6988,7 +7116,9 @@ function renderDashboard() {
   $("#statMonthWages").textContent = money(monthWages);
   if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(monthExpensesTotal);
-  $("#statGrandTotal").textContent = money(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
+  $("#statGrandTotal").textContent = money(selectedMonthCompanyCost);
+  if ($("#statPreviousMonthCost")) $("#statPreviousMonthCost").textContent = money(previousMonthCompanyCost);
+  if ($("#statTwoMonthCost")) $("#statTwoMonthCost").textContent = money(selectedMonthCompanyCost + previousMonthCompanyCost);
   $("#statAttendanceDays").textContent = formatHours(monthOvertime);
   $("#statUnpaidWages").textContent = money(directUnpaid);
   if ($("#statTotalUnpaidBalance")) $("#statTotalUnpaidBalance").textContent = money(totalUnpaidBalance);
