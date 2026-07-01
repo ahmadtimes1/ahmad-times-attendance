@@ -1415,6 +1415,23 @@ function wageHistoryFormText(worker) {
     .join("\n");
 }
 
+function normalizeMonthlyWageHistory(worker) {
+  const monthMap = new Map();
+  normalizeWageHistory(worker).forEach((entry) => {
+    const month = monthFromDate(entry.date);
+    if (!month) return;
+    monthMap.set(`${month}-01`, roundMoney(entry.dailyWage || 0));
+  });
+  return Array.from(monthMap, ([date, dailyWage]) => ({ date, dailyWage }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function removeWageMonthFromMap(historyMap, month) {
+  Array.from(historyMap.keys()).forEach((date) => {
+    if (monthFromDate(date) === month) historyMap.delete(date);
+  });
+}
+
 function parseWageHistoryText(text) {
   const entries = [];
   String(text || "").split(/\r?\n/).forEach((line) => {
@@ -1439,10 +1456,18 @@ function buildUpdatedWageHistory(existing, { dailyWage, joinDate, effectiveDate,
     historyMap.set(seedDate, roundMoney(existing.dailyWage || 0));
   }
 
-  typedHistory.forEach((entry) => historyMap.set(entry.date, entry.dailyWage));
+  typedHistory.forEach((entry) => {
+    const month = monthFromDate(entry.date);
+    if (month) removeWageMonthFromMap(historyMap, month);
+    historyMap.set(entry.date, entry.dailyWage);
+  });
 
-  const date = normalizeDateValue(effectiveDate || joinDate) || todayISO();
-  if (Number.isFinite(dailyWage) && dailyWage >= 0) historyMap.set(date, roundMoney(dailyWage));
+  const sourceDate = normalizeDateValue(effectiveDate || joinDate) || todayISO();
+  const date = `${monthFromDate(sourceDate)}-01`;
+  if (Number.isFinite(dailyWage) && dailyWage >= 0) {
+    removeWageMonthFromMap(historyMap, monthFromDate(date));
+    historyMap.set(date, roundMoney(dailyWage));
+  }
 
   if (!historyMap.size && Number.isFinite(dailyWage) && dailyWage >= 0) {
     historyMap.set(normalizeDateValue(joinDate) || todayISO(), roundMoney(dailyWage));
@@ -1457,14 +1482,14 @@ function readWorkerWageHistoryEditor() {
   try {
     const value = $("#workerWageHistoryData")?.value || "[]";
     const entries = JSON.parse(value);
-    return normalizeWageHistory({ wageHistory: Array.isArray(entries) ? entries : [] });
+    return normalizeMonthlyWageHistory({ wageHistory: Array.isArray(entries) ? entries : [] });
   } catch {
     return [];
   }
 }
 
 function setWorkerWageHistoryEditor(entries) {
-  const history = normalizeWageHistory({ wageHistory: entries || [] });
+  const history = normalizeMonthlyWageHistory({ wageHistory: entries || [] });
   if ($("#workerWageHistoryData")) $("#workerWageHistoryData").value = JSON.stringify(history);
   const list = $("#workerWageHistoryList");
   if (!list) return;
@@ -1490,6 +1515,7 @@ function addWorkerWageRateFromForm() {
   }
   const date = `${month}-01`;
   const historyMap = new Map(readWorkerWageHistoryEditor().map((entry) => [entry.date, entry.dailyWage]));
+  removeWageMonthFromMap(historyMap, month);
   historyMap.set(date, roundMoney(dailyWage));
   const history = Array.from(historyMap, ([date, dailyWage]) => ({ date, dailyWage }));
   setWorkerWageHistoryEditor(history);
