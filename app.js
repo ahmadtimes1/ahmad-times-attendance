@@ -570,6 +570,8 @@ Object.assign(translations.en, {
   halfDays: "Half days",
   printAllWages: "Print all wages",
   printSelectedWage: "Print selected wage",
+  printSeparateWorkerReports: "Print separate worker reports",
+  downloadSeparateWorkerReports: "Download separate worker reports",
   baseWage: "Base wage",
   overtimeWage: "Overtime wage",
   payments: "Payments",
@@ -648,6 +650,7 @@ Object.assign(translations.en, {
   workerBalance: "Worker balance",
   paymentDeducted: "Payment deducted",
   extraPaidBalance: "Extra paid balance",
+  balanceOnCompany: "Balance on company",
   balanceAfterPayment: "Balance after payment",
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
@@ -815,6 +818,8 @@ Object.assign(translations.ps, {
   halfDays: "نیمې ورځې",
   printAllWages: "د ټولو مزدوري چاپ",
   printSelectedWage: "د یو مزدور مزدوري چاپ",
+  printSeparateWorkerReports: "جلا جلا د کارکوونکو راپورونه چاپ",
+  downloadSeparateWorkerReports: "جلا جلا د کارکوونکو راپورونه ډاونلوډ",
   baseWage: "اصلي مزدوري",
   overtimeWage: "د اضافي وخت مزدوري",
   payments: "تادیات",
@@ -896,6 +901,7 @@ Object.assign(translations.ps, {
   workerBalance: "د کارکوونکي پاتې حساب",
   paymentDeducted: "کم شوې تادیه",
   extraPaidBalance: "زیاتې ورکړل شوې پیسې",
+  balanceOnCompany: "د شرکت پاتې حساب",
   balanceAfterPayment: "له تادیې وروسته پاتې حساب",
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
@@ -2635,22 +2641,21 @@ function saveDailyPayment(workerId, date, paidAmount) {
   saveData();
 }
 
-function openPrintableReport() {
-  renderReport();
+function printableReportHtml(customReport = "", { includePrintActions = true } = {}) {
   const language = reportLanguage();
   const dir = language === "ps" ? "rtl" : "ltr";
   const logoUrl = new URL("ahmad-times-logo.png", window.location.href).href;
   const stampUrl = new URL("ahmad-times-stamp.png", window.location.href).href;
-  const report = $("#reportOutput").innerHTML
+  const sourceReport = customReport || $("#reportOutput").innerHTML;
+  const report = sourceReport
     .replace(/<div class="report-logo-fallback"[^>]*>.*?<\/div>/g, "")
     .replaceAll('src="ahmad-times-logo.png"', `src="${logoUrl}"`)
     .replaceAll("src='ahmad-times-logo.png'", `src='${logoUrl}'`)
     .replaceAll('src="ahmad-times-stamp.png"', `src="${stampUrl}"`);
   if (!report.trim()) {
-    toast(t("emptyReport"));
-    return;
+    return "";
   }
-  const html = `<!doctype html>
+  return `<!doctype html>
     <html lang="${language}" dir="${dir}">
       <head>
         <meta charset="utf-8">
@@ -2686,6 +2691,14 @@ function openPrintableReport() {
           .report-footer { display: flex; justify-content: flex-end; align-items: flex-end; gap: 24px; margin-top: 28px; padding-top: 18px; border-top: 1px solid #d9e0ea; break-inside: avoid; }
           .report-stamp-box { margin-left: auto; text-align: center; color: #667085; font-size: 12px; }
           [dir="rtl"] .report-stamp-box { margin-right: auto; margin-left: 0; }
+          .report-payment-history { margin: 14px 0; padding: 12px; border: 1px solid #d9eaf1; border-radius: 8px; background: #fbfdff; break-inside: avoid; }
+          .report-payment-history h3 { margin: 0 0 10px; }
+          .report-payment-worker { padding: 8px 0; border-bottom: 1px solid #e6edf5; }
+          .report-payment-worker:last-child { border-bottom: 0; }
+          .payment-history-list { display: grid; gap: 6px; margin-top: 6px; }
+          .payment-history-list div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 8px; background: #f4f7fb; }
+          .separate-worker-report { break-after: page; page-break-after: always; }
+          .separate-worker-report:last-child { break-after: auto; page-break-after: auto; }
           .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
           .payment-list, .report-controls { display: none; }
           .table-wrap { overflow: visible; }
@@ -2698,12 +2711,21 @@ function openPrintableReport() {
         </style>
       </head>
       <body>
-        <div class="print-actions">
+        ${includePrintActions ? `<div class="print-actions">
           <button onclick="window.print()">Print / Save PDF</button>
-        </div>
+        </div>` : ""}
         <main class="report-page">${report}</main>
       </body>
     </html>`;
+}
+
+function openPrintableReport(customReport = "") {
+  if (!customReport) renderReport();
+  const html = printableReportHtml(customReport);
+  if (!html.trim()) {
+    toast(t("emptyReport"));
+    return;
+  }
   downloadFile(`ahmad-times-report-${todayISO()}.html`, html, "text/html");
   toast(t("reportDownloaded"));
 }
@@ -2714,6 +2736,96 @@ function printReportOnly() {
 
 function openPdfReport() {
   openPrintableReport();
+}
+
+function printSeparateWorkerReports() {
+  renderReport();
+  const workerSelect = $("#reportWorker");
+  if (!workerSelect) return;
+  const originalSelected = Array.from(workerSelect.options).map((option) => ({ value: option.value, selected: option.selected }));
+  const selectedIds = selectedReportWorkerIds();
+  const workerOptions = Array.from(workerSelect.options).filter((option) => option.value && option.value !== "all");
+  const ids = selectedIds.includes("all")
+    ? workerOptions.map((option) => option.value)
+    : selectedIds.filter((id) => workerOptions.some((option) => option.value === id));
+  if (!ids.length) {
+    toast(t("noRecordsReport"));
+    return;
+  }
+  const reports = ids.map((workerId) => {
+    Array.from(workerSelect.options).forEach((option) => {
+      option.selected = option.value === workerId;
+    });
+    renderReport();
+    return `<section class="separate-worker-report">${$("#reportOutput").innerHTML}</section>`;
+  });
+  Array.from(workerSelect.options).forEach((option) => {
+    const original = originalSelected.find((item) => item.value === option.value);
+    option.selected = Boolean(original?.selected);
+  });
+  renderReport();
+  openPrintableReport(reports.join(""));
+  addLog("Separate worker reports printed", `${ids.length} workers`);
+  saveData(false);
+}
+
+function selectedWorkerReportIdsForSeparateFiles() {
+  renderReport();
+  const workerSelect = $("#reportWorker");
+  if (!workerSelect) return [];
+  const selectedIds = selectedReportWorkerIds();
+  const workerOptions = Array.from(workerSelect.options).filter((option) => option.value && option.value !== "all");
+  return selectedIds.includes("all")
+    ? workerOptions.map((option) => option.value)
+    : selectedIds.filter((id) => workerOptions.some((option) => option.value === id));
+}
+
+function workerReportFileName(worker, period) {
+  const name = String(displayWorkerName(worker) || "worker")
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 80) || "worker";
+  return `${name}-${period.start}-to-${period.end}.html`;
+}
+
+function workerReportHtmlFile(workerId) {
+  const workerSelect = $("#reportWorker");
+  Array.from(workerSelect.options).forEach((option) => {
+    option.selected = option.value === workerId;
+  });
+  renderReport();
+  return printableReportHtml($("#reportOutput").innerHTML, { includePrintActions: true });
+}
+
+function downloadSeparateWorkerReports() {
+  const workerSelect = $("#reportWorker");
+  if (!workerSelect) return;
+  const originalSelected = Array.from(workerSelect.options).map((option) => ({ value: option.value, selected: option.selected }));
+  const ids = selectedWorkerReportIdsForSeparateFiles();
+  if (!ids.length) {
+    toast(t("noRecordsReport"));
+    return;
+  }
+  const period = currentReportPeriod();
+  const files = ids.map((workerId) => {
+    const worker = app.workers.find((item) => item.id === workerId);
+    return {
+      name: workerReportFileName(worker || { name: workerId }, period),
+      content: workerReportHtmlFile(workerId),
+    };
+  }).filter((file) => file.content);
+  Array.from(workerSelect.options).forEach((option) => {
+    const original = originalSelected.find((item) => item.value === option.value);
+    option.selected = Boolean(original?.selected);
+  });
+  renderReport();
+  if (!files.length) {
+    toast(t("emptyReport"));
+    return;
+  }
+  downloadZip(`ahmad-times-worker-reports-${period.start}-to-${period.end}.zip`, files);
+  addLog("Separate worker report files downloaded", `${files.length} workers`);
+  saveData(false);
 }
 
 function formatHours(value) {
@@ -3690,19 +3802,27 @@ function renderReport() {
       <div><span>${t("overtimeWage")}</span><strong>${money(totals.overtimeWage)}</strong></div>
       <div><span>${t("foodDeductionTotal")}</span><strong>${money(totals.foodDeduction)}</strong></div>
       <div><span>${t("grossPayable")}</span><strong>${money(totals.wage)}</strong></div>
-      <div><span>${t("advanceDeducted")}</span><strong>${money(totals.advanceDeducted)}</strong></div>
-      <div><span>${t("payableAfterAdvance")}</span><strong>${money(totals.finalPayable)}</strong></div>
-      <div><span>${t("paymentDeducted")}</span><strong>${money(payTotals.paymentDeducted)}</strong></div>
-      <div><span>${t("workerBalance")}</span><strong>${money(payTotals.pending)}</strong></div>
-      <div><span>${t("extraPaidBalance")}</span><strong>${money(payTotals.extraPaid)}</strong></div>
+      <div><span>${t("paid")}</span><strong>${money(payTotals.paid)}</strong></div>
+      <div><span>${t("unpaid")}</span><strong>${money(payTotals.pending)}</strong></div>
+      <div><span>${t("workerBalance")}</span><strong>${money(payTotals.extraPaid)}</strong></div>
+      <div><span>${t("balanceOnCompany")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
+    <section class="report-payment-history">
+      <h3>${t("paymentHistory")}</h3>
+      ${rows.map((row) => {
+        const history = workerPaymentHistory(row.worker.id, start, end);
+        return `
+          <div class="report-payment-worker">
+            <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
+            ${history.length ? renderPaymentHistory(history) : `<p class="help-text">${t("noPaymentHistory")}</p>`}
+          </div>
+        `;
+      }).join("") || `<p class="help-text">${t("noPaymentHistory")}</p>`}
+    </section>
     <div class="payment-list">
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
         const paid = rowPaidAmount(row, start, end);
-        const advance = rowAdvanceDeduction(row, start, end);
-        const finalPayable = rowFinalPayable(row, start, end);
-        const paymentDeducted = rowPaymentDeducted(row, start, end);
         const pending = rowWorkerBalance(row, start, end);
         const extraPaid = rowExtraPaidBalance(row, start, end);
         const serial = reportSerial(row.worker, start, end);
@@ -3712,7 +3832,7 @@ function renderReport() {
             <div>
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
-              <p>${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("payableAfterAdvance")}: ${money(finalPayable)} · ${t("paymentDeducted")}: ${money(paymentDeducted)} · ${t("workerBalance")}: ${money(pending)} · ${t("extraPaidBalance")}: ${money(extraPaid)}</p>
+              <p>${t("grossPayable")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)} · ${t("workerBalance")}: ${money(extraPaid)} · ${t("balanceOnCompany")}: ${money(pending)}</p>
               <div class="payment-row-history">${renderPaymentHistory(history)}</div>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
@@ -3749,11 +3869,10 @@ function renderReport() {
             <th>${t("overtimeWage")}</th>
             <th>${t("foodDeductionTotal")}</th>
             <th>${t("grossPayable")}</th>
-            <th>${t("advanceDeducted")}</th>
-            <th>${t("payableAfterAdvance")}</th>
-            <th>${t("paymentDeducted")}</th>
+            <th>${t("paid")}</th>
+            <th>${t("unpaid")}</th>
             <th>${t("workerBalance")}</th>
-            <th>${t("extraPaidBalance")}</th>
+            <th>${t("balanceOnCompany")}</th>
           </tr>
         </thead>
         <tbody>
@@ -3772,13 +3891,12 @@ function renderReport() {
               <td>${money(row.overtimeWage || 0)}</td>
               <td>${money(row.foodDeduction || 0)}</td>
               <td><strong>${money(row.wage)}</strong></td>
-              <td>${money(rowAdvanceDeduction(row, start, end))}</td>
-              <td><strong>${money(rowFinalPayable(row, start, end))}</strong></td>
-              <td>${money(rowPaymentDeducted(row, start, end))}</td>
+              <td>${money(rowPaidAmount(row, start, end))}</td>
               <td><strong>${money(rowWorkerBalance(row, start, end))}</strong></td>
               <td><strong>${money(rowExtraPaidBalance(row, start, end))}</strong></td>
+              <td><strong>${money(rowWorkerBalance(row, start, end))}</strong></td>
             </tr>
-          `).join("") || `<tr><td colspan="18">${t("noRecordsReport")}</td></tr>`}
+          `).join("") || `<tr><td colspan="17">${t("noRecordsReport")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -5878,6 +5996,110 @@ function downloadFile(name, content, type) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const ZIP_CRC_TABLE = (() => {
+  const table = [];
+  for (let n = 0; n < 256; n += 1) {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  bytes.forEach((byte) => {
+    crc = ZIP_CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  });
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function zipDateTime(date = new Date()) {
+  const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const dosDate = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+  return { dosDate, dosTime };
+}
+
+function pushZipNumber(parts, value, bytes) {
+  for (let index = 0; index < bytes; index += 1) parts.push((value >>> (8 * index)) & 0xff);
+}
+
+function pushZipBytes(parts, bytes) {
+  bytes.forEach((byte) => parts.push(byte));
+}
+
+function createZipBlob(files) {
+  const encoder = new TextEncoder();
+  const fileParts = [];
+  const centralParts = [];
+  let offset = 0;
+  const { dosDate, dosTime } = zipDateTime();
+  files.forEach((file) => {
+    const nameBytes = encoder.encode(file.name);
+    const dataBytes = encoder.encode(file.content);
+    const crc = crc32(dataBytes);
+    const local = [];
+    pushZipNumber(local, 0x04034b50, 4);
+    pushZipNumber(local, 20, 2);
+    pushZipNumber(local, 0, 2);
+    pushZipNumber(local, 0, 2);
+    pushZipNumber(local, dosTime, 2);
+    pushZipNumber(local, dosDate, 2);
+    pushZipNumber(local, crc, 4);
+    pushZipNumber(local, dataBytes.length, 4);
+    pushZipNumber(local, dataBytes.length, 4);
+    pushZipNumber(local, nameBytes.length, 2);
+    pushZipNumber(local, 0, 2);
+    pushZipBytes(local, nameBytes);
+    pushZipBytes(local, dataBytes);
+    pushZipBytes(fileParts, local);
+
+    const central = [];
+    pushZipNumber(central, 0x02014b50, 4);
+    pushZipNumber(central, 20, 2);
+    pushZipNumber(central, 20, 2);
+    pushZipNumber(central, 0, 2);
+    pushZipNumber(central, 0, 2);
+    pushZipNumber(central, dosTime, 2);
+    pushZipNumber(central, dosDate, 2);
+    pushZipNumber(central, crc, 4);
+    pushZipNumber(central, dataBytes.length, 4);
+    pushZipNumber(central, dataBytes.length, 4);
+    pushZipNumber(central, nameBytes.length, 2);
+    pushZipNumber(central, 0, 2);
+    pushZipNumber(central, 0, 2);
+    pushZipNumber(central, 0, 2);
+    pushZipNumber(central, 0, 2);
+    pushZipNumber(central, 0, 4);
+    pushZipNumber(central, offset, 4);
+    pushZipBytes(central, nameBytes);
+    pushZipBytes(centralParts, central);
+    offset += local.length;
+  });
+  const end = [];
+  pushZipNumber(end, 0x06054b50, 4);
+  pushZipNumber(end, 0, 2);
+  pushZipNumber(end, 0, 2);
+  pushZipNumber(end, files.length, 2);
+  pushZipNumber(end, files.length, 2);
+  pushZipNumber(end, centralParts.length, 4);
+  pushZipNumber(end, fileParts.length, 4);
+  pushZipNumber(end, 0, 2);
+  return new Blob([new Uint8Array([...fileParts, ...centralParts, ...end])], { type: "application/zip" });
+}
+
+function downloadZip(name, files) {
+  const blob = createZipBlob(files);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function csvCell(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
@@ -6422,6 +6644,8 @@ function bindEvents() {
     renderReport();
     printReportOnly();
   });
+  $("#printSeparateWorkerReports")?.addEventListener("click", printSeparateWorkerReports);
+  $("#downloadSeparateWorkerReports")?.addEventListener("click", downloadSeparateWorkerReports);
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
   $("#downloadLatestBackup").addEventListener("click", downloadLatestDailyBackup);
