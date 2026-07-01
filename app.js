@@ -644,6 +644,10 @@ Object.assign(translations.en, {
   remainingAdvanceBalance: "Remaining advance balance",
   grossPayable: "Gross payable",
   finalPayable: "Final payable",
+  payableAfterAdvance: "Payable after advance",
+  workerBalance: "Worker balance",
+  paymentDeducted: "Payment deducted",
+  balanceAfterPayment: "Balance after payment",
   wageEffectiveDate: "Wage effective from",
   wageHistory: "Wage history",
   effectiveFrom: "from",
@@ -887,6 +891,10 @@ Object.assign(translations.ps, {
   remainingAdvanceBalance: "پاتې اډوانس بیلنس",
   grossPayable: "مجموعي ورکړه",
   finalPayable: "وروستۍ ورکړه",
+  payableAfterAdvance: "له اډوانس وروسته ورکړه",
+  workerBalance: "د کارکوونکي پاتې حساب",
+  paymentDeducted: "کم شوې تادیه",
+  balanceAfterPayment: "له تادیې وروسته پاتې حساب",
   wageEffectiveDate: "مزدوري له دې نېټې نه",
   wageHistory: "د مزدورۍ تاریخچه",
   effectiveFrom: "له",
@@ -1543,6 +1551,14 @@ function rowUnpaidAmount(row, start, end) {
   return roundMoney(Math.max(0, rowFinalPayable(row, start, end) - rowPaidAmount(row, start, end)));
 }
 
+function rowPaymentDeducted(row, start, end) {
+  return roundMoney(Math.min(rowPaidAmount(row, start, end), rowFinalPayable(row, start, end)));
+}
+
+function rowWorkerBalance(row, start, end) {
+  return rowUnpaidAmount(row, start, end);
+}
+
 function whatsappNumber(worker) {
   const phone = String(worker.phone || "").replace(/\D/g, "");
   if (!phone) return "";
@@ -1560,6 +1576,7 @@ function buildWhatsAppMessage(row, start, end, title) {
   const unpaid = rowUnpaidAmount(row, start, end);
   const advance = rowAdvanceDeduction(row, start, end);
   const finalPayable = rowFinalPayable(row, start, end);
+  const paymentDeducted = rowPaymentDeducted(row, start, end);
   return [
     "Ahmad Times For Building Maintenance L.L.C",
     t("buildingMaintenance"),
@@ -1585,9 +1602,9 @@ function buildWhatsAppMessage(row, start, end, title) {
     `${t("foodDeductionTotal")}: ${money(row.foodDeduction || 0)}`,
     `${t("grossPayable")}: ${money(row.wage || 0)}`,
     `${t("advanceDeducted")}: ${money(advance)}`,
-    `${t("finalPayable")}: ${money(finalPayable)}`,
-    `${t("paid")}: ${money(paid)}`,
-    `${t("unpaid")}: ${money(unpaid)}`,
+    `${t("payableAfterAdvance")}: ${money(finalPayable)}`,
+    `${t("paymentDeducted")}: ${money(paymentDeducted)}`,
+    `${t("workerBalance")}: ${money(unpaid)}`,
     "",
     "Thank you.",
   ].join("\n");
@@ -2347,13 +2364,17 @@ function paymentTotals(rows, start, end) {
     const advance = rowAdvanceDeduction(row, start, end);
     const finalPayable = rowFinalPayable(row, start, end);
     const paid = rowPaidAmount(row, start, end);
+    const paymentDeducted = Math.min(paid, finalPayable);
+    const balance = Math.max(0, finalPayable - paid);
     acc.gross = roundMoney(acc.gross + Number(row.wage || 0));
     acc.advance = roundMoney(acc.advance + advance);
     acc.finalPayable = roundMoney(acc.finalPayable + finalPayable);
     acc.paid = roundMoney(acc.paid + paid);
-    acc.pending = roundMoney(acc.pending + Math.max(0, finalPayable - paid));
+    acc.paymentDeducted = roundMoney(acc.paymentDeducted + paymentDeducted);
+    acc.pending = roundMoney(acc.pending + balance);
+    acc.balance = acc.pending;
     return acc;
-  }, { gross: 0, advance: 0, finalPayable: 0, paid: 0, pending: 0 });
+  }, { gross: 0, advance: 0, finalPayable: 0, paid: 0, paymentDeducted: 0, pending: 0, balance: 0 });
 }
 
 function currentReportPeriod() {
@@ -2458,6 +2479,7 @@ function renderPaymentEntryPanel() {
       history = workerPaymentHistory(worker.id, start, end);
     }
   }
+  const paymentDeducted = roundMoney(Math.min(paid, total));
   const unpaid = roundMoney(Math.max(0, total - paid));
   const selectedWorker = type === "worker" ? app.workers.find((item) => item.id === personSelect.value) : null;
   const remainingAdvance = selectedWorker ? workerRemainingAdvance(selectedWorker, end) : 0;
@@ -2466,9 +2488,9 @@ function renderPaymentEntryPanel() {
     return;
   }
   summary.innerHTML = `
-    <div><span>${t("finalPayable")}</span><strong>${money(total)}</strong></div>
-    <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
-    <div><span>${t("remainingUnpaidBalance")}</span><strong>${money(unpaid)}</strong></div>
+    <div><span>${t("payableAfterAdvance")}</span><strong>${money(total)}</strong></div>
+    <div><span>${t("paymentDeducted")}</span><strong>${money(paymentDeducted)}</strong></div>
+    <div><span>${t("workerBalance")}</span><strong>${money(unpaid)}</strong></div>
     ${selectedWorker ? `<div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>` : ""}
     <div class="wide"><span>${t("paymentHistory")}</span>${renderPaymentHistory(history)}</div>
   `;
@@ -3196,10 +3218,10 @@ function workerSummaryPanel(worker) {
         <div><span>${t("grossPayable")}</span><strong>${money(row.wage)}</strong></div>
         <div><span>${t("totalAdvanceGiven")}</span><strong>${money(totalAdvance)}</strong></div>
         <div><span>${t("advanceDeducted")}</span><strong>${money(advance)}</strong></div>
-        <div><span>${t("finalPayable")}</span><strong>${money(finalPayable)}</strong></div>
+        <div><span>${t("payableAfterAdvance")}</span><strong>${money(finalPayable)}</strong></div>
         <div><span>${t("remainingAdvanceBalance")}</span><strong>${money(remainingAdvance)}</strong></div>
-        <div><span>${t("paid")}</span><strong>${money(paid)}</strong></div>
-        <div><span>${t("unpaid")}</span><strong>${money(unpaid)}</strong></div>
+        <div><span>${t("paymentDeducted")}</span><strong>${money(paymentDeducted)}</strong></div>
+        <div><span>${t("workerBalance")}</span><strong>${money(unpaid)}</strong></div>
       </div>
 
       <section class="mini-attendance-card">
@@ -3654,9 +3676,9 @@ function renderReport() {
       <div><span>${t("foodDeductionTotal")}</span><strong>${money(totals.foodDeduction)}</strong></div>
       <div><span>${t("grossPayable")}</span><strong>${money(totals.wage)}</strong></div>
       <div><span>${t("advanceDeducted")}</span><strong>${money(totals.advanceDeducted)}</strong></div>
-      <div><span>${t("finalPayable")}</span><strong>${money(totals.finalPayable)}</strong></div>
-      <div><span>${t("paid")}</span><strong>${money(payTotals.paid)}</strong></div>
-      <div><span>${t("unpaid")}</span><strong>${money(payTotals.pending)}</strong></div>
+      <div><span>${t("payableAfterAdvance")}</span><strong>${money(totals.finalPayable)}</strong></div>
+      <div><span>${t("paymentDeducted")}</span><strong>${money(payTotals.paymentDeducted)}</strong></div>
+      <div><span>${t("workerBalance")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
     <div class="payment-list">
       <h3>${t("payments")}</h3>
@@ -3664,7 +3686,8 @@ function renderReport() {
         const paid = rowPaidAmount(row, start, end);
         const advance = rowAdvanceDeduction(row, start, end);
         const finalPayable = rowFinalPayable(row, start, end);
-        const pending = rowUnpaidAmount(row, start, end);
+        const paymentDeducted = rowPaymentDeducted(row, start, end);
+        const pending = rowWorkerBalance(row, start, end);
         const serial = reportSerial(row.worker, start, end);
         const history = workerPaymentHistory(row.worker.id, start, end);
         return `
@@ -3672,7 +3695,7 @@ function renderReport() {
             <div>
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
-              <p>${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("finalPayable")}: ${money(finalPayable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)}</p>
+              <p>${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("payableAfterAdvance")}: ${money(finalPayable)} · ${t("paymentDeducted")}: ${money(paymentDeducted)} · ${t("workerBalance")}: ${money(pending)}</p>
               <div class="payment-row-history">${renderPaymentHistory(history)}</div>
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
@@ -3710,9 +3733,9 @@ function renderReport() {
             <th>${t("foodDeductionTotal")}</th>
             <th>${t("grossPayable")}</th>
             <th>${t("advanceDeducted")}</th>
-            <th>${t("finalPayable")}</th>
-            <th>${t("paid")}</th>
-            <th>${t("unpaid")}</th>
+            <th>${t("payableAfterAdvance")}</th>
+            <th>${t("paymentDeducted")}</th>
+            <th>${t("workerBalance")}</th>
           </tr>
         </thead>
         <tbody>
@@ -3733,8 +3756,8 @@ function renderReport() {
               <td><strong>${money(row.wage)}</strong></td>
               <td>${money(rowAdvanceDeduction(row, start, end))}</td>
               <td><strong>${money(rowFinalPayable(row, start, end))}</strong></td>
-              <td>${money(rowPaidAmount(row, start, end))}</td>
-              <td><strong>${money(rowUnpaidAmount(row, start, end))}</strong></td>
+              <td>${money(rowPaymentDeducted(row, start, end))}</td>
+              <td><strong>${money(rowWorkerBalance(row, start, end))}</strong></td>
             </tr>
           `).join("") || `<tr><td colspan="17">${t("noRecordsReport")}</td></tr>`}
         </tbody>
@@ -5014,12 +5037,13 @@ function assistantWorkerReport(worker) {
   const unpaid = rowUnpaidAmount(row, context.dates[0], context.dates[context.dates.length - 1]);
   const advance = rowAdvanceDeduction(row, context.dates[0], context.dates[context.dates.length - 1]);
   const finalPayable = rowFinalPayable(row, context.dates[0], context.dates[context.dates.length - 1]);
+  const paymentDeducted = rowPaymentDeducted(row, context.dates[0], context.dates[context.dates.length - 1]);
   return [
     `${displayWorkerName(worker)} · ${context.month}`,
     `${t("status")}: ${t(worker.status || "active")} · ${t("shift")}: ${attendanceShiftLabel(workerDefaultShift(worker))}`,
     `${t("present")}: ${row.present} · ${t("halfday")}: ${row.halfday || 0} · ${t("absent")}: ${row.absent} · ${t("off")}: ${row.off}`,
     `${t("hours")}: ${formatHours(row.hours)} · ${t("overtime")}: ${formatHours(row.overtime)}`,
-    `${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("finalPayable")}: ${money(finalPayable)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(unpaid)}`,
+    `${t("grossPayable")}: ${money(row.wage)} · ${t("advanceDeducted")}: ${money(advance)} · ${t("payableAfterAdvance")}: ${money(finalPayable)} · ${t("paymentDeducted")}: ${money(paymentDeducted)} · ${t("workerBalance")}: ${money(unpaid)}`,
   ].join("\n");
 }
 
@@ -6491,6 +6515,7 @@ function renderDashboard() {
       const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
       const advance = rowAdvanceDeduction(row, monthDates[0], monthDates[monthDates.length - 1]);
       const finalPayable = rowFinalPayable(row, monthDates[0], monthDates[monthDates.length - 1]);
+      const paymentDeducted = rowPaymentDeducted(row, monthDates[0], monthDates[monthDates.length - 1]);
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -6499,9 +6524,9 @@ function renderDashboard() {
           <td data-label="${t("overtime")}">${formatHours(row.overtime)}</td>
           <td data-label="${t("dailyWage")}">${money(row.dailyWage || currentDailyWage(row.worker))}</td>
           <td data-label="${t("advanceDeducted")}">${money(advance)}</td>
-          <td data-label="${t("paid")}">${money(paid)}</td>
-          <td data-label="${t("unpaid")}"><strong>${money(unpaid)}</strong></td>
-          <td data-label="${t("finalPayable")}"><strong>${money(finalPayable)}</strong></td>
+          <td data-label="${t("payableAfterAdvance")}"><strong>${money(finalPayable)}</strong></td>
+          <td data-label="${t("paymentDeducted")}">${money(paymentDeducted)}</td>
+          <td data-label="${t("workerBalance")}"><strong>${money(unpaid)}</strong></td>
         </tr>
       `;
     }).join("") || `<tr><td colspan="9">${t("noWageRecords")}</td></tr>`;
