@@ -2184,6 +2184,10 @@ function selectedAttendanceWorkerIds() {
 
 function selectedReportWorkerIds() {
   const select = $("#reportWorker");
+  const mobileSelect = $("#reportWorkerMobile");
+  if (mobileSelect && window.matchMedia("(max-width: 700px)").matches && mobileSelect.value) {
+    return mobileSelect.value === "all" ? ["all"] : [mobileSelect.value];
+  }
   if (!select) return ["all"];
   const values = Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
   if (!values.length || values.includes("all")) return ["all"];
@@ -4120,6 +4124,11 @@ function renderReport() {
     .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${selectedWorkerIds.includes(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>`));
   $("#reportWorker").innerHTML = workerOptions.join("");
   if (selectedWorkerIds.includes("all")) $("#reportWorker").querySelector('option[value="all"]').selected = true;
+  if ($("#reportWorkerMobile")) {
+    $("#reportWorkerMobile").innerHTML = workerOptions.map((optionHtml) => optionHtml.replace(/\sselected/g, "")).join("");
+    const mobileValue = selectedWorkerIds.includes("all") ? "all" : selectedWorkerIds[0];
+    $("#reportWorkerMobile").value = Array.from($("#reportWorkerMobile").options).some((option) => option.value === mobileValue) ? mobileValue : "all";
+  }
 
   const reportSelection = selectedWorkerIds.includes("all") ? ["all"] : selectedWorkerIds;
   const rows = wageReportRowsForPeriod(type, month, start, end, reportSelection, reportShift);
@@ -6961,7 +6970,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportWorkerMobile", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
     $(`#${id}`).addEventListener("change", renderAll);
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {

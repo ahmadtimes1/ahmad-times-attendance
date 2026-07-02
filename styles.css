@@ -1105,6 +1105,10 @@ tbody tr:last-child td {
   min-height: 132px;
 }
 
+.mobile-report-worker-label {
+  display: none;
+}
+
 .month-worker-cell small {
   display: block;
   margin-top: 3px;
@@ -3095,6 +3099,16 @@ dialog::backdrop {
   .report-controls label {
     width: 100%;
     min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .desktop-report-worker-label {
+    display: none;
+  }
+
+  .mobile-report-worker-label {
+    display: grid;
   }
 }
 
