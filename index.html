@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=mobile-report-worker-select-1">
+    <link rel="stylesheet" href="styles.css?v=mobile-report-worker-multiselect-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -605,10 +605,10 @@
               <span data-i18n="workers">Workers</span>
               <select id="reportWorker" multiple size="5"></select>
             </label>
-            <label class="mobile-report-worker-label">
-              <span data-i18n="worker">Worker</span>
-              <select id="reportWorkerMobile"></select>
-            </label>
+            <div class="mobile-report-worker-label">
+              <span data-i18n="workers">Workers</span>
+              <div id="reportWorkerMobileList" class="mobile-check-list" aria-label="Report workers"></div>
+            </div>
             <label>
               <span data-i18n="shiftFilter">Shift filter</span>
               <select id="reportShiftFilter">
@@ -1057,6 +1057,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=mobile-report-worker-select-1"></script>
+    <script src="app.js?v=mobile-report-worker-multiselect-1"></script>
   </body>
 </html>

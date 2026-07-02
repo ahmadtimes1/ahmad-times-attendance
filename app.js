@@ -2184,9 +2184,13 @@ function selectedAttendanceWorkerIds() {
 
 function selectedReportWorkerIds() {
   const select = $("#reportWorker");
-  const mobileSelect = $("#reportWorkerMobile");
-  if (mobileSelect && window.matchMedia("(max-width: 700px)").matches && mobileSelect.value) {
-    return mobileSelect.value === "all" ? ["all"] : [mobileSelect.value];
+  const mobileList = $("#reportWorkerMobileList");
+  if (mobileList && window.matchMedia("(max-width: 700px)").matches) {
+    const values = Array.from(mobileList.querySelectorAll("input[type='checkbox']:checked"))
+      .map((input) => input.value)
+      .filter(Boolean);
+    if (!values.length || values.includes("all")) return ["all"];
+    return values;
   }
   if (!select) return ["all"];
   const values = Array.from(select.selectedOptions).map((option) => option.value).filter(Boolean);
@@ -4124,10 +4128,20 @@ function renderReport() {
     .concat(reportWorkers.map((worker) => `<option value="${worker.id}" ${selectedWorkerIds.includes(worker.id) ? "selected" : ""}>${escapeHTML(displayWorkerName(worker))}</option>`));
   $("#reportWorker").innerHTML = workerOptions.join("");
   if (selectedWorkerIds.includes("all")) $("#reportWorker").querySelector('option[value="all"]').selected = true;
-  if ($("#reportWorkerMobile")) {
-    $("#reportWorkerMobile").innerHTML = workerOptions.map((optionHtml) => optionHtml.replace(/\sselected/g, "")).join("");
-    const mobileValue = selectedWorkerIds.includes("all") ? "all" : selectedWorkerIds[0];
-    $("#reportWorkerMobile").value = Array.from($("#reportWorkerMobile").options).some((option) => option.value === mobileValue) ? mobileValue : "all";
+  if ($("#reportWorkerMobileList")) {
+    const mobileOptions = [{ id: "all", name: t("companyWideReport") }]
+      .concat(reportWorkers.map((worker) => ({ id: worker.id, name: displayWorkerName(worker) })));
+    $("#reportWorkerMobileList").innerHTML = mobileOptions.map((option) => {
+      const checked = selectedWorkerIds.includes("all")
+        ? option.id === "all"
+        : selectedWorkerIds.includes(option.id);
+      return `
+        <label class="mobile-check-item">
+          <input type="checkbox" value="${escapeHTML(option.id)}" ${checked ? "checked" : ""}>
+          <span>${escapeHTML(option.name)}</span>
+        </label>
+      `;
+    }).join("");
   }
 
   const reportSelection = selectedWorkerIds.includes("all") ? ["all"] : selectedWorkerIds;
@@ -6970,8 +6984,26 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportWorkerMobile", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
-    $(`#${id}`).addEventListener("change", renderAll);
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
+    $(`#${id}`)?.addEventListener("change", renderAll);
+  });
+  $("#reportWorkerMobileList")?.addEventListener("change", (event) => {
+    const input = event.target.closest("input[type='checkbox']");
+    if (!input) return;
+    const list = $("#reportWorkerMobileList");
+    if (input.value === "all" && input.checked) {
+      list.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+        checkbox.checked = checkbox.value === "all";
+      });
+    } else if (input.checked) {
+      const allOption = list.querySelector('input[value="all"]');
+      if (allOption) allOption.checked = false;
+    }
+    if (!list.querySelector("input[type='checkbox']:checked")) {
+      const allOption = list.querySelector('input[value="all"]');
+      if (allOption) allOption.checked = true;
+    }
+    renderAll();
   });
   ["paymentEntryType", "paymentEntryPerson"].forEach((id) => {
     $(`#${id}`)?.addEventListener("change", renderPaymentEntryPanel);
