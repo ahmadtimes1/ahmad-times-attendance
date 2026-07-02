@@ -42,6 +42,12 @@ const translations = {
     recordsSaved: "Records saved",
     latestBackup: "Latest backup",
     noBackupYet: "No backup yet",
+    backupToday: "Backup today",
+    backupNotToday: "Backup not today",
+    monthOpen: "Month open",
+    monthLockedShort: "Month locked",
+    readyToClose: "Ready to close",
+    reviewBeforeClose: "Review before closing",
     never: "Never",
     fullDayBasis: "actual working hours full day basis",
     worker: "Worker",
@@ -349,6 +355,12 @@ const translations = {
     recordsSaved: "ریکارډونه ذخیره شوي",
     latestBackup: "وروستی بیک اپ",
     noBackupYet: "بیک اپ نشته",
+    backupToday: "نن بیک اپ شته",
+    backupNotToday: "نن بیک اپ نشته",
+    monthOpen: "میاشت خلاصه ده",
+    monthLockedShort: "میاشت بنده ده",
+    readyToClose: "د بندولو لپاره چمتو",
+    reviewBeforeClose: "د بندولو مخکې یې وګورئ",
     never: "هېڅکله",
     fullDayBasis: "د حقیقي کاري ساعتونو د بشپړې ورځې حساب",
     recentAttendance: "وروستۍ حاضري",
@@ -3348,31 +3360,53 @@ function renderActiveAttendancePanel() {
 
 function renderControlCenter() {
   const date = $("#todayInput")?.value || todayISO();
+  const month = $("#dashboardMonth")?.value || monthISO();
   const todayRecords = app.attendance[date] || {};
   const activeCount = activeWorkers().length;
   const presentToday = Object.values(todayRecords)
     .filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status))
     .length;
   const alerts = payrollAlerts();
+  const verification = verifyPayrollCalculations(month);
+  const monthLocked = isMonthLocked(month);
   const latestBackup = Object.entries(app.dailyBackups || {})
     .sort((a, b) => b[0].localeCompare(a[0]))[0];
+  const backupIsToday = latestBackup?.[0] === todayISO();
   const storageLabel = app.lastCloudSaveError ? t("cloudSaveProblem") : (app.storageMode === "cloud" ? t("cloudMode") : t("localMode"));
   const lastSaved = app.lastSaved ? new Date(app.lastSaved).toLocaleString() : t("never");
+  const setCardState = (selector, state) => {
+    const card = $(selector)?.closest(".control-card");
+    if (!card) return;
+    card.classList.remove("control-good", "control-warning", "control-danger");
+    card.classList.add(`control-${state}`);
+  };
 
   if ($("#controlTodayStatus")) $("#controlTodayStatus").textContent = `${presentToday}/${activeCount}`;
   if ($("#controlTodayDetail")) {
     $("#controlTodayDetail").textContent = `${t("presentToday")} · ${date} · ${STANDARD_HOURS}h ${t("fullDayBasis")}`;
   }
-  if ($("#controlHealthStatus")) $("#controlHealthStatus").textContent = alerts.length ? t("needsReview") : t("healthy");
-  if ($("#controlHealthDetail")) {
-    $("#controlHealthDetail").textContent = alerts.length ? `${alerts.length} ${t("mistakeAlerts")}` : t("noAlerts");
+  setCardState("#controlTodayStatus", presentToday === activeCount && activeCount > 0 ? "good" : presentToday > 0 ? "warning" : "danger");
+  if ($("#controlHealthStatus")) {
+    $("#controlHealthStatus").textContent = verification.issueCount || alerts.length
+      ? t("needsReview")
+      : monthLocked ? t("monthLockedShort") : t("readyToClose");
   }
+  if ($("#controlHealthDetail")) {
+    const healthParts = [
+      `${month}: ${monthLocked ? t("locked") : t("monthOpen")}`,
+      verification.issueCount ? `${verification.issueCount} ${t("mistakeAlerts")}` : t("calculationVerified"),
+      alerts.length ? `${alerts.length} ${t("mistakeAlerts")}` : t("noAlerts"),
+    ];
+    $("#controlHealthDetail").textContent = healthParts.join(" · ");
+  }
+  setCardState("#controlHealthStatus", verification.issueCount || alerts.length ? "danger" : monthLocked ? "good" : "warning");
   if ($("#controlDataSafety")) $("#controlDataSafety").textContent = storageLabel;
   if ($("#controlDataSafetyDetail")) {
     $("#controlDataSafetyDetail").textContent = app.lastCloudSaveError
       ? `${app.lastCloudSaveError} · ${t("browserCopySaved")}`
-      : `${t("recordsSaved")}: ${lastSaved} · ${t("latestBackup")}: ${latestBackup?.[0] || t("noBackupYet")}`;
+      : `${t("recordsSaved")}: ${lastSaved} · ${t("latestBackup")}: ${latestBackup?.[0] || t("noBackupYet")} · ${backupIsToday ? t("backupToday") : t("backupNotToday")}`;
   }
+  setCardState("#controlDataSafety", app.lastCloudSaveError ? "danger" : backupIsToday ? "good" : "warning");
 }
 
 function applyLanguage() {
