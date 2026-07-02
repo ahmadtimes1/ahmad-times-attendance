@@ -765,6 +765,8 @@ Object.assign(translations.en, {
   projectExpenses: "Project expenses",
   companyExpenseCost: "Company expenses",
   workerWageCost: "Worker wages",
+  totalAllMonthsWages: "Total all months wages",
+  totalCompanyCost: "Total company cost",
   budgetRemaining: "Budget remaining",
   noBudgetEntries: "No budget entries yet.",
   printPartnerReport: "Print partner report",
@@ -1030,6 +1032,8 @@ Object.assign(translations.ps, {
   projectExpenses: "د پروژې مصرف",
   companyExpenseCost: "د شرکت مصارف",
   workerWageCost: "د مزدورانو مزدوري",
+  totalAllMonthsWages: "د ټولو میاشتو مزدوري",
+  totalCompanyCost: "د شرکت ټول لګښت",
   budgetRemaining: "پاتې بودیجه",
   noBudgetEntries: "تر اوسه بودیجه نشته.",
   printPartnerReport: "د شریکانو راپور چاپ",
@@ -3438,7 +3442,6 @@ function renderAuthStatus() {
 function renderDashboardLegacyUnused() {
   const date = $("#todayInput").value || todayISO();
   const month = $("#dashboardMonth").value || monthISO();
-  const previous = previousMonth(month);
   const summary = monthSummary(month);
   const todayRecords = app.attendance[date] || {};
   const monthExpensesTotal = companyExpenseTotal(month);
@@ -4930,6 +4933,8 @@ function projectWorkerWageRows(project = "all", startMonth = monthISO(), endMont
         month,
         worker: row.worker,
         amount: rowFinalPayable(row, dates[0], dates[dates.length - 1]),
+        paid: rowPaymentDeducted(row, dates[0], dates[dates.length - 1]),
+        unpaid: rowUnpaidAmount(row, dates[0], dates[dates.length - 1]),
       }));
   });
 }
@@ -4942,9 +4947,13 @@ function projectBudgetSummary(startMonth = monthISO(), selectedProject = "all", 
   const companySpent = roundMoney(expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0));
   const workerSpent = roundMoney(workerWages.reduce((sum, item) => sum + Number(item.amount || 0), 0));
   const spent = roundMoney(companySpent + workerSpent);
-  const paid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).paid, 0));
-  const unpaid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).unpaid, 0));
-  return { entries, expenses, workerWages, received, spent, companySpent, workerSpent, paid, unpaid, remaining: roundMoney(received - spent) };
+  const expensePaid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).paid, 0));
+  const expenseUnpaid = roundMoney(expenses.reduce((sum, expense) => sum + expenseLedger(expense).unpaid, 0));
+  const workerPaid = roundMoney(workerWages.reduce((sum, item) => sum + Number(item.paid || 0), 0));
+  const workerUnpaid = roundMoney(workerWages.reduce((sum, item) => sum + Number(item.unpaid || 0), 0));
+  const paid = roundMoney(expensePaid + workerPaid);
+  const unpaid = roundMoney(expenseUnpaid + workerUnpaid);
+  return { entries, expenses, workerWages, received, spent, companySpent, workerSpent, expensePaid, expenseUnpaid, workerPaid, workerUnpaid, paid, unpaid, remaining: roundMoney(received - spent) };
 }
 
 function projectSummaryRows(startMonth = monthISO(), selectedProject = "all", endMonth = startMonth) {
@@ -4972,24 +4981,12 @@ function renderProjectsBudget() {
   const endMonth = $("#budgetToMonth")?.value || startMonth;
   const selectedProject = $("#budgetProjectFilter")?.value || "all";
   const summary = projectBudgetSummary(startMonth, selectedProject, endMonth);
-  const rows = projectSummaryRows(startMonth, selectedProject, endMonth);
   $("#budgetSummary").innerHTML = `
     <article><span>${t("budgetReceived")}</span><strong>${money(summary.received)}</strong></article>
-    <article><span>${t("projectExpenses")}</span><strong>${money(summary.spent)}</strong></article>
-    <article><span>${t("companyExpenseCost")}</span><strong>${money(summary.companySpent)}</strong></article>
-    <article><span>${t("workerWageCost")}</span><strong>${money(summary.workerSpent)}</strong></article>
-    <article><span>${t("paid")}</span><strong>${money(summary.paid)}</strong></article>
+    <article><span>${t("totalAllMonthsWages")}</span><strong>${money(summary.workerSpent)}</strong></article>
+    <article><span>${t("totalCompanyCost")}</span><strong>${money(summary.spent)}</strong></article>
     <article><span>${t("unpaid")}</span><strong>${money(summary.unpaid)}</strong></article>
-    <article><span>${t("budgetRemaining")}</span><strong>${money(summary.remaining)}</strong></article>
-    ${rows.map((row) => `
-      <article class="expense-category-card">
-        <span>${escapeHTML(row.project)}</span>
-        <strong>${money(row.remaining)}</strong>
-        <small>${t("budgetReceived")}: ${money(row.received)}</small>
-        <small>${t("companyExpenseCost")}: ${money(row.companySpent)}</small>
-        <small>${t("workerWageCost")}: ${money(row.workerSpent)}</small>
-      </article>
-    `).join("")}
+    <article><span>${t("monthlyExpenses")}</span><strong>${money(summary.companySpent)}</strong></article>
   `;
   $("#budgetEntriesList").innerHTML = summary.entries
     .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
@@ -7097,35 +7094,29 @@ function renderDashboard() {
     acc.unpaid = roundMoney(acc.unpaid + ledger.unpaid);
     return acc;
   }, { paid: 0, unpaid: 0 });
-  const monthOvertime = summary.reduce((sum, row) => sum + row.overtime, 0);
   const monthDates = daysInMonth(month);
   const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
   const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month), monthDates[0], monthDates[monthDates.length - 1]);
   const monthWages = dashboardPayTotals.finalPayable;
   const selectedMonthCompanyCost = roundMoney(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
-  const previousMonthCompanyCost = companyCostForMonth(previous);
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
   const totalUnpaidBalance = roundMoney(directUnpaid + supplierDashboardTotals.unpaid + monthExpenseLedger.unpaid);
-  const workerAdvanceRemaining = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, monthDates[monthDates.length - 1]), 0));
 
   if ($("#statTotalWorkers")) $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
-  $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
+  if ($("#statInactiveWorkers")) $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
   $("#statMonthWages").textContent = money(monthWages);
   if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(monthExpensesTotal);
   $("#statGrandTotal").textContent = money(selectedMonthCompanyCost);
-  if ($("#statPreviousMonthCost")) $("#statPreviousMonthCost").textContent = money(previousMonthCompanyCost);
-  if ($("#statTwoMonthCost")) $("#statTwoMonthCost").textContent = money(selectedMonthCompanyCost + previousMonthCompanyCost);
-  $("#statAttendanceDays").textContent = formatHours(monthOvertime);
+  if ($("#statAttendanceDays")) $("#statAttendanceDays").textContent = formatHours(summary.reduce((sum, row) => sum + row.overtime, 0));
   $("#statUnpaidWages").textContent = money(directUnpaid);
   if ($("#statTotalUnpaidBalance")) $("#statTotalUnpaidBalance").textContent = money(totalUnpaidBalance);
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
-  if ($("#statWorkerAdvance")) $("#statWorkerAdvance").textContent = money(workerAdvanceRemaining);
   if ($("#statAdvanceDeducted")) $("#statAdvanceDeducted").textContent = money(dashboardPayTotals.advance);
   if ($("#statBudgetReceived")) $("#statBudgetReceived").textContent = money(budgetSummary.received);
   if ($("#statBudgetRemaining")) $("#statBudgetRemaining").textContent = money(budgetSummary.remaining);
