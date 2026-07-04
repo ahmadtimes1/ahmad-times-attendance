@@ -638,6 +638,7 @@ Object.assign(translations.en, {
   totalWageAmount: "Total wage amount",
   remainingUnpaidBalance: "Remaining unpaid balance",
   paymentHistory: "Payment history",
+  includePaymentHistory: "Include payment history",
   noPaymentHistory: "No payment history yet.",
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
@@ -902,6 +903,7 @@ Object.assign(translations.ps, {
   totalWageAmount: "ټوله مزدوري",
   remainingUnpaidBalance: "پاتې ناادا",
   paymentHistory: "د تادیاتو تاریخچه",
+  includePaymentHistory: "د تادیاتو تاریخچه شامل کړئ",
   noPaymentHistory: "تر اوسه تادیه نشته.",
   noPaymentTarget: "کارکوونکی یا سپلایر نه دی ټاکل شوی.",
   addPaymentAmountFirst: "لومړی د تادیې اندازه ولیکئ.",
@@ -4170,6 +4172,7 @@ function renderReport() {
       ? escapeHTML(displayWorkerName(selectedWorker))
       : `${t("selectedWorkerReports")} (${rows.length})`;
   const includePreviousMonth = type === "monthly" && Boolean($("#includePreviousMonthReport")?.checked);
+  const includePaymentHistory = Boolean($("#includePaymentHistoryReport")?.checked);
   const previousReportMonth = previousMonth(month);
   const previousDates = daysInMonth(previousReportMonth);
   const previousRows = includePreviousMonth
@@ -4217,7 +4220,7 @@ function renderReport() {
       <div><span>${t("workerBalance")}</span><strong>${money(payTotals.extraPaid)}</strong></div>
       <div><span>${t("balanceOnCompany")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
-    <section class="report-payment-history">
+    ${includePaymentHistory ? `<section class="report-payment-history">
       <h3>${t("paymentHistory")}</h3>
       ${rows.map((row) => {
         const history = workerPaymentHistory(row.worker.id, start, end);
@@ -4228,7 +4231,7 @@ function renderReport() {
           </div>
         `;
       }).join("") || `<p class="help-text">${t("noPaymentHistory")}</p>`}
-    </section>
+    </section>` : ""}
     <div class="payment-list">
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
@@ -4243,7 +4246,7 @@ function renderReport() {
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
               <p>${t("grossPayable")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)} · ${t("workerBalance")}: ${money(extraPaid)} · ${t("balanceOnCompany")}: ${money(pending)}</p>
-              <div class="payment-row-history">${renderPaymentHistory(history, { editable: true, type: "worker" })}</div>
+              ${includePaymentHistory ? `<div class="payment-row-history">${renderPaymentHistory(history, { editable: true, type: "worker" })}</div>` : ""}
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
             <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${$("#todayInput")?.value || todayISO()}"></label>
@@ -6984,7 +6987,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
+  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "includePaymentHistoryReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
     $(`#${id}`)?.addEventListener("change", renderAll);
   });
   $("#reportWorkerMobileList")?.addEventListener("change", (event) => {
