@@ -2349,6 +2349,22 @@ tbody tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.payment-period-note {
+  border-color: rgba(20, 116, 145, 0.22);
+  background: rgba(227, 246, 251, 0.7);
+}
+
+.payment-period-note p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+:root[data-theme="dark"] .payment-period-note {
+  background: rgba(22, 90, 110, 0.24);
+  border-color: rgba(138, 221, 239, 0.18);
+}
+
 .payment-history-list {
   display: grid;
   gap: 6px;

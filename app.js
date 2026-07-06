@@ -635,6 +635,8 @@ Object.assign(translations.en, {
   directWorker: "Direct worker",
   paymentPerson: "Worker / supplier",
   paymentDateHelp: "Use the real date when you give this payment. It can be today or any future payment date.",
+  balancePeriod: "Balance period",
+  balancePeriodHelp: "Payable, paid, balance, and payment history use only this date range.",
   totalWageAmount: "Total wage amount",
   remainingUnpaidBalance: "Remaining unpaid balance",
   paymentHistory: "Payment history",
@@ -900,6 +902,8 @@ Object.assign(translations.ps, {
   directWorker: "مستقیم کارکوونکی",
   paymentPerson: "کارکوونکی / سپلایر",
   paymentDateHelp: "هغه اصلي نېټه وټاکئ چې پیسې ورکوئ. نن یا د راتلونکې هره نېټه کېدای شي.",
+  balancePeriod: "د بیلانس موده",
+  balancePeriodHelp: "مزدوري، ورکړل شوې پیسې، بیلانس، او د تادیاتو تاریخچه یوازې د همدې نېټو له مخې حسابېږي.",
   totalWageAmount: "ټوله مزدوري",
   remainingUnpaidBalance: "پاتې ناادا",
   paymentHistory: "د تادیاتو تاریخچه",
@@ -2724,6 +2728,11 @@ function renderPaymentEntryPanel() {
     return;
   }
   summary.innerHTML = `
+    <div class="wide payment-period-note">
+      <span>${t("balancePeriod")}</span>
+      <strong>${start} ${t("to")} ${end}</strong>
+      <p>${t("balancePeriodHelp")}</p>
+    </div>
     <div><span>${t("payableAfterAdvance")}</span><strong>${money(total)}</strong></div>
     <div><span>${t("paymentDeducted")}</span><strong>${money(paymentDeducted)}</strong></div>
     <div><span>${t("workerBalance")}</span><strong>${money(unpaid)}</strong></div>
