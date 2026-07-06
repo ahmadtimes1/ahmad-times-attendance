@@ -629,6 +629,24 @@ textarea {
   margin-top: 0;
 }
 
+.dashboard-period-bar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.dashboard-period-bar label {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboard-period-bar .help-text {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .stat-card,
 .panel,
 .worker-card {
@@ -2686,6 +2704,7 @@ dialog::backdrop {
   }
 
   .stat-grid,
+  .dashboard-period-bar,
   .control-center,
   .summary-strip,
   .form-grid,

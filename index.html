@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=report-payment-period-clarity-1">
+    <link rel="stylesheet" href="styles.css?v=dashboard-all-months-filter-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -89,6 +89,31 @@
         </header>
 
         <section id="dashboard" class="view active">
+          <div class="dashboard-period-bar panel">
+            <label>
+              <span data-i18n="dashboardPeriod">Dashboard period</span>
+              <select id="dashboardPeriod">
+                <option value="all" data-i18n="allMonthsCombined">All months combined</option>
+                <option value="current" data-i18n="currentMonth">Current month</option>
+                <option value="previous" data-i18n="previousMonth">Previous month</option>
+                <option value="month" data-i18n="specificMonth">Specific month</option>
+                <option value="custom" data-i18n="customDateRange">Custom date range</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="month">Month</span>
+              <input id="dashboardMonth" type="month">
+            </label>
+            <label>
+              <span data-i18n="fromDate">From date</span>
+              <input id="dashboardStartDate" type="date">
+            </label>
+            <label>
+              <span data-i18n="toDate">To date</span>
+              <input id="dashboardEndDate" type="date">
+            </label>
+            <p id="dashboardPeriodLabel" class="help-text">-</p>
+          </div>
           <div class="stat-grid dashboard-metrics">
             <h3 class="dashboard-section-title" data-i18n="dashboardWorkersGroup">Workers</h3>
             <article class="stat-card green">
@@ -100,11 +125,11 @@
               <strong id="statInactiveWorkers">0</strong>
             </article>
             <article class="stat-card amber">
-              <span data-i18n="presentToday">Present today</span>
+              <span data-i18n="periodAttendance">Attendance in period</span>
               <strong id="statPresentToday">0</strong>
             </article>
             <article class="stat-card">
-              <span data-i18n="monthlyOvertime">Monthly overtime</span>
+              <span data-i18n="periodOvertime">Overtime in period</span>
               <strong id="statAttendanceDays">0</strong>
             </article>
 
@@ -149,7 +174,7 @@
 
             <h3 class="dashboard-section-title" data-i18n="dashboardExpensesBudgetGroup">Expenses and budget</h3>
             <article class="stat-card">
-              <span data-i18n="monthlyExpenses">Company monthly expenses</span>
+              <span data-i18n="companyExpenses">Company expenses</span>
               <strong id="statMonthExpenses">AED 0</strong>
             </article>
             <article class="stat-card blue">
@@ -165,7 +190,7 @@
               <strong id="statTwoMonthCost">AED 0</strong>
             </article>
             <article class="stat-card green">
-              <span data-i18n="budgetReceivedThisMonth">Budget received this month</span>
+              <span data-i18n="budgetReceivedInPeriod">Budget received in period</span>
               <strong id="statBudgetReceived">AED 0</strong>
             </article>
             <article class="stat-card amber">
@@ -200,8 +225,8 @@
           <div class="content-grid">
             <section class="panel">
               <div class="panel-head">
-                <h3 data-i18n="monthlyWageSummary">Monthly Wage Summary</h3>
-                <input id="dashboardMonth" type="month">
+                <h3 data-i18n="wageSummary">Wage Summary</h3>
+                <span id="dashboardSummaryPeriod" class="help-text">-</span>
               </div>
               <div class="table-wrap dashboard-wage-wrap">
                 <table class="dashboard-wage-table">
@@ -1061,6 +1086,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=report-payment-period-clarity-1"></script>
+    <script src="app.js?v=dashboard-all-months-filter-1"></script>
   </body>
 </html>
