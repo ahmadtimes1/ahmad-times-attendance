@@ -33,6 +33,7 @@ const translations = {
     periodOvertime: "Overtime in period",
     monthlyWageSummary: "Monthly Wage Summary",
     wageSummary: "Wage Summary",
+    printWageSummary: "Print wage summary",
     dashboardPeriod: "Dashboard period",
     allMonthsCombined: "All months combined",
     currentMonth: "Current month",
@@ -316,6 +317,7 @@ const translations = {
     periodOvertime: "په ټاکلې موده کې اضافي وخت",
     monthlyWageSummary: "د میاشتې مزدورۍ لنډیز",
     wageSummary: "د مزدورۍ لنډیز",
+    printWageSummary: "د مزدورۍ لنډیز چاپ کړئ",
     dashboardPeriod: "د ډشبورډ موده",
     allMonthsCombined: "ټولې میاشتې یوځای",
     currentMonth: "اوسنۍ میاشت",
@@ -1159,8 +1161,21 @@ let suppressWorkerOpen = false;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
+function localDateISO(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function localMonthISO(date = new Date()) {
+  return localDateISO(date).slice(0, 7);
+}
+
+function dateFromISO(value = todayISO()) {
+  const [year, month, day] = String(value || todayISO()).split("-").map(Number);
+  return new Date(year || new Date().getFullYear(), (month || 1) - 1, day || 1);
+}
+
+const todayISO = () => localDateISO(new Date());
+const monthISO = (date = new Date()) => localMonthISO(date);
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const money = (value) => `AED ${roundMoney(value).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -1357,13 +1372,14 @@ function requireAdmin() {
 }
 
 function monthFromDate(date) {
+  if (date instanceof Date) return localMonthISO(date);
   return String(date || todayISO()).slice(0, 7);
 }
 
 function shiftMonth(month, offset) {
   const [year, monthIndex] = String(month || monthISO()).split("-").map(Number);
   const date = new Date(year, (monthIndex || 1) - 1 + offset, 1);
-  return date.toISOString().slice(0, 7);
+  return localMonthISO(date);
 }
 
 function previousMonth(month) {
@@ -1744,9 +1760,9 @@ function workerAdvanceEntries(workerId) {
 }
 
 function previousISODate(date) {
-  const value = new Date(`${date}T00:00:00`);
+  const value = dateFromISO(date);
   value.setDate(value.getDate() - 1);
-  return value.toISOString().slice(0, 10);
+  return localDateISO(value);
 }
 
 function workerGrossWageUntil(workerId, end) {
@@ -2641,12 +2657,12 @@ function currentReportPeriod() {
   let end = reportDate;
   let title = `${t("dailyReport")} · ${reportDate}`;
   if (type === "weekly") {
-    const date = new Date(`${reportDate}T00:00:00`);
+    const date = dateFromISO(reportDate);
     const day = date.getDay();
     date.setDate(date.getDate() - day);
-    start = date.toISOString().slice(0, 10);
+    start = localDateISO(date);
     date.setDate(date.getDate() + 6);
-    end = date.toISOString().slice(0, 10);
+    end = localDateISO(date);
     title = `${t("weeklyReport")} · ${start} ${t("to")} ${end}`;
   }
   if (type === "monthly") {
@@ -3161,10 +3177,10 @@ function daysInMonth(month) {
 
 function datesBetween(start, end) {
   const dates = [];
-  const current = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
+  const current = dateFromISO(start);
+  const last = dateFromISO(end);
   while (current <= last) {
-    dates.push(current.toISOString().slice(0, 10));
+    dates.push(localDateISO(current));
     current.setDate(current.getDate() + 1);
   }
   return dates;
@@ -3173,10 +3189,10 @@ function datesBetween(start, end) {
 function recordsForRange(start, end, workerId = "all", shift = "all") {
   const rows = [];
   const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
-  const current = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
+  const current = dateFromISO(start);
+  const last = dateFromISO(end);
   while (current <= last) {
-    const date = current.toISOString().slice(0, 10);
+    const date = localDateISO(current);
     const day = app.attendance[date] || {};
     app.workers.forEach((worker) => {
       if (!workerMatchesSelection(worker, workerSelection)) return;
@@ -3958,13 +3974,13 @@ function renderDayAttendance() {
 }
 
 function weekRange(dateValue = todayISO()) {
-  const start = new Date(`${dateValue}T00:00:00`);
+  const start = dateFromISO(dateValue);
   const day = start.getDay();
   start.setDate(start.getDate() - day);
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
-    return date.toISOString().slice(0, 10);
+    return localDateISO(date);
   });
 }
 
@@ -5100,9 +5116,9 @@ function monthsBetweenRange(startMonth = monthISO(), endMonth = startMonth) {
   const first = start <= end ? start : end;
   const last = start <= end ? end : start;
   const months = [];
-  const cursor = new Date(`${first}-01T00:00:00`);
-  while (cursor.toISOString().slice(0, 7) <= last) {
-    months.push(cursor.toISOString().slice(0, 7));
+  const cursor = dateFromISO(`${first}-01`);
+  while (localMonthISO(cursor) <= last) {
+    months.push(localMonthISO(cursor));
     cursor.setMonth(cursor.getMonth() + 1);
   }
   return months;
@@ -6492,6 +6508,62 @@ function printPlainReport(title, bodyHtml) {
   win.document.close();
 }
 
+function printDashboardWageSummary() {
+  const { start, end, title } = dashboardPeriodRange();
+  const rows = periodSummary(start, end)
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end));
+  const totals = paymentTotals(rows, start, end);
+  const overtime = rows.reduce((sum, row) => sum + Number(row.overtime || 0), 0);
+  const attendanceDays = rows.reduce((sum, row) => sum + Number(row.present || 0) + Number(row.halfday || 0) * 0.5, 0);
+  const headers = [
+    t("worker"),
+    t("days"),
+    t("hours"),
+    t("overtime"),
+    t("dailyWage"),
+    t("advanceDeducted"),
+    t("payableAfterAdvance"),
+    t("paymentDeducted"),
+    t("workerBalance"),
+    t("extraPaidBalance"),
+  ];
+  const bodyRows = rows.map((row) => {
+    const advance = rowAdvanceDeduction(row, start, end);
+    const finalPayable = rowFinalPayable(row, start, end);
+    const paymentDeducted = rowPaymentDeducted(row, start, end);
+    const unpaid = rowUnpaidAmount(row, start, end);
+    const extraPaid = rowExtraPaidBalance(row, start, end);
+    return [
+      displayWorkerName(row.worker),
+      String(row.present + (row.halfday * 0.5)),
+      formatHours(row.hours),
+      formatHours(row.overtime),
+      money(row.dailyWage || currentDailyWage(row.worker)),
+      money(advance),
+      money(finalPayable),
+      money(paymentDeducted),
+      money(unpaid),
+      money(extraPaid),
+    ];
+  });
+  const table = bodyRows.length
+    ? `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : `<p>${t("noWageRecords")}</p>`;
+  printPlainReport(t("wageSummary"), `
+    <p>${escapeHTML(title)} · ${escapeHTML(start)} ${t("to")} ${escapeHTML(end)}</p>
+    <div class="summary-grid">
+      <div class="row"><span>${t("attendanceDays")}</span><strong>${attendanceDays}</strong></div>
+      <div class="row"><span>${t("overtime")}</span><strong>${formatHours(overtime)}</strong></div>
+      <div class="row"><span>${t("payableAfterAdvance")}</span><strong>${money(totals.finalPayable)}</strong></div>
+      <div class="row"><span>${t("totalPaidAmount")}</span><strong>${money(totals.paid)}</strong></div>
+      <div class="row"><span>${t("totalUnpaidAmount")}</span><strong>${money(totals.pending)}</strong></div>
+      <div class="row"><span>${t("extraPaidBalance")}</span><strong>${money(totals.extraPaid)}</strong></div>
+    </div>
+    ${table}
+  `);
+  addLog("Dashboard wage summary printed", `${start} to ${end}`);
+}
+
 function printSettlement() {
   const worker = app.workers.find((item) => item.id === $("#settlementWorker").value);
   if (!worker) return;
@@ -7156,6 +7228,7 @@ function bindEvents() {
   });
   $(".payment-entry-panel")?.addEventListener("toggle", renderPaymentEntryPanel);
   $("#addPaymentEntry")?.addEventListener("click", addPaymentEntryFromPanel);
+  $("#printDashboardWageSummary")?.addEventListener("click", printDashboardWageSummary);
   $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
   $("#printExpenseReport")?.addEventListener("click", printExpenseReport);
 
