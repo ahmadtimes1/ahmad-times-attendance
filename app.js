@@ -728,6 +728,7 @@ Object.assign(translations.en, {
   overtimeAmount: "Overtime amount",
   totalWage: "Total wage",
   totalLabourWages: "Total labour wages",
+  completeLabourWages: "Complete labour wages",
   totalSupplierWorkerWages: "Total supplier worker wages",
   totalPaidAmount: "Total paid amount",
   totalUnpaidAmount: "Total unpaid amount",
@@ -999,6 +1000,7 @@ Object.assign(translations.ps, {
   overtimeAmount: "د اضافي وخت اندازه",
   totalWage: "ټوله مزدوري",
   totalLabourWages: "د مزدورانو ټولې مزدورۍ",
+  completeLabourWages: "د مزدورانو مکملې مزدورۍ",
   totalSupplierWorkerWages: "د سپلایر مزدورانو ټولې مزدورۍ",
   totalPaidAmount: "ټول ادا شوی مبلغ",
   totalUnpaidAmount: "ټول ناادا مبلغ",
@@ -7512,6 +7514,7 @@ function renderDashboard() {
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   if ($("#statInactiveWorkers")) $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
   $("#statPresentToday").textContent = attendanceInPeriod;
+  if ($("#statCompleteLabourWages")) $("#statCompleteLabourWages").textContent = money(dashboardPayTotals.gross);
   $("#statMonthWages").textContent = money(monthWages);
   if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
   $("#statMonthExpenses").textContent = money(expenseTotals.amount);
