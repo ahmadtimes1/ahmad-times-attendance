@@ -729,6 +729,7 @@ Object.assign(translations.en, {
   totalWage: "Total wage",
   totalLabourWages: "Total labour wages",
   completeLabourWages: "Complete labour wages",
+  currentMonthBalance: "Current month balance",
   totalSupplierWorkerWages: "Total supplier worker wages",
   totalPaidAmount: "Total paid amount",
   totalUnpaidAmount: "Total unpaid amount",
@@ -1001,6 +1002,7 @@ Object.assign(translations.ps, {
   totalWage: "ټوله مزدوري",
   totalLabourWages: "د مزدورانو ټولې مزدورۍ",
   completeLabourWages: "د مزدورانو مکملې مزدورۍ",
+  currentMonthBalance: "د روانې میاشتې بیلنس",
   totalSupplierWorkerWages: "د سپلایر مزدورانو ټولې مزدورۍ",
   totalPaidAmount: "ټول ادا شوی مبلغ",
   totalUnpaidAmount: "ټول ناادا مبلغ",
@@ -7544,6 +7546,12 @@ function renderDashboard() {
     `;
   }
 
+  const balanceMonth = monthFromDate(date) || monthISO();
+  const balanceMonthDates = daysInMonth(balanceMonth);
+  const balanceStart = balanceMonthDates[0];
+  const balanceEnd = balanceMonthDates[balanceMonthDates.length - 1];
+  const currentMonthRowsByWorker = new Map(monthSummary(balanceMonth, "all", "all").map((row) => [row.worker.id, row]));
+
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
     .map((row) => {
@@ -7553,6 +7561,8 @@ function renderDashboard() {
       const finalPayable = rowFinalPayable(row, start, end);
       const paymentDeducted = rowPaymentDeducted(row, start, end);
       const extraPaid = rowExtraPaidBalance(row, start, end);
+      const currentMonthRow = currentMonthRowsByWorker.get(row.worker.id);
+      const currentMonthBalance = currentMonthRow ? rowWorkerBalance(currentMonthRow, balanceStart, balanceEnd) : 0;
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -7564,10 +7574,11 @@ function renderDashboard() {
           <td data-label="${t("payableAfterAdvance")}"><strong>${money(finalPayable)}</strong></td>
           <td data-label="${t("paymentDeducted")}">${money(paymentDeducted)}</td>
           <td data-label="${t("workerBalance")}"><strong>${money(unpaid)}</strong></td>
+          <td data-label="${t("currentMonthBalance")}"><strong>${money(currentMonthBalance)}</strong></td>
           <td data-label="${t("extraPaidBalance")}"><strong>${money(extraPaid)}</strong></td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="10">${t("noWageRecords")}</td></tr>`;
+    }).join("") || `<tr><td colspan="11">${t("noWageRecords")}</td></tr>`;
 
   if ($("#todayList")) $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
