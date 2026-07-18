@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=month-end-report-date-fix-1">
+    <link rel="stylesheet" href="styles.css?v=dashboard-combined-company-expense-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -150,14 +150,6 @@
               <span data-i18n="totalUnpaidBalance">Total unpaid balance</span>
               <strong id="statTotalUnpaidBalance">AED 0</strong>
             </article>
-            <article class="stat-card blue">
-              <span data-i18n="workerAdvanceBalance">Worker advance balance</span>
-              <strong id="statWorkerAdvance">AED 0</strong>
-            </article>
-            <article class="stat-card amber">
-              <span data-i18n="advanceDeductedThisMonth">Advance deducted this month</span>
-              <strong id="statAdvanceDeducted">AED 0</strong>
-            </article>
             <h3 class="dashboard-section-title" data-i18n="dashboardSupplierGroup">Supplier labour</h3>
             <article class="stat-card blue">
               <span data-i18n="supplierWorkersTotalAmount">Supplier workers total</span>
@@ -178,16 +170,12 @@
               <strong id="statMonthExpenses">AED 0</strong>
             </article>
             <article class="stat-card blue">
-              <span data-i18n="grandTotalAmount">Grand total amount</span>
+              <span data-i18n="allCompanyCost">All company cost</span>
               <strong id="statGrandTotal">AED 0</strong>
             </article>
             <article class="stat-card">
               <span data-i18n="previousMonthCompanyCost">Previous month company cost</span>
               <strong id="statPreviousMonthCost">AED 0</strong>
-            </article>
-            <article class="stat-card blue">
-              <span data-i18n="twoMonthCompanyCost">Selected + previous month cost</span>
-              <strong id="statTwoMonthCost">AED 0</strong>
             </article>
             <article class="stat-card green">
               <span data-i18n="budgetReceivedInPeriod">Budget received in period</span>
@@ -1089,6 +1077,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=month-end-report-date-fix-1"></script>
+    <script src="app.js?v=dashboard-combined-company-expense-1"></script>
   </body>
 </html>

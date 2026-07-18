@@ -835,6 +835,7 @@ Object.assign(translations.en, {
   supplierWorkersTotalAmount: "Supplier workers total",
   supplierWorkersPaidAmount: "Supplier workers paid",
   supplierWorkersUnpaidAmount: "Supplier workers unpaid",
+  allCompanyCost: "All company cost",
   directWorkersTotalAmount: "Direct labour payable after advance",
   directWorkersPaidAmount: "Direct workers paid",
   directWorkersUnpaidAmount: "Direct workers unpaid",
@@ -1100,6 +1101,7 @@ Object.assign(translations.ps, {
   supplierWorkersTotalAmount: "د سپلایر ټول مبلغ",
   supplierWorkersPaidAmount: "د سپلایر ادا شوی",
   supplierWorkersUnpaidAmount: "د سپلایر ناادا",
+  allCompanyCost: "د شرکت ټول لګښت",
   directWorkersTotalAmount: "له اډوانس وروسته د مستقیمو مزدورانو ورکړه",
   directWorkersPaidAmount: "د مستقیمو کارکوونکو ادا شوی",
   directWorkersUnpaidAmount: "د مستقیمو کارکوونکو ناادا",
@@ -7409,7 +7411,6 @@ function renderDashboard() {
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
   const totalUnpaidBalance = roundMoney(directUnpaid + supplierDashboardTotals.unpaid + expenseTotals.unpaid);
-  const workerAdvanceRemaining = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, end), 0));
   const attendanceInPeriod = summary.reduce((sum, row) => sum + row.present + row.halfday, 0);
 
   if ($("#statTotalWorkers")) $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
@@ -7421,15 +7422,12 @@ function renderDashboard() {
   $("#statMonthExpenses").textContent = money(expenseTotals.amount);
   $("#statGrandTotal").textContent = money(selectedMonthCompanyCost);
   if ($("#statPreviousMonthCost")) $("#statPreviousMonthCost").textContent = money(previousMonthCompanyCost);
-  if ($("#statTwoMonthCost")) $("#statTwoMonthCost").textContent = money(roundMoney(selectedMonthCompanyCost + previousMonthCompanyCost));
   if ($("#statAttendanceDays")) $("#statAttendanceDays").textContent = formatHours(summary.reduce((sum, row) => sum + row.overtime, 0));
   $("#statUnpaidWages").textContent = money(directUnpaid);
   if ($("#statTotalUnpaidBalance")) $("#statTotalUnpaidBalance").textContent = money(totalUnpaidBalance);
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
-  if ($("#statWorkerAdvance")) $("#statWorkerAdvance").textContent = money(workerAdvanceRemaining);
-  if ($("#statAdvanceDeducted")) $("#statAdvanceDeducted").textContent = money(dashboardPayTotals.advance);
   if ($("#statBudgetReceived")) $("#statBudgetReceived").textContent = money(budgetReceived);
   if ($("#statBudgetRemaining")) $("#statBudgetRemaining").textContent = money(roundMoney(budgetReceived - selectedMonthCompanyCost));
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
