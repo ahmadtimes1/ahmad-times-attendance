@@ -4652,24 +4652,38 @@ function supplierNamesFromEntries(entries = app.supplierEntries || []) {
 }
 
 function supplierTotals(entries = [], start = "", end = "") {
-  const totals = entries.reduce((acc, entry) => {
-    const totals = supplierEntryTotals(entry);
-    acc.total = roundMoney(acc.total + totals.total);
-    acc.paid = roundMoney(acc.paid + totals.paid);
-    acc.normal = roundMoney(acc.normal + totals.normalAmount);
-    acc.overtime = roundMoney(acc.overtime + totals.overtimeAmount);
-    acc.transportationCharges = roundMoney(acc.transportationCharges + totals.transportationCharges);
-    acc.previousLoan = roundMoney(acc.previousLoan + totals.previousLoan);
-    acc.workers += totals.workers;
-    return acc;
-  }, { total: 0, paid: 0, unpaid: 0, normal: 0, overtime: 0, transportationCharges: 0, previousLoan: 0, workers: 0 });
   const entryDates = entries.map((entry) => entry.date).filter(Boolean).sort();
   const rangeStart = start || entryDates[0] || todayISO();
   const rangeEnd = end || entryDates[entryDates.length - 1] || rangeStart;
-  const ledgerPaid = supplierNamesFromEntries(entries)
-    .reduce((sum, supplierName) => sum + supplierPaymentTotal(supplierName, rangeStart, rangeEnd), 0);
-  totals.paid = roundMoney(totals.paid + ledgerPaid);
-  totals.unpaid = roundMoney(Math.max(0, totals.total - totals.paid));
+  const bySupplier = new Map();
+  const totals = entries.reduce((acc, entry) => {
+    const entryTotals = supplierEntryTotals(entry);
+    const supplierName = String(entry.supplierName || "").trim() || "-";
+    const supplier = bySupplier.get(supplierName) || { total: 0, paid: 0 };
+    supplier.total = roundMoney(supplier.total + entryTotals.total);
+    supplier.paid = roundMoney(supplier.paid + entryTotals.paid);
+    bySupplier.set(supplierName, supplier);
+    acc.total = roundMoney(acc.total + entryTotals.total);
+    acc.normal = roundMoney(acc.normal + entryTotals.normalAmount);
+    acc.overtime = roundMoney(acc.overtime + entryTotals.overtimeAmount);
+    acc.transportationCharges = roundMoney(acc.transportationCharges + entryTotals.transportationCharges);
+    acc.previousLoan = roundMoney(acc.previousLoan + entryTotals.previousLoan);
+    acc.workers += entryTotals.workers;
+    return acc;
+  }, { total: 0, paid: 0, unpaid: 0, overpaid: 0, normal: 0, overtime: 0, transportationCharges: 0, previousLoan: 0, workers: 0 });
+  supplierPaymentEntries()
+    .filter((payment) => paymentAppliesToRange(payment, rangeStart, rangeEnd))
+    .forEach((payment) => {
+      const supplierName = String(payment.supplierName || "").trim() || "-";
+      const supplier = bySupplier.get(supplierName) || { total: 0, paid: 0 };
+      supplier.paid = roundMoney(supplier.paid + Number(payment.amount || 0));
+      bySupplier.set(supplierName, supplier);
+    });
+  bySupplier.forEach((supplier) => {
+    totals.paid = roundMoney(totals.paid + supplier.paid);
+    totals.unpaid = roundMoney(totals.unpaid + Math.max(0, supplier.total - supplier.paid));
+    totals.overpaid = roundMoney(totals.overpaid + Math.max(0, supplier.paid - supplier.total));
+  });
   return totals;
 }
 
