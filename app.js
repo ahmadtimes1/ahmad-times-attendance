@@ -4927,6 +4927,7 @@ function companyExpenseReportData() {
     .filter((expense) => project === "all" || projectNameOf(expense.project) === project)
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
   const expenseTotalsData = expenseTotalsForRows(expenseRows, "all");
+  const buyerTotals = expenseBuyerTotals(expenseRows);
   const expenseCategories = [
     "materialExpenses",
     "transportExpenses",
@@ -4959,6 +4960,7 @@ function companyExpenseReportData() {
     supplierTotals: supplierTotalsData,
     expenseRows,
     expenseTotals: expenseTotalsData,
+    buyerTotals,
     expenseCategories,
     summary: { totalPaid, totalUnpaid, grandTotal },
   };
@@ -5006,6 +5008,13 @@ function companyExpenseReportHtml(data) {
     money(item.unpaid),
     String(item.rows.length),
   ]);
+  const buyerRows = (data.buyerTotals || []).map((buyer) => [
+    buyer.buyer,
+    money(buyer.amount),
+    money(buyer.paid),
+    money(buyer.unpaid),
+    money(buyer.balance),
+  ]);
   const expenseRows = data.expenseRows.map((expense) => {
     const ledger = expenseLedger(expense);
     return [
@@ -5037,6 +5046,8 @@ function companyExpenseReportHtml(data) {
     ${reportTable([t("supplierName"), t("projectName"), t("workersProvided"), t("dailyRate"), t("overtime"), t("paid"), t("unpaid"), t("totalSupplierAmount")], supplierRows, t("noSupplierEntries"))}
     <h2>${t("companyExpenses")}</h2>
     ${reportTable([t("expenseCategory"), t("expenseAmount"), t("paid"), t("unpaid"), t("records")], expenseCategoryRows, t("noExpenses"))}
+    <h2>${t("buyerTotals")}</h2>
+    ${reportTable([t("buyerName"), t("totalExpenses"), t("paid"), t("unpaid"), t("buyerBalance")], buyerRows, t("noExpenses"))}
     <h2>${t("companyExpenses")} · ${t("details")}</h2>
     ${reportTable([t("date"), t("buyerName"), t("expenseCategory"), t("projectName"), t("marketName"), t("expenseDescription"), t("expenseAmount"), t("paid"), t("unpaid")], expenseRows, t("noExpenses"))}
     <h2>${t("paymentSummary")}</h2>
@@ -6624,6 +6635,7 @@ function printDashboardProjectReport() {
     const supplierTotalsData = supplierTotals(supplierEntries, start, end);
     const expenseRows = expenseRowsBetween(start, end).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
     const expenseTotalsData = expenseTotalsForRows(expenseRows, "all");
+    const buyerTotals = expenseBuyerTotals(expenseRows);
     const expenseCategories = [
       "materialExpenses",
       "transportExpenses",
@@ -6651,6 +6663,7 @@ function printDashboardProjectReport() {
       supplierTotals: supplierTotalsData,
       expenseRows,
       expenseTotals: expenseTotalsData,
+      buyerTotals,
       expenseCategories,
       summary: {
         totalPaid: roundMoney(labourTotals.paid + supplierTotalsData.paid + expenseTotalsData.paid),
