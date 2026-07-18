@@ -906,6 +906,13 @@ textarea {
   border-bottom: 1px solid var(--line);
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .panel-head input,
 .panel-head select {
   max-width: 190px;
@@ -932,6 +939,10 @@ table {
 
 .dashboard-wage-wrap {
   overflow: visible;
+}
+
+.labour-total-strip {
+  margin: 0 0 14px;
 }
 
 .dashboard-wage-table {

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=unpaid-calculation-audit-1">
+    <link rel="stylesheet" href="styles.css?v=final-project-report-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -217,8 +217,12 @@
                   <h3 data-i18n="wageSummary">Wage Summary</h3>
                   <span id="dashboardSummaryPeriod" class="help-text">-</span>
                 </div>
-                <button type="button" id="printDashboardWageSummary" data-i18n="printWageSummary">Print wage summary</button>
+                <div class="panel-actions">
+                  <button type="button" id="printDashboardWageSummary" data-i18n="printWageSummary">Print wage summary</button>
+                  <button type="button" id="printDashboardProjectReport" data-i18n="printCompleteProjectReport">Print complete project report</button>
+                </div>
               </div>
+              <div id="dashboardLabourTotals" class="expense-summary labour-total-strip"></div>
               <div class="table-wrap dashboard-wage-wrap">
                 <table class="dashboard-wage-table">
                   <thead>
@@ -1077,6 +1081,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=unpaid-calculation-audit-1"></script>
+    <script src="app.js?v=final-project-report-1"></script>
   </body>
 </html>

@@ -34,6 +34,7 @@ const translations = {
     monthlyWageSummary: "Monthly Wage Summary",
     wageSummary: "Wage Summary",
     printWageSummary: "Print wage summary",
+    printCompleteProjectReport: "Print complete project report",
     dashboardPeriod: "Dashboard period",
     allMonthsCombined: "All months combined",
     currentMonth: "Current month",
@@ -318,6 +319,7 @@ const translations = {
     monthlyWageSummary: "د میاشتې مزدورۍ لنډیز",
     wageSummary: "د مزدورۍ لنډیز",
     printWageSummary: "د مزدورۍ لنډیز چاپ کړئ",
+    printCompleteProjectReport: "د پروژې مکمل راپور چاپ کړئ",
     dashboardPeriod: "د ډشبورډ موده",
     allMonthsCombined: "ټولې میاشتې یوځای",
     currentMonth: "اوسنۍ میاشت",
@@ -6568,8 +6570,10 @@ function printDashboardWageSummary() {
   printPlainReport(t("wageSummary"), `
     <p>${escapeHTML(title)} · ${escapeHTML(start)} ${t("to")} ${escapeHTML(end)}</p>
     <div class="summary-grid">
+      <div class="row"><span>${t("totalWorkers")}</span><strong>${rows.length}</strong></div>
       <div class="row"><span>${t("attendanceDays")}</span><strong>${attendanceDays}</strong></div>
       <div class="row"><span>${t("overtime")}</span><strong>${formatHours(overtime)}</strong></div>
+      <div class="row"><span>${t("totalLabourWages")}</span><strong>${money(totals.gross)}</strong></div>
       <div class="row"><span>${t("payableAfterAdvance")}</span><strong>${money(totals.finalPayable)}</strong></div>
       <div class="row"><span>${t("totalPaidAmount")}</span><strong>${money(totals.paid)}</strong></div>
       <div class="row"><span>${t("totalUnpaidAmount")}</span><strong>${money(totals.pending)}</strong></div>
@@ -6578,6 +6582,82 @@ function printDashboardWageSummary() {
     ${table}
   `);
   addLog("Dashboard wage summary printed", `${start} to ${end}`);
+}
+
+function printDashboardProjectReport() {
+  return withLanguage(app.language || "en", () => {
+    const { start, end, title } = dashboardPeriodRange();
+    const labourRows = periodSummary(start, end)
+      .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
+      .sort((a, b) => displayWorkerName(a.worker).localeCompare(displayWorkerName(b.worker)));
+    const labourTotals = paymentTotals(labourRows, start, end);
+    const supplierEntries = supplierEntriesForRange(start, end);
+    const supplierRows = Array.from(supplierEntries.reduce((map, entry) => {
+      const name = String(entry.supplierName || "-").trim() || "-";
+      const current = map.get(name) || { name, projects: new Set(), workers: 0, dailyRates: new Set(), overtimeHours: 0, total: 0, paidFromEntries: 0, normal: 0, overtimeAmount: 0 };
+      const totals = supplierEntryTotals(entry);
+      if (projectNameOf(entry.project)) current.projects.add(projectNameOf(entry.project));
+      current.workers += totals.workers;
+      if (totals.dailyWage) current.dailyRates.add(money(totals.dailyWage));
+      current.overtimeHours += totals.overtimeHours;
+      current.normal = roundMoney(current.normal + totals.normalAmount);
+      current.overtimeAmount = roundMoney(current.overtimeAmount + totals.overtimeAmount);
+      current.total = roundMoney(current.total + totals.total);
+      current.paidFromEntries = roundMoney(current.paidFromEntries + totals.paid);
+      map.set(name, current);
+      return map;
+    }, new Map()).values()).map((row) => {
+      const ledgerPaid = supplierPaymentTotal(row.name, start, end);
+      const paid = roundMoney(row.paidFromEntries + ledgerPaid);
+      return {
+        ...row,
+        projectText: row.projects.size ? Array.from(row.projects).join(" / ") : "-",
+        dailyRateText: row.dailyRates.size ? Array.from(row.dailyRates).join(" / ") : money(0),
+        paid,
+        unpaid: roundMoney(Math.max(0, row.total - paid)),
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    const supplierTotalsData = supplierTotals(supplierEntries, start, end);
+    const expenseRows = expenseRowsBetween(start, end).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    const expenseTotalsData = expenseTotalsForRows(expenseRows, "all");
+    const expenseCategories = [
+      "materialExpenses",
+      "transportExpenses",
+      "fuelExpenses",
+      "carRent",
+      "toolsEquipment",
+      "foodGroceryExpenses",
+      "projectExpenses",
+      "otherSmallExpenses",
+    ].map((key) => {
+      const rows = expenseRows.filter((expense) => investorExpenseCategoryKey(expense) === key);
+      const totals = expenseTotalsForRows(rows, "all");
+      return { key, label: t(key), rows, ...totals };
+    });
+    const data = {
+      start,
+      end,
+      title,
+      project: "all",
+      shift: "all",
+      supplierNames: [],
+      labourRows,
+      labourTotals,
+      supplierRows,
+      supplierTotals: supplierTotalsData,
+      expenseRows,
+      expenseTotals: expenseTotalsData,
+      expenseCategories,
+      summary: {
+        totalPaid: roundMoney(labourTotals.paid + supplierTotalsData.paid + expenseTotalsData.paid),
+        totalUnpaid: roundMoney(labourTotals.pending + supplierTotalsData.unpaid + expenseTotalsData.unpaid),
+        grandTotal: roundMoney(labourTotals.gross + supplierTotalsData.total + expenseTotalsData.amount),
+      },
+    };
+    printPlainReport(t("companyExpenseReport"), companyExpenseReportHtml(data));
+    addLog("Dashboard complete project report printed", `${start} to ${end}`);
+    saveData(false);
+  });
 }
 
 function printSettlement() {
@@ -7245,6 +7325,7 @@ function bindEvents() {
   $(".payment-entry-panel")?.addEventListener("toggle", renderPaymentEntryPanel);
   $("#addPaymentEntry")?.addEventListener("click", addPaymentEntryFromPanel);
   $("#printDashboardWageSummary")?.addEventListener("click", printDashboardWageSummary);
+  $("#printDashboardProjectReport")?.addEventListener("click", printDashboardProjectReport);
   $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
   $("#printExpenseReport")?.addEventListener("click", printExpenseReport);
 
@@ -7447,6 +7528,18 @@ function renderDashboard() {
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
   if ($("#dashboardPeriodLabel")) $("#dashboardPeriodLabel").textContent = `${t("dashboardPeriodShowing")}: ${title} · ${start} ${t("to")} ${end}`;
   if ($("#dashboardSummaryPeriod")) $("#dashboardSummaryPeriod").textContent = `${start} ${t("to")} ${end}`;
+  if ($("#dashboardLabourTotals")) {
+    $("#dashboardLabourTotals").innerHTML = `
+      <article><span>${t("totalWorkers")}</span><strong>${summary.length}</strong></article>
+      <article><span>${t("attendanceDays")}</span><strong>${attendanceInPeriod}</strong></article>
+      <article><span>${t("totalLabourWages")}</span><strong>${money(dashboardPayTotals.gross)}</strong></article>
+      <article><span>${t("payableAfterAdvance")}</span><strong>${money(dashboardPayTotals.finalPayable)}</strong></article>
+      <article><span>${t("totalPaidAmount")}</span><strong>${money(dashboardPayTotals.paid)}</strong></article>
+      <article><span>${t("totalUnpaidAmount")}</span><strong>${money(dashboardPayTotals.pending)}</strong></article>
+      <article><span>${t("extraPaidBalance")}</span><strong>${money(dashboardPayTotals.extraPaid)}</strong></article>
+      <article><span>${t("overtime")}</span><strong>${formatHours(summary.reduce((sum, row) => sum + Number(row.overtime || 0), 0))}</strong></article>
+    `;
+  }
 
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
