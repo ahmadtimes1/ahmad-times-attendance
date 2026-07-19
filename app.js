@@ -607,10 +607,15 @@ Object.assign(translations.en, {
   halfday: "Half day",
   halfDays: "Half days",
   printAllWages: "Print all wages",
-  printSelectedWage: "Print selected wage",
-  printSeparateWorkerReports: "Print separate worker reports",
-  downloadSeparateWorkerReports: "Download separate worker reports",
-  baseWage: "Base wage",
+    printSelectedWage: "Print selected wage",
+    printSeparateWorkerReports: "Print separate worker reports",
+    downloadSeparateWorkerReports: "Download separate worker reports",
+    printMonthlyAttendance: "Print monthly attendance",
+    printAllMonthlyAttendance: "Print all monthly attendance",
+    monthlyAttendanceReport: "Monthly attendance report",
+    attendanceCode: "Code",
+    attendanceTotals: "Attendance totals",
+    baseWage: "Base wage",
   overtimeWage: "Overtime wage",
   payments: "Payments",
   paid: "Paid",
@@ -880,6 +885,11 @@ Object.assign(translations.ps, {
   printSelectedWage: "د یو مزدور مزدوري چاپ",
   printSeparateWorkerReports: "جلا جلا د کارکوونکو راپورونه چاپ",
   downloadSeparateWorkerReports: "جلا جلا د کارکوونکو راپورونه ډاونلوډ",
+  printMonthlyAttendance: "میاشتنۍ حاضري چاپ",
+  printAllMonthlyAttendance: "د ټولو میاشتنۍ حاضري چاپ",
+  monthlyAttendanceReport: "د میاشتنۍ حاضري راپور",
+  attendanceCode: "کوډ",
+  attendanceTotals: "د حاضري ټولټال",
   baseWage: "اصلي مزدوري",
   overtimeWage: "د اضافي وخت مزدوري",
   payments: "تادیات",
@@ -3038,6 +3048,25 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           .payment-history-list div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 8px; background: #f4f7fb; }
           .separate-worker-report { break-after: page; page-break-after: always; }
           .separate-worker-report:last-child { break-after: auto; page-break-after: auto; }
+          .attendance-print-note { margin: 8px 0 10px; color: #667085; font-size: 11px; }
+          .attendance-print-table { table-layout: fixed; width: 100%; font-size: 9px; }
+          .attendance-print-table th, .attendance-print-table td { padding: 4px 3px; text-align: center; white-space: normal; border: 1px solid #d9e0ea; }
+          .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 150px; text-align: start; font-weight: 700; }
+          .attendance-print-table .attendance-day-heading { font-size: 8px; line-height: 1.15; color: #425466; }
+          .attendance-print-table .attendance-day-heading strong { display: block; color: #1d2433; font-size: 9px; }
+          .attendance-print-table .attendance-total-col { width: 32px; font-weight: 700; background: #f4f7fb; }
+          .attendance-mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; font-size: 9px; font-weight: 800; color: #fff; }
+          .attendance-mark.present { background: #188a6a; }
+          .attendance-mark.halfday { background: #b7791f; }
+          .attendance-mark.absent { background: #c94040; }
+          .attendance-mark.off { background: #526071; }
+          .attendance-mark.empty, .attendance-mark.unavailable { color: #98a2b3; background: #f4f7fb; border: 1px dashed #d0d5dd; }
+          .attendance-worker-line { display: grid; gap: 2px; }
+          .attendance-worker-line span { color: #667085; font-size: 8px; font-weight: 500; }
+          .attendance-print-footer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+          .attendance-print-footer div { padding: 8px; border-radius: 8px; background: #f4f7fb; }
+          .attendance-print-footer span { display: block; color: #667085; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+          .attendance-print-footer strong { display: block; margin-top: 2px; font-size: 14px; }
           .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
           .payment-list, .report-controls { display: none; }
           .table-wrap { overflow: visible; }
@@ -3046,7 +3075,7 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
           @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } .report-footer { align-items: flex-start; flex-direction: column; } }
           @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
-          @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } }
+          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } .attendance-report-page { padding-bottom: 120px; } .attendance-print-table { font-size: 8px; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } }
         </style>
       </head>
       <body>
@@ -3164,6 +3193,157 @@ function downloadSeparateWorkerReports() {
   }
   downloadZip(`ahmad-times-worker-reports-${period.start}-to-${period.end}.zip`, files);
   addLog("Separate worker report files downloaded", `${files.length} workers`);
+  saveData(false);
+}
+
+function monthlyAttendancePrintableWorkers(month, selection = ["all"], shift = "all") {
+  const dates = daysInMonth(month);
+  const workerSelection = Array.isArray(selection) ? selection : [selection];
+  return app.workers.filter((worker) => {
+    if (!workerMatchesSelection(worker, workerSelection)) return false;
+    const hasRecord = dates.some((date) => {
+      const record = getAttendanceRecord(date, worker.id);
+      return record.status && recordMatchesShift(record, shift);
+    });
+    const canWorkInMonth = worker.status === "active"
+      && dates.some((date) => workerJoinedByDate(worker, date))
+      && (shift === "all" || dates.some((date) => workerAssignedShift(worker, date) === shift));
+    return hasRecord || canWorkInMonth;
+  });
+}
+
+function attendancePrintMark(worker, date, shift) {
+  const record = getAttendanceRecord(date, worker.id);
+  if (!workerAvailableForAttendance(worker, date)) {
+    return { code: "-", status: "unavailable", label: t("notAvailable") };
+  }
+  if (!record.status || !recordMatchesShift(record, shift)) {
+    return { code: "-", status: "empty", label: t("notMarked") };
+  }
+  return {
+    code: { present: "P", halfday: "H", absent: "A", off: "O" }[record.status] || "-",
+    status: record.status,
+    label: statusLabel(record.status),
+  };
+}
+
+function monthlyAttendancePrintRow(worker, dates, shift) {
+  const totals = dates.reduce((acc, date) => {
+    const record = getAttendanceRecord(date, worker.id);
+    if (!record.status || !recordMatchesShift(record, shift)) return acc;
+    if (record.status === "present") acc.present += 1;
+    if (record.status === "halfday") acc.halfday += 1;
+    if (record.status === "absent") acc.absent += 1;
+    if (record.status === "off") acc.off += 1;
+    return acc;
+  }, { present: 0, halfday: 0, absent: 0, off: 0 });
+  return `
+    <tr>
+      <td>
+        <div class="attendance-worker-line">
+          <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+          <span>${escapeHTML(worker.role || t("roleWorker"))}</span>
+        </div>
+      </td>
+      ${dates.map((date) => {
+        const mark = attendancePrintMark(worker, date, shift);
+        return `<td><span class="attendance-mark ${escapeHTML(mark.status)}" title="${escapeHTML(mark.label)}">${escapeHTML(mark.code)}</span></td>`;
+      }).join("")}
+      <td class="attendance-total-col">${totals.present}</td>
+      <td class="attendance-total-col">${totals.halfday}</td>
+      <td class="attendance-total-col">${totals.absent}</td>
+      <td class="attendance-total-col">${totals.off}</td>
+    </tr>
+  `;
+}
+
+function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
+  renderReport();
+  const month = $("#reportMonth")?.value || monthISO();
+  const dates = daysInMonth(month);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const shift = selectedReportShift();
+  const selectedIds = allWorkers ? ["all"] : selectedReportWorkerIds();
+  const workers = monthlyAttendancePrintableWorkers(month, selectedIds, shift);
+  if (!workers.length) return "";
+  const totals = workers.reduce((acc, worker) => {
+    dates.forEach((date) => {
+      const record = getAttendanceRecord(date, worker.id);
+      if (!record.status || !recordMatchesShift(record, shift)) return;
+      if (record.status === "present") acc.present += 1;
+      if (record.status === "halfday") acc.halfday += 1;
+      if (record.status === "absent") acc.absent += 1;
+      if (record.status === "off") acc.off += 1;
+    });
+    return acc;
+  }, { present: 0, halfday: 0, absent: 0, off: 0 });
+  const subject = allWorkers || selectedIds.includes("all")
+    ? t("companyWideReport")
+    : workers.length === 1
+      ? displayWorkerName(workers[0])
+      : `${t("selectedWorkerReports")} (${workers.length})`;
+  const shiftLabel = shift === "all" ? t("allShifts") : attendanceShiftLabel(shift);
+  return `
+    <section class="attendance-report-page">
+      <div class="report-brand">
+        <img src="ahmad-times-logo.png" alt="Ahmad Times logo">
+        <div>
+          <strong>Ahmad Times For Building Maintenance L.L.C</strong>
+          <span>${t("monthlyAttendanceReport")}</span>
+        </div>
+      </div>
+      <div class="report-meta">
+        <span>${t("monthlyReport")} · ${month}</span>
+        <span>${t("shift")}: ${shiftLabel}</span>
+        <span>${t("serialNo")}: ATBM-ATT-${start.replaceAll("-", "")}-${end.replaceAll("-", "")}</span>
+      </div>
+      <h3>${t("monthlyAttendanceReport")} · ${month}</h3>
+      <p class="help-text">${escapeHTML(subject)} · ${start} ${t("to")} ${end}</p>
+      <p class="attendance-print-note">
+        ${t("attendanceCode")}: P = ${t("present")}, H = ${t("halfday")}, A = ${t("absent")}, O = ${t("off")}, - = ${t("notMarked")}
+      </p>
+      <div class="table-wrap">
+        <table class="attendance-print-table">
+          <thead>
+            <tr>
+              <th>${t("worker")}</th>
+              ${dates.map((date) => `<th><span class="attendance-day-heading"><strong>${Number(date.slice(-2))}</strong>${date.slice(5)}</span></th>`).join("")}
+              <th class="attendance-total-col">P</th>
+              <th class="attendance-total-col">H</th>
+              <th class="attendance-total-col">A</th>
+              <th class="attendance-total-col">O</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${workers.map((worker) => monthlyAttendancePrintRow(worker, dates, shift)).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="attendance-print-footer">
+        <div><span>${t("present")}</span><strong>${totals.present}</strong></div>
+        <div><span>${t("halfday")}</span><strong>${totals.halfday}</strong></div>
+        <div><span>${t("absent")}</span><strong>${totals.absent}</strong></div>
+        <div><span>${t("off")}</span><strong>${totals.off}</strong></div>
+      </div>
+      <footer class="report-footer">
+        <div class="report-stamp-box">
+          <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
+          <p class="help-text">Generated: ${new Date().toLocaleString()}</p>
+        </div>
+      </footer>
+    </section>
+  `;
+}
+
+function printMonthlyAttendanceReport(allWorkers = false) {
+  const report = monthlyAttendanceReportHtml({ allWorkers });
+  if (!report.trim()) {
+    toast(t("noRecordsReport"));
+    return;
+  }
+  openPrintableReport(report);
+  addLog("Monthly attendance report printed", allWorkers ? "All workers" : selectedReportWorkerIds().join(", "));
   saveData(false);
 }
 
@@ -7443,6 +7623,8 @@ function bindEvents() {
   });
   $("#printSeparateWorkerReports")?.addEventListener("click", printSeparateWorkerReports);
   $("#downloadSeparateWorkerReports")?.addEventListener("click", downloadSeparateWorkerReports);
+  $("#printMonthlyAttendance")?.addEventListener("click", () => printMonthlyAttendanceReport(false));
+  $("#printAllMonthlyAttendance")?.addEventListener("click", () => printMonthlyAttendanceReport(true));
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
   $("#downloadLatestBackup").addEventListener("click", downloadLatestDailyBackup);
