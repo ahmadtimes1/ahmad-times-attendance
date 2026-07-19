@@ -3061,12 +3061,14 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           .attendance-print-table .attendance-day-heading span { display: block; color: #667085; font-size: 7px; }
           .attendance-print-table .attendance-total-col { width: 32px; font-weight: 700; background: #f4f7fb; }
           .attendance-print-table .attendance-overtime-col { width: 44px; font-weight: 800; background: #eef9fb; color: #087fae; }
+          .attendance-day-cell { display: grid; justify-items: center; gap: 2px; min-height: 28px; }
           .attendance-mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; font-size: 9px; font-weight: 800; color: #fff; }
           .attendance-mark.present { background: #188a6a; }
           .attendance-mark.halfday { background: #b7791f; }
           .attendance-mark.absent { background: #c94040; }
           .attendance-mark.off { background: #526071; }
           .attendance-mark.empty, .attendance-mark.unavailable { color: #98a2b3; background: #f4f7fb; border: 1px dashed #d0d5dd; }
+          .attendance-day-overtime { display: inline-block; max-width: 100%; padding: 1px 3px; border-radius: 999px; color: #087fae; background: #e7f8fd; font-size: 7px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
           .attendance-worker-line { display: grid; gap: 2px; }
           .attendance-worker-line span { color: #667085; font-size: 8px; font-weight: 500; }
           .attendance-print-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
@@ -3089,7 +3091,7 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
           @media (max-width: 700px) { body { padding: 12px; overflow-x: hidden; } .report-page { width: 100%; max-width: 100%; padding-bottom: 110px; } .report-brand { align-items: flex-start; } .report-brand img { width: 54px; height: 54px; } .report-brand strong { font-size: 17px; line-height: 1.15; overflow-wrap: anywhere; } .report-meta { flex-direction: column; gap: 4px; overflow-wrap: anywhere; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; } .table-wrap table { min-width: 760px; } .attendance-print-table { min-width: 980px; } .attendance-overtime-grid { grid-template-columns: 1fr; } .attendance-overtime-card, .attendance-overtime-card li, .payment-history-list div { overflow-wrap: anywhere; } .report-footer { align-items: flex-start; flex-direction: column; position: static; } }
           @media (max-width: 460px) { body { padding: 10px; } .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid, .attendance-print-footer { grid-template-columns: 1fr; } .print-actions { position: sticky; top: 0; z-index: 3; justify-content: stretch; padding: 8px 0; background: #fff; } .print-actions button { width: 100%; min-height: 46px; } .attendance-print-table { min-width: 1040px; } }
-          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } .attendance-report-page { padding-bottom: 120px; } .attendance-print-table { font-size: 8px; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } .attendance-overtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .attendance-overtime-card { padding: 6px; } .attendance-overtime-card ul { font-size: 9px; } }
+          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } .attendance-report-page { padding-bottom: 120px; } .attendance-print-table { font-size: 8px; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } .attendance-day-overtime { font-size: 6px; padding: 1px 2px; } .attendance-overtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .attendance-overtime-card { padding: 6px; } .attendance-overtime-card ul { font-size: 9px; } }
         </style>
       </head>
       <body>
@@ -3261,6 +3263,28 @@ function printableDateLabel(date) {
   });
 }
 
+function printableDayName(date, style = "short") {
+  const value = dateFromISO(date);
+  if (Number.isNaN(value.getTime())) return "";
+  return value.toLocaleDateString(app.language === "ps" ? "ps-AF" : "en-GB", { weekday: style });
+}
+
+function attendancePrintCell(worker, date, shift) {
+  const mark = attendancePrintMark(worker, date, shift);
+  const record = getAttendanceRecord(date, worker.id);
+  const overtime = record.status === "present" && recordMatchesShift(record, shift)
+    ? calculateHours(record).overtime || 0
+    : 0;
+  return `
+    <td>
+      <div class="attendance-day-cell">
+        <span class="attendance-mark ${escapeHTML(mark.status)}" title="${escapeHTML(mark.label)}">${escapeHTML(mark.code)}</span>
+        ${overtime > 0 ? `<span class="attendance-day-overtime">OT ${escapeHTML(formatHours(overtime))}</span>` : ""}
+      </div>
+    </td>
+  `;
+}
+
 function monthlyAttendancePrintRow(worker, dates, shift) {
   const overtimeDetails = monthlyWorkerOvertimeDetails(worker, dates, shift);
   const overtimeTotal = overtimeDetails.reduce((sum, item) => sum + item.overtime, 0);
@@ -3281,10 +3305,7 @@ function monthlyAttendancePrintRow(worker, dates, shift) {
           <span>${escapeHTML(worker.role || t("roleWorker"))}</span>
         </div>
       </td>
-      ${dates.map((date) => {
-        const mark = attendancePrintMark(worker, date, shift);
-        return `<td><span class="attendance-mark ${escapeHTML(mark.status)}" title="${escapeHTML(mark.label)}">${escapeHTML(mark.code)}</span></td>`;
-      }).join("")}
+      ${dates.map((date) => attendancePrintCell(worker, date, shift)).join("")}
       <td class="attendance-total-col">${totals.present}</td>
       <td class="attendance-total-col">${totals.halfday}</td>
       <td class="attendance-total-col">${totals.absent}</td>
@@ -3363,14 +3384,14 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
       <h3>${t("monthlyAttendanceReport")} · ${month}</h3>
       <p class="help-text">${escapeHTML(subject)} · ${start} ${t("to")} ${end}</p>
       <p class="attendance-print-note">
-        ${t("attendanceCode")}: P = ${t("present")}, H = ${t("halfday")}, A = ${t("absent")}, O = ${t("off")}, - = ${t("notMarked")}
+        ${t("attendanceCode")}: P = ${t("present")}, H = ${t("halfday")}, A = ${t("absent")}, O = ${t("off")}, - = ${t("notMarked")}. OT = ${t("overtime")} on that exact date.
       </p>
       <div class="table-wrap">
         <table class="attendance-print-table">
           <thead>
             <tr>
               <th>${t("worker")}</th>
-              ${dates.map((date) => `<th><span class="attendance-day-heading"><strong>${Number(date.slice(-2))}</strong>${date.slice(5)}</span></th>`).join("")}
+              ${dates.map((date) => `<th><span class="attendance-day-heading"><span>${escapeHTML(printableDayName(date))}</span><strong>${Number(date.slice(-2))}</strong><span>${escapeHTML(date.slice(5))}</span></span></th>`).join("")}
               <th class="attendance-total-col">P</th>
               <th class="attendance-total-col">H</th>
               <th class="attendance-total-col">A</th>
