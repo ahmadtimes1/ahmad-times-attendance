@@ -3285,9 +3285,9 @@ function attendancePrintCell(worker, date, shift) {
   `;
 }
 
-function monthlyAttendancePrintRow(worker, dates, shift) {
+function monthlyAttendancePrintRow(worker, dates, shift, summaryRow = null) {
   const overtimeDetails = monthlyWorkerOvertimeDetails(worker, dates, shift);
-  const overtimeTotal = overtimeDetails.reduce((sum, item) => sum + item.overtime, 0);
+  const overtimeTotal = Number(summaryRow?.overtime ?? overtimeDetails.reduce((sum, item) => sum + item.overtime, 0));
   const totals = dates.reduce((acc, date) => {
     const record = getAttendanceRecord(date, worker.id);
     if (!record.status || !recordMatchesShift(record, shift)) return acc;
@@ -3315,10 +3315,10 @@ function monthlyAttendancePrintRow(worker, dates, shift) {
   `;
 }
 
-function monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift) {
+function monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift, summaryRowsByWorker = new Map()) {
   const cards = workers.map((worker) => {
     const details = monthlyWorkerOvertimeDetails(worker, dates, shift);
-    const total = details.reduce((sum, item) => sum + item.overtime, 0);
+    const total = Number(summaryRowsByWorker.get(worker.id)?.overtime ?? details.reduce((sum, item) => sum + item.overtime, 0));
     return `
       <div class="attendance-overtime-card">
         <strong>${escapeHTML(displayWorkerName(worker))}</strong>
@@ -3349,7 +3349,10 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
   const selectedIds = allWorkers ? ["all"] : selectedReportWorkerIds();
   const workers = monthlyAttendancePrintableWorkers(month, selectedIds, shift);
   if (!workers.length) return "";
+  const summaryRowsByWorker = new Map(monthSummary(month, workers.map((worker) => worker.id), shift).map((row) => [row.worker.id, row]));
   const totals = workers.reduce((acc, worker) => {
+    const summaryRow = summaryRowsByWorker.get(worker.id);
+    acc.overtime += Number(summaryRow?.overtime || 0);
     dates.forEach((date) => {
       const record = getAttendanceRecord(date, worker.id);
       if (!record.status || !recordMatchesShift(record, shift)) return;
@@ -3357,7 +3360,6 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
       if (record.status === "halfday") acc.halfday += 1;
       if (record.status === "absent") acc.absent += 1;
       if (record.status === "off") acc.off += 1;
-      if (record.status === "present") acc.overtime += calculateHours(record).overtime || 0;
     });
     return acc;
   }, { present: 0, halfday: 0, absent: 0, off: 0, overtime: 0 });
@@ -3400,7 +3402,7 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
             </tr>
           </thead>
           <tbody>
-            ${workers.map((worker) => monthlyAttendancePrintRow(worker, dates, shift)).join("")}
+            ${workers.map((worker) => monthlyAttendancePrintRow(worker, dates, shift, summaryRowsByWorker.get(worker.id))).join("")}
           </tbody>
         </table>
       </div>
@@ -3411,7 +3413,7 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
         <div><span>${t("off")}</span><strong>${totals.off}</strong></div>
         <div><span>${t("totalOvertime")}</span><strong>${formatHours(totals.overtime)}</strong></div>
       </div>
-      ${monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift)}
+      ${monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift, summaryRowsByWorker)}
       <footer class="report-footer">
         <div class="report-stamp-box">
           <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
