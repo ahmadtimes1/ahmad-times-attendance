@@ -615,6 +615,8 @@ Object.assign(translations.en, {
     monthlyAttendanceReport: "Monthly attendance report",
     attendanceCode: "Code",
     attendanceTotals: "Attendance totals",
+    overtimeDetails: "Overtime details",
+    totalOvertime: "Total overtime",
     baseWage: "Base wage",
   overtimeWage: "Overtime wage",
   payments: "Payments",
@@ -890,6 +892,8 @@ Object.assign(translations.ps, {
   monthlyAttendanceReport: "د میاشتنۍ حاضري راپور",
   attendanceCode: "کوډ",
   attendanceTotals: "د حاضري ټولټال",
+  overtimeDetails: "د اضافي وخت تفصیل",
+  totalOvertime: "ټول اضافي وخت",
   baseWage: "اصلي مزدوري",
   overtimeWage: "د اضافي وخت مزدوري",
   payments: "تادیات",
@@ -3054,7 +3058,9 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 150px; text-align: start; font-weight: 700; }
           .attendance-print-table .attendance-day-heading { font-size: 8px; line-height: 1.15; color: #425466; }
           .attendance-print-table .attendance-day-heading strong { display: block; color: #1d2433; font-size: 9px; }
+          .attendance-print-table .attendance-day-heading span { display: block; color: #667085; font-size: 7px; }
           .attendance-print-table .attendance-total-col { width: 32px; font-weight: 700; background: #f4f7fb; }
+          .attendance-print-table .attendance-overtime-col { width: 44px; font-weight: 800; background: #eef9fb; color: #087fae; }
           .attendance-mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; font-size: 9px; font-weight: 800; color: #fff; }
           .attendance-mark.present { background: #188a6a; }
           .attendance-mark.halfday { background: #b7791f; }
@@ -3063,19 +3069,27 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           .attendance-mark.empty, .attendance-mark.unavailable { color: #98a2b3; background: #f4f7fb; border: 1px dashed #d0d5dd; }
           .attendance-worker-line { display: grid; gap: 2px; }
           .attendance-worker-line span { color: #667085; font-size: 8px; font-weight: 500; }
-          .attendance-print-footer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+          .attendance-print-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
           .attendance-print-footer div { padding: 8px; border-radius: 8px; background: #f4f7fb; }
           .attendance-print-footer span { display: block; color: #667085; font-size: 10px; font-weight: 700; text-transform: uppercase; }
           .attendance-print-footer strong { display: block; margin-top: 2px; font-size: 14px; }
+          .attendance-overtime-details { margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+          .attendance-overtime-details h4 { margin: 0 0 8px; font-size: 14px; }
+          .attendance-overtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+          .attendance-overtime-card { padding: 8px; border: 1px solid #d9e0ea; border-radius: 8px; background: #fbfdff; break-inside: avoid; page-break-inside: avoid; }
+          .attendance-overtime-card strong { display: block; margin-bottom: 4px; font-size: 12px; }
+          .attendance-overtime-card ul { margin: 0; padding-left: 18px; color: #344054; font-size: 10px; line-height: 1.35; }
+          [dir="rtl"] .attendance-overtime-card ul { padding-right: 18px; padding-left: 0; }
+          .attendance-overtime-total { margin-top: 5px; font-weight: 800; color: #087fae; font-size: 11px; }
           .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
           .payment-list, .report-controls { display: none; }
-          .table-wrap { overflow: visible; }
+          .table-wrap { overflow: visible; max-width: 100%; }
           table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
           th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
-          @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } .report-footer { align-items: flex-start; flex-direction: column; } }
-          @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
-          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } .attendance-report-page { padding-bottom: 120px; } .attendance-print-table { font-size: 8px; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } }
+          @media (max-width: 700px) { body { padding: 12px; overflow-x: hidden; } .report-page { width: 100%; max-width: 100%; padding-bottom: 110px; } .report-brand { align-items: flex-start; } .report-brand img { width: 54px; height: 54px; } .report-brand strong { font-size: 17px; line-height: 1.15; overflow-wrap: anywhere; } .report-meta { flex-direction: column; gap: 4px; overflow-wrap: anywhere; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; } .table-wrap table { min-width: 760px; } .attendance-print-table { min-width: 980px; } .attendance-overtime-grid { grid-template-columns: 1fr; } .attendance-overtime-card, .attendance-overtime-card li, .payment-history-list div { overflow-wrap: anywhere; } .report-footer { align-items: flex-start; flex-direction: column; position: static; } }
+          @media (max-width: 460px) { body { padding: 10px; } .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid, .attendance-print-footer { grid-template-columns: 1fr; } .print-actions { position: sticky; top: 0; z-index: 3; justify-content: stretch; padding: 8px 0; background: #fff; } .print-actions button { width: 100%; min-height: 46px; } .attendance-print-table { min-width: 1040px; } }
+          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } .attendance-report-page { padding-bottom: 120px; } .attendance-print-table { font-size: 8px; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } .attendance-overtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .attendance-overtime-card { padding: 6px; } .attendance-overtime-card ul { font-size: 9px; } }
         </style>
       </head>
       <body>
@@ -3227,7 +3241,29 @@ function attendancePrintMark(worker, date, shift) {
   };
 }
 
+function monthlyWorkerOvertimeDetails(worker, dates, shift) {
+  return dates.map((date) => {
+    const record = getAttendanceRecord(date, worker.id);
+    if (record.status !== "present" || !recordMatchesShift(record, shift)) return null;
+    const overtime = calculateHours(record).overtime || 0;
+    if (overtime <= 0) return null;
+    return { date, overtime };
+  }).filter(Boolean);
+}
+
+function printableDateLabel(date) {
+  const value = dateFromISO(date);
+  if (Number.isNaN(value.getTime())) return date;
+  return value.toLocaleDateString(app.language === "ps" ? "ps-AF" : "en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function monthlyAttendancePrintRow(worker, dates, shift) {
+  const overtimeDetails = monthlyWorkerOvertimeDetails(worker, dates, shift);
+  const overtimeTotal = overtimeDetails.reduce((sum, item) => sum + item.overtime, 0);
   const totals = dates.reduce((acc, date) => {
     const record = getAttendanceRecord(date, worker.id);
     if (!record.status || !recordMatchesShift(record, shift)) return acc;
@@ -3253,7 +3289,32 @@ function monthlyAttendancePrintRow(worker, dates, shift) {
       <td class="attendance-total-col">${totals.halfday}</td>
       <td class="attendance-total-col">${totals.absent}</td>
       <td class="attendance-total-col">${totals.off}</td>
+      <td class="attendance-overtime-col">${formatHours(overtimeTotal)}</td>
     </tr>
+  `;
+}
+
+function monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift) {
+  const cards = workers.map((worker) => {
+    const details = monthlyWorkerOvertimeDetails(worker, dates, shift);
+    const total = details.reduce((sum, item) => sum + item.overtime, 0);
+    return `
+      <div class="attendance-overtime-card">
+        <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+        ${details.length ? `
+          <ul>
+            ${details.map((item) => `<li>${escapeHTML(printableDateLabel(item.date))} - ${escapeHTML(formatHours(item.overtime))} ${escapeHTML(t("overtime").toLowerCase())}</li>`).join("")}
+          </ul>
+        ` : `<p class="help-text">${formatHours(0)} ${escapeHTML(t("overtime").toLowerCase())}</p>`}
+        <div class="attendance-overtime-total">${t("totalOvertime")}: ${formatHours(total)}</div>
+      </div>
+    `;
+  }).join("");
+  return `
+    <section class="attendance-overtime-details">
+      <h4>${t("overtimeDetails")}</h4>
+      <div class="attendance-overtime-grid">${cards}</div>
+    </section>
   `;
 }
 
@@ -3275,9 +3336,10 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
       if (record.status === "halfday") acc.halfday += 1;
       if (record.status === "absent") acc.absent += 1;
       if (record.status === "off") acc.off += 1;
+      if (record.status === "present") acc.overtime += calculateHours(record).overtime || 0;
     });
     return acc;
-  }, { present: 0, halfday: 0, absent: 0, off: 0 });
+  }, { present: 0, halfday: 0, absent: 0, off: 0, overtime: 0 });
   const subject = allWorkers || selectedIds.includes("all")
     ? t("companyWideReport")
     : workers.length === 1
@@ -3313,6 +3375,7 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
               <th class="attendance-total-col">H</th>
               <th class="attendance-total-col">A</th>
               <th class="attendance-total-col">O</th>
+              <th class="attendance-overtime-col">OT</th>
             </tr>
           </thead>
           <tbody>
@@ -3325,7 +3388,9 @@ function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
         <div><span>${t("halfday")}</span><strong>${totals.halfday}</strong></div>
         <div><span>${t("absent")}</span><strong>${totals.absent}</strong></div>
         <div><span>${t("off")}</span><strong>${totals.off}</strong></div>
+        <div><span>${t("totalOvertime")}</span><strong>${formatHours(totals.overtime)}</strong></div>
       </div>
+      ${monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift)}
       <footer class="report-footer">
         <div class="report-stamp-box">
           <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
