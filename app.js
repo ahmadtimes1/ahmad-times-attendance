@@ -736,7 +736,7 @@ Object.assign(translations.en, {
   totalWage: "Total wage",
   totalLabourWages: "Total labour wages",
   completeLabourWages: "Complete labour wages",
-  currentMonthBalance: "Current month balance",
+  currentMonthBalance: "Selected period balance",
   totalSupplierWorkerWages: "Total supplier worker wages",
   totalPaidAmount: "Total paid amount",
   totalUnpaidAmount: "Total unpaid amount",
@@ -1016,7 +1016,7 @@ Object.assign(translations.ps, {
   totalWage: "ټوله مزدوري",
   totalLabourWages: "د مزدورانو ټولې مزدورۍ",
   completeLabourWages: "د مزدورانو مکملې مزدورۍ",
-  currentMonthBalance: "د روانې میاشتې بیلنس",
+  currentMonthBalance: "د ټاکلې مودې بیلنس",
   totalSupplierWorkerWages: "د سپلایر مزدورانو ټولې مزدورۍ",
   totalPaidAmount: "ټول ادا شوی مبلغ",
   totalUnpaidAmount: "ټول ناادا مبلغ",
@@ -1743,13 +1743,9 @@ function rangesOverlap(aStart, aEnd, bStart, bEnd) {
 }
 
 function paymentAppliesToRange(payment, start, end) {
-  const hasAssignedPeriod = Boolean(payment.start || payment.end);
-  const paymentStart = payment.start || payment.date || start;
-  const paymentEnd = payment.end || payment.date || paymentStart;
-  if (hasAssignedPeriod) {
-    return String(paymentStart) >= String(start) && String(paymentEnd) <= String(end);
-  }
-  return String(payment.date || "") >= String(start) && String(payment.date || "") <= String(end);
+  const paymentDate = String(payment?.date || "");
+  if (!paymentDate) return false;
+  return paymentDate >= String(start) && paymentDate <= String(end);
 }
 
 function workerPaymentHistory(workerId, start, end) {
@@ -7832,12 +7828,6 @@ function renderDashboard() {
     `;
   }
 
-  const balanceMonth = monthFromDate(date) || monthISO();
-  const balanceMonthDates = daysInMonth(balanceMonth);
-  const balanceStart = balanceMonthDates[0];
-  const balanceEnd = balanceMonthDates[balanceMonthDates.length - 1];
-  const currentMonthRowsByWorker = new Map(monthSummary(balanceMonth, "all", "all").map((row) => [row.worker.id, row]));
-
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
     .map((row) => {
@@ -7847,8 +7837,7 @@ function renderDashboard() {
       const finalPayable = rowFinalPayable(row, start, end);
       const paymentDeducted = rowPaymentDeducted(row, start, end);
       const extraPaid = rowExtraPaidBalance(row, start, end);
-      const currentMonthRow = currentMonthRowsByWorker.get(row.worker.id);
-      const currentMonthBalance = currentMonthRow ? rowWorkerBalance(currentMonthRow, balanceStart, balanceEnd) : 0;
+      const currentMonthBalance = rowWorkerBalance(row, start, end);
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -7910,6 +7899,9 @@ initCloud()
     toast(t("startupCloudFailed"));
     renderAll();
   });
+
+
+
 
 
 
