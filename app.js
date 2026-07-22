@@ -736,7 +736,7 @@ Object.assign(translations.en, {
   totalWage: "Total wage",
   totalLabourWages: "Total labour wages",
   completeLabourWages: "Complete labour wages",
-  currentMonthBalance: "Selected period balance",
+  currentMonthBalance: "Current month balance",
   totalSupplierWorkerWages: "Total supplier worker wages",
   totalPaidAmount: "Total paid amount",
   totalUnpaidAmount: "Total unpaid amount",
@@ -1016,7 +1016,7 @@ Object.assign(translations.ps, {
   totalWage: "ټوله مزدوري",
   totalLabourWages: "د مزدورانو ټولې مزدورۍ",
   completeLabourWages: "د مزدورانو مکملې مزدورۍ",
-  currentMonthBalance: "د ټاکلې مودې بیلنس",
+  currentMonthBalance: "د روانې میاشتې بیلنس",
   totalSupplierWorkerWages: "د سپلایر مزدورانو ټولې مزدورۍ",
   totalPaidAmount: "ټول ادا شوی مبلغ",
   totalUnpaidAmount: "ټول ناادا مبلغ",
@@ -1743,9 +1743,13 @@ function rangesOverlap(aStart, aEnd, bStart, bEnd) {
 }
 
 function paymentAppliesToRange(payment, start, end) {
-  const paymentDate = String(payment?.date || "");
-  if (!paymentDate) return false;
-  return paymentDate >= String(start) && paymentDate <= String(end);
+  const hasAssignedPeriod = Boolean(payment.start || payment.end);
+  const paymentStart = payment.start || payment.date || start;
+  const paymentEnd = payment.end || payment.date || paymentStart;
+  if (hasAssignedPeriod) {
+    return String(paymentStart) >= String(start) && String(paymentEnd) <= String(end);
+  }
+  return String(payment.date || "") >= String(start) && String(payment.date || "") <= String(end);
 }
 
 function workerPaymentHistory(workerId, start, end) {
@@ -3050,9 +3054,6 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           .separate-worker-report:last-child { break-after: auto; page-break-after: auto; }
           .attendance-print-note { margin: 8px 0 10px; color: #667085; font-size: 11px; }
           .attendance-print-table { table-layout: fixed; width: 100%; font-size: 9px; }
-          .attendance-print-table thead { display: table-header-group; }
-          .attendance-print-table tfoot { display: table-footer-group; }
-          .attendance-print-table tr { break-inside: avoid; page-break-inside: avoid; }
           .attendance-print-table th, .attendance-print-table td { padding: 4px 3px; text-align: center; white-space: normal; border: 1px solid #d9e0ea; }
           .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 150px; text-align: start; font-weight: 700; }
           .attendance-print-table .attendance-day-heading { font-size: 8px; line-height: 1.15; color: #425466; }
@@ -3090,7 +3091,7 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
           @media (max-width: 700px) { body { padding: 12px; overflow-x: hidden; } .report-page { width: 100%; max-width: 100%; padding-bottom: 110px; } .report-brand { align-items: flex-start; } .report-brand img { width: 54px; height: 54px; } .report-brand strong { font-size: 17px; line-height: 1.15; overflow-wrap: anywhere; } .report-meta { flex-direction: column; gap: 4px; overflow-wrap: anywhere; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; } .table-wrap table { min-width: 760px; } .attendance-print-table { min-width: 980px; } .attendance-overtime-grid { grid-template-columns: 1fr; } .attendance-overtime-card, .attendance-overtime-card li, .payment-history-list div { overflow-wrap: anywhere; } .report-footer { align-items: flex-start; flex-direction: column; position: static; } }
           @media (max-width: 460px) { body { padding: 10px; } .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid, .attendance-print-footer { grid-template-columns: 1fr; } .print-actions { position: sticky; top: 0; z-index: 3; justify-content: stretch; padding: 8px 0; background: #fff; } .print-actions button { width: 100%; min-height: 46px; } .attendance-print-table { min-width: 1040px; } }
-          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: auto; padding-bottom: 0; } .report-footer { position: static; right: auto; bottom: auto; left: auto; background: #fff; break-inside: avoid; page-break-inside: avoid; } .attendance-report-page { padding-bottom: 0; } .attendance-report-page .report-footer { margin-top: 16px; } .attendance-print-table { font-size: 8px; page-break-inside: auto; } .attendance-print-table thead { display: table-header-group; } .attendance-print-table tr { break-inside: avoid; page-break-inside: avoid; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } .attendance-day-overtime { font-size: 6px; padding: 1px 2px; } .attendance-print-footer, .attendance-overtime-details { break-inside: avoid; page-break-inside: avoid; } .attendance-overtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .attendance-overtime-card { padding: 6px; } .attendance-overtime-card ul { font-size: 9px; } }
+          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } .attendance-report-page { padding-bottom: 120px; } .attendance-print-table { font-size: 8px; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } .attendance-day-overtime { font-size: 6px; padding: 1px 2px; } .attendance-overtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .attendance-overtime-card { padding: 6px; } .attendance-overtime-card ul { font-size: 9px; } }
         </style>
       </head>
       <body>
@@ -7828,6 +7829,12 @@ function renderDashboard() {
     `;
   }
 
+  const balanceMonth = monthFromDate(date) || monthISO();
+  const balanceMonthDates = daysInMonth(balanceMonth);
+  const balanceStart = balanceMonthDates[0];
+  const balanceEnd = balanceMonthDates[balanceMonthDates.length - 1];
+  const currentMonthRowsByWorker = new Map(monthSummary(balanceMonth, "all", "all").map((row) => [row.worker.id, row]));
+
   $("#dashboardSummary").innerHTML = summary
     .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
     .map((row) => {
@@ -7837,7 +7844,8 @@ function renderDashboard() {
       const finalPayable = rowFinalPayable(row, start, end);
       const paymentDeducted = rowPaymentDeducted(row, start, end);
       const extraPaid = rowExtraPaidBalance(row, start, end);
-      const currentMonthBalance = rowWorkerBalance(row, start, end);
+      const currentMonthRow = currentMonthRowsByWorker.get(row.worker.id);
+      const currentMonthBalance = currentMonthRow ? rowWorkerBalance(currentMonthRow, balanceStart, balanceEnd) : 0;
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -7899,9 +7907,6 @@ initCloud()
     toast(t("startupCloudFailed"));
     renderAll();
   });
-
-
-
 
 
 
