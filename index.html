@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ahmad Times Attendance & Wages</title>
-    <link rel="stylesheet" href="styles.css?v=mobile-report-worker-multiselect-1">
+    <link rel="stylesheet" href="styles.css?v=attendance-print-overtime-match-wage-1">
   </head>
   <body class="login-locked">
     <section id="loginScreen" class="login-screen">
@@ -89,6 +89,31 @@
         </header>
 
         <section id="dashboard" class="view active">
+          <div class="dashboard-period-bar panel">
+            <label>
+              <span data-i18n="dashboardPeriod">Dashboard period</span>
+              <select id="dashboardPeriod">
+                <option value="all" data-i18n="allMonthsCombined">All months combined</option>
+                <option value="current" data-i18n="currentMonth">Current month</option>
+                <option value="previous" data-i18n="previousMonth">Previous month</option>
+                <option value="month" data-i18n="specificMonth">Specific month</option>
+                <option value="custom" data-i18n="customDateRange">Custom date range</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="month">Month</span>
+              <input id="dashboardMonth" type="month">
+            </label>
+            <label>
+              <span data-i18n="fromDate">From date</span>
+              <input id="dashboardStartDate" type="date">
+            </label>
+            <label>
+              <span data-i18n="toDate">To date</span>
+              <input id="dashboardEndDate" type="date">
+            </label>
+            <p id="dashboardPeriodLabel" class="help-text">-</p>
+          </div>
           <div class="stat-grid dashboard-metrics">
             <h3 class="dashboard-section-title" data-i18n="dashboardWorkersGroup">Workers</h3>
             <article class="stat-card green">
@@ -100,15 +125,19 @@
               <strong id="statInactiveWorkers">0</strong>
             </article>
             <article class="stat-card amber">
-              <span data-i18n="presentToday">Present today</span>
+              <span data-i18n="periodAttendance">Attendance in period</span>
               <strong id="statPresentToday">0</strong>
             </article>
             <article class="stat-card">
-              <span data-i18n="monthlyOvertime">Monthly overtime</span>
+              <span data-i18n="periodOvertime">Overtime in period</span>
               <strong id="statAttendanceDays">0</strong>
             </article>
 
             <h3 class="dashboard-section-title" data-i18n="dashboardWagesGroup">Direct labour wages</h3>
+            <article class="stat-card blue">
+              <span data-i18n="completeLabourWages">Complete labour wages</span>
+              <strong id="statCompleteLabourWages">AED 0</strong>
+            </article>
             <article class="stat-card blue">
               <span data-i18n="directWorkersTotalAmount">Direct workers total</span>
               <strong id="statMonthWages">AED 0</strong>
@@ -124,14 +153,6 @@
             <article class="stat-card amber">
               <span data-i18n="totalUnpaidBalance">Total unpaid balance</span>
               <strong id="statTotalUnpaidBalance">AED 0</strong>
-            </article>
-            <article class="stat-card blue">
-              <span data-i18n="workerAdvanceBalance">Worker advance balance</span>
-              <strong id="statWorkerAdvance">AED 0</strong>
-            </article>
-            <article class="stat-card amber">
-              <span data-i18n="advanceDeductedThisMonth">Advance deducted this month</span>
-              <strong id="statAdvanceDeducted">AED 0</strong>
             </article>
             <h3 class="dashboard-section-title" data-i18n="dashboardSupplierGroup">Supplier labour</h3>
             <article class="stat-card blue">
@@ -149,23 +170,19 @@
 
             <h3 class="dashboard-section-title" data-i18n="dashboardExpensesBudgetGroup">Expenses and budget</h3>
             <article class="stat-card">
-              <span data-i18n="monthlyExpenses">Company monthly expenses</span>
+              <span data-i18n="companyExpenses">Company expenses</span>
               <strong id="statMonthExpenses">AED 0</strong>
             </article>
             <article class="stat-card blue">
-              <span data-i18n="grandTotalAmount">Grand total amount</span>
+              <span data-i18n="allCompanyCost">All company cost</span>
               <strong id="statGrandTotal">AED 0</strong>
             </article>
             <article class="stat-card">
               <span data-i18n="previousMonthCompanyCost">Previous month company cost</span>
               <strong id="statPreviousMonthCost">AED 0</strong>
             </article>
-            <article class="stat-card blue">
-              <span data-i18n="twoMonthCompanyCost">Selected + previous month cost</span>
-              <strong id="statTwoMonthCost">AED 0</strong>
-            </article>
             <article class="stat-card green">
-              <span data-i18n="budgetReceivedThisMonth">Budget received this month</span>
+              <span data-i18n="budgetReceivedInPeriod">Budget received in period</span>
               <strong id="statBudgetReceived">AED 0</strong>
             </article>
             <article class="stat-card amber">
@@ -200,9 +217,16 @@
           <div class="content-grid">
             <section class="panel">
               <div class="panel-head">
-                <h3 data-i18n="monthlyWageSummary">Monthly Wage Summary</h3>
-                <input id="dashboardMonth" type="month">
+                <div>
+                  <h3 data-i18n="wageSummary">Wage Summary</h3>
+                  <span id="dashboardSummaryPeriod" class="help-text">-</span>
+                </div>
+                <div class="panel-actions">
+                  <button type="button" id="printDashboardWageSummary" data-i18n="printWageSummary">Print wage summary</button>
+                  <button type="button" id="printDashboardProjectReport" data-i18n="printCompleteProjectReport">Print complete project report</button>
+                </div>
               </div>
+              <div id="dashboardLabourTotals" class="expense-summary labour-total-strip"></div>
               <div class="table-wrap dashboard-wage-wrap">
                 <table class="dashboard-wage-table">
                   <thead>
@@ -216,6 +240,7 @@
                       <th data-i18n="payableAfterAdvance">Payable after advance</th>
                       <th data-i18n="paymentDeducted">Payment deducted</th>
                       <th data-i18n="workerBalance">Worker balance</th>
+                      <th data-i18n="currentMonthBalance">Current month balance</th>
                       <th data-i18n="extraPaidBalance">Extra paid balance</th>
                     </tr>
                   </thead>
@@ -638,12 +663,18 @@
               <input id="includePreviousMonthReport" type="checkbox">
               <span data-i18n="includePreviousMonth">Include previous month</span>
             </label>
+            <label class="checkbox-line report-option">
+              <input id="includePaymentHistoryReport" type="checkbox">
+              <span data-i18n="includePaymentHistory">Include payment history</span>
+            </label>
             <button id="printReport" data-i18n="print">Print</button>
             <button id="pdfReport" data-i18n="pdfReport">PDF report</button>
             <button id="printAllWages" data-i18n="printAllWages">Print all wages</button>
             <button id="printSelectedWage" data-i18n="printSelectedWage">Print selected wage</button>
             <button id="printSeparateWorkerReports" data-i18n="printSeparateWorkerReports">Print separate worker reports</button>
             <button id="downloadSeparateWorkerReports" data-i18n="downloadSeparateWorkerReports">Download separate worker reports</button>
+            <button id="printMonthlyAttendance" data-i18n="printMonthlyAttendance">Print monthly attendance</button>
+            <button id="printAllMonthlyAttendance" data-i18n="printAllMonthlyAttendance">Print all monthly attendance</button>
             <button id="exportReport" data-i18n="exportCsv">Export CSV</button>
             <button id="printCompanyExpenseReport" data-i18n="printCompanyExpenseReport">Investor expense report</button>
             <button id="exportCompanyExpenseReport" data-i18n="exportCompanyExpenseReport">Export investor CSV</button>
@@ -1057,6 +1088,6 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="app.js?v=mobile-report-worker-multiselect-1"></script>
+    <script src="app.js?v=attendance-print-overtime-match-wage-1"></script>
   </body>
 </html>

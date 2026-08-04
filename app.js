@@ -27,9 +27,22 @@ const translations = {
     activeWorkers: "Active workers",
     inactiveWorkers: "Inactive workers",
     presentToday: "Present today",
+    periodAttendance: "Attendance in period",
     monthWages: "This month wages",
     monthlyOvertime: "Monthly overtime",
+    periodOvertime: "Overtime in period",
     monthlyWageSummary: "Monthly Wage Summary",
+    wageSummary: "Wage Summary",
+    printWageSummary: "Print wage summary",
+    printCompleteProjectReport: "Print complete project report",
+    dashboardPeriod: "Dashboard period",
+    allMonthsCombined: "All months combined",
+    currentMonth: "Current month",
+    previousMonth: "Previous month",
+    specificMonth: "Specific month",
+    customDateRange: "Custom date range",
+    dashboardPeriodShowing: "Showing",
+    budgetReceivedInPeriod: "Budget received in period",
     todayOperations: "Today operations",
     openAttendance: "Open attendance",
     openExpenses: "Open expenses",
@@ -299,9 +312,22 @@ const translations = {
     activeWorkers: "فعال کارکوونکي",
     inactiveWorkers: "غیر فعال کارکوونکي",
     presentToday: "نن حاضر",
+    periodAttendance: "په ټاکلې موده کې حاضري",
     monthWages: "د دې میاشتې مزدوري",
     monthlyOvertime: "د میاشتې اضافي وخت",
+    periodOvertime: "په ټاکلې موده کې اضافي وخت",
     monthlyWageSummary: "د میاشتې مزدورۍ لنډیز",
+    wageSummary: "د مزدورۍ لنډیز",
+    printWageSummary: "د مزدورۍ لنډیز چاپ کړئ",
+    printCompleteProjectReport: "د پروژې مکمل راپور چاپ کړئ",
+    dashboardPeriod: "د ډشبورډ موده",
+    allMonthsCombined: "ټولې میاشتې یوځای",
+    currentMonth: "اوسنۍ میاشت",
+    previousMonth: "تېره میاشت",
+    specificMonth: "ځانګړې میاشت",
+    customDateRange: "ځانګړې نېټې",
+    dashboardPeriodShowing: "ښودل کېږي",
+    budgetReceivedInPeriod: "په ټاکلې موده کې ترلاسه شوې بودیجه",
     worker: "کارکوونکی",
     days: "ورځې",
     hours: "ساعتونه",
@@ -581,10 +607,17 @@ Object.assign(translations.en, {
   halfday: "Half day",
   halfDays: "Half days",
   printAllWages: "Print all wages",
-  printSelectedWage: "Print selected wage",
-  printSeparateWorkerReports: "Print separate worker reports",
-  downloadSeparateWorkerReports: "Download separate worker reports",
-  baseWage: "Base wage",
+    printSelectedWage: "Print selected wage",
+    printSeparateWorkerReports: "Print separate worker reports",
+    downloadSeparateWorkerReports: "Download separate worker reports",
+    printMonthlyAttendance: "Print monthly attendance",
+    printAllMonthlyAttendance: "Print all monthly attendance",
+    monthlyAttendanceReport: "Monthly attendance report",
+    attendanceCode: "Code",
+    attendanceTotals: "Attendance totals",
+    overtimeDetails: "Overtime details",
+    totalOvertime: "Total overtime",
+    baseWage: "Base wage",
   overtimeWage: "Overtime wage",
   payments: "Payments",
   paid: "Paid",
@@ -635,9 +668,12 @@ Object.assign(translations.en, {
   directWorker: "Direct worker",
   paymentPerson: "Worker / supplier",
   paymentDateHelp: "Use the real date when you give this payment. It can be today or any future payment date.",
+  balancePeriod: "Balance period",
+  balancePeriodHelp: "Payable, paid, balance, and payment history use only this date range.",
   totalWageAmount: "Total wage amount",
   remainingUnpaidBalance: "Remaining unpaid balance",
   paymentHistory: "Payment history",
+  includePaymentHistory: "Include payment history",
   noPaymentHistory: "No payment history yet.",
   noPaymentTarget: "No worker or supplier selected.",
   addPaymentAmountFirst: "Enter a paid amount first.",
@@ -699,6 +735,8 @@ Object.assign(translations.en, {
   overtimeAmount: "Overtime amount",
   totalWage: "Total wage",
   totalLabourWages: "Total labour wages",
+  completeLabourWages: "Complete labour wages",
+  currentMonthBalance: "Current month balance",
   totalSupplierWorkerWages: "Total supplier worker wages",
   totalPaidAmount: "Total paid amount",
   totalUnpaidAmount: "Total unpaid amount",
@@ -808,6 +846,7 @@ Object.assign(translations.en, {
   supplierWorkersTotalAmount: "Supplier workers total",
   supplierWorkersPaidAmount: "Supplier workers paid",
   supplierWorkersUnpaidAmount: "Supplier workers unpaid",
+  allCompanyCost: "All company cost",
   directWorkersTotalAmount: "Direct labour payable after advance",
   directWorkersPaidAmount: "Direct workers paid",
   directWorkersUnpaidAmount: "Direct workers unpaid",
@@ -848,6 +887,13 @@ Object.assign(translations.ps, {
   printSelectedWage: "د یو مزدور مزدوري چاپ",
   printSeparateWorkerReports: "جلا جلا د کارکوونکو راپورونه چاپ",
   downloadSeparateWorkerReports: "جلا جلا د کارکوونکو راپورونه ډاونلوډ",
+  printMonthlyAttendance: "میاشتنۍ حاضري چاپ",
+  printAllMonthlyAttendance: "د ټولو میاشتنۍ حاضري چاپ",
+  monthlyAttendanceReport: "د میاشتنۍ حاضري راپور",
+  attendanceCode: "کوډ",
+  attendanceTotals: "د حاضري ټولټال",
+  overtimeDetails: "د اضافي وخت تفصیل",
+  totalOvertime: "ټول اضافي وخت",
   baseWage: "اصلي مزدوري",
   overtimeWage: "د اضافي وخت مزدوري",
   payments: "تادیات",
@@ -899,9 +945,12 @@ Object.assign(translations.ps, {
   directWorker: "مستقیم کارکوونکی",
   paymentPerson: "کارکوونکی / سپلایر",
   paymentDateHelp: "هغه اصلي نېټه وټاکئ چې پیسې ورکوئ. نن یا د راتلونکې هره نېټه کېدای شي.",
+  balancePeriod: "د بیلانس موده",
+  balancePeriodHelp: "مزدوري، ورکړل شوې پیسې، بیلانس، او د تادیاتو تاریخچه یوازې د همدې نېټو له مخې حسابېږي.",
   totalWageAmount: "ټوله مزدوري",
   remainingUnpaidBalance: "پاتې ناادا",
   paymentHistory: "د تادیاتو تاریخچه",
+  includePaymentHistory: "د تادیاتو تاریخچه شامل کړئ",
   noPaymentHistory: "تر اوسه تادیه نشته.",
   noPaymentTarget: "کارکوونکی یا سپلایر نه دی ټاکل شوی.",
   addPaymentAmountFirst: "لومړی د تادیې اندازه ولیکئ.",
@@ -966,6 +1015,8 @@ Object.assign(translations.ps, {
   overtimeAmount: "د اضافي وخت اندازه",
   totalWage: "ټوله مزدوري",
   totalLabourWages: "د مزدورانو ټولې مزدورۍ",
+  completeLabourWages: "د مزدورانو مکملې مزدورۍ",
+  currentMonthBalance: "د روانې میاشتې بیلنس",
   totalSupplierWorkerWages: "د سپلایر مزدورانو ټولې مزدورۍ",
   totalPaidAmount: "ټول ادا شوی مبلغ",
   totalUnpaidAmount: "ټول ناادا مبلغ",
@@ -1070,6 +1121,7 @@ Object.assign(translations.ps, {
   supplierWorkersTotalAmount: "د سپلایر ټول مبلغ",
   supplierWorkersPaidAmount: "د سپلایر ادا شوی",
   supplierWorkersUnpaidAmount: "د سپلایر ناادا",
+  allCompanyCost: "د شرکت ټول لګښت",
   directWorkersTotalAmount: "له اډوانس وروسته د مستقیمو مزدورانو ورکړه",
   directWorkersPaidAmount: "د مستقیمو کارکوونکو ادا شوی",
   directWorkersUnpaidAmount: "د مستقیمو کارکوونکو ناادا",
@@ -1131,8 +1183,21 @@ let suppressWorkerOpen = false;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const monthISO = (date = new Date()) => date.toISOString().slice(0, 7);
+function localDateISO(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function localMonthISO(date = new Date()) {
+  return localDateISO(date).slice(0, 7);
+}
+
+function dateFromISO(value = todayISO()) {
+  const [year, month, day] = String(value || todayISO()).split("-").map(Number);
+  return new Date(year || new Date().getFullYear(), (month || 1) - 1, day || 1);
+}
+
+const todayISO = () => localDateISO(new Date());
+const monthISO = (date = new Date()) => localMonthISO(date);
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const money = (value) => `AED ${roundMoney(value).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -1329,13 +1394,14 @@ function requireAdmin() {
 }
 
 function monthFromDate(date) {
+  if (date instanceof Date) return localMonthISO(date);
   return String(date || todayISO()).slice(0, 7);
 }
 
 function shiftMonth(month, offset) {
   const [year, monthIndex] = String(month || monthISO()).split("-").map(Number);
   const date = new Date(year, (monthIndex || 1) - 1 + offset, 1);
-  return date.toISOString().slice(0, 7);
+  return localMonthISO(date);
 }
 
 function previousMonth(month) {
@@ -1716,9 +1782,9 @@ function workerAdvanceEntries(workerId) {
 }
 
 function previousISODate(date) {
-  const value = new Date(`${date}T00:00:00`);
+  const value = dateFromISO(date);
   value.setDate(value.getDate() - 1);
-  return value.toISOString().slice(0, 10);
+  return localDateISO(value);
 }
 
 function workerGrossWageUntil(workerId, end) {
@@ -2141,7 +2207,10 @@ function setDefaults() {
   $("#reportDate").value = today;
   if ($("#reportStartDate")) $("#reportStartDate").value = today;
   if ($("#reportEndDate")) $("#reportEndDate").value = today;
+  if ($("#dashboardPeriod")) $("#dashboardPeriod").value = "all";
   $("#dashboardMonth").value = month;
+  if ($("#dashboardStartDate")) $("#dashboardStartDate").value = `${month}-01`;
+  if ($("#dashboardEndDate")) $("#dashboardEndDate").value = today;
   $("#lockMonth").value = month;
   if ($("#approvalMonth")) $("#approvalMonth").value = month;
   $("#attendanceMonth").value = month;
@@ -2610,12 +2679,12 @@ function currentReportPeriod() {
   let end = reportDate;
   let title = `${t("dailyReport")} · ${reportDate}`;
   if (type === "weekly") {
-    const date = new Date(`${reportDate}T00:00:00`);
+    const date = dateFromISO(reportDate);
     const day = date.getDay();
     date.setDate(date.getDate() - day);
-    start = date.toISOString().slice(0, 10);
+    start = localDateISO(date);
     date.setDate(date.getDate() + 6);
-    end = date.toISOString().slice(0, 10);
+    end = localDateISO(date);
     title = `${t("weeklyReport")} · ${start} ${t("to")} ${end}`;
   }
   if (type === "monthly") {
@@ -2722,6 +2791,11 @@ function renderPaymentEntryPanel() {
     return;
   }
   summary.innerHTML = `
+    <div class="wide payment-period-note">
+      <span>${t("balancePeriod")}</span>
+      <strong>${start} ${t("to")} ${end}</strong>
+      <p>${t("balancePeriodHelp")}</p>
+    </div>
     <div><span>${t("payableAfterAdvance")}</span><strong>${money(total)}</strong></div>
     <div><span>${t("paymentDeducted")}</span><strong>${money(paymentDeducted)}</strong></div>
     <div><span>${t("workerBalance")}</span><strong>${money(unpaid)}</strong></div>
@@ -2978,15 +3052,49 @@ function printableReportHtml(customReport = "", { includePrintActions = true } =
           .payment-history-list div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 8px; background: #f4f7fb; }
           .separate-worker-report { break-after: page; page-break-after: always; }
           .separate-worker-report:last-child { break-after: auto; page-break-after: auto; }
+          .attendance-print-note { margin: 8px 0 10px; color: #667085; font-size: 11px; }
+          .attendance-print-table { table-layout: fixed; width: 100%; font-size: 9px; }
+          .attendance-print-table thead { display: table-header-group; }
+          .attendance-print-table tfoot { display: table-footer-group; }
+          .attendance-print-table tr { break-inside: avoid; page-break-inside: avoid; }
+          .attendance-print-table th, .attendance-print-table td { padding: 4px 3px; text-align: center; white-space: normal; border: 1px solid #d9e0ea; }
+          .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 150px; text-align: start; font-weight: 700; }
+          .attendance-print-table .attendance-day-heading { font-size: 8px; line-height: 1.15; color: #425466; }
+          .attendance-print-table .attendance-day-heading strong { display: block; color: #1d2433; font-size: 9px; }
+          .attendance-print-table .attendance-day-heading span { display: block; color: #667085; font-size: 7px; }
+          .attendance-print-table .attendance-total-col { width: 32px; font-weight: 700; background: #f4f7fb; }
+          .attendance-print-table .attendance-overtime-col { width: 44px; font-weight: 800; background: #eef9fb; color: #087fae; }
+          .attendance-day-cell { display: grid; justify-items: center; gap: 2px; min-height: 28px; }
+          .attendance-mark { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; font-size: 9px; font-weight: 800; color: #fff; }
+          .attendance-mark.present { background: #188a6a; }
+          .attendance-mark.halfday { background: #b7791f; }
+          .attendance-mark.absent { background: #c94040; }
+          .attendance-mark.off { background: #526071; }
+          .attendance-mark.empty, .attendance-mark.unavailable { color: #98a2b3; background: #f4f7fb; border: 1px dashed #d0d5dd; }
+          .attendance-day-overtime { display: inline-block; max-width: 100%; padding: 1px 3px; border-radius: 999px; color: #087fae; background: #e7f8fd; font-size: 7px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+          .attendance-worker-line { display: grid; gap: 2px; }
+          .attendance-worker-line span { color: #667085; font-size: 8px; font-weight: 500; }
+          .attendance-print-footer { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px; }
+          .attendance-print-footer div { padding: 8px; border-radius: 8px; background: #f4f7fb; }
+          .attendance-print-footer span { display: block; color: #667085; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+          .attendance-print-footer strong { display: block; margin-top: 2px; font-size: 14px; }
+          .attendance-overtime-details { margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+          .attendance-overtime-details h4 { margin: 0 0 8px; font-size: 14px; }
+          .attendance-overtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+          .attendance-overtime-card { padding: 8px; border: 1px solid #d9e0ea; border-radius: 8px; background: #fbfdff; break-inside: avoid; page-break-inside: avoid; }
+          .attendance-overtime-card strong { display: block; margin-bottom: 4px; font-size: 12px; }
+          .attendance-overtime-card ul { margin: 0; padding-left: 18px; color: #344054; font-size: 10px; line-height: 1.35; }
+          [dir="rtl"] .attendance-overtime-card ul { padding-right: 18px; padding-left: 0; }
+          .attendance-overtime-total { margin-top: 5px; font-weight: 800; color: #087fae; font-size: 11px; }
           .panel, .report-panel { border: 0; box-shadow: none; background: #fff; }
           .payment-list, .report-controls { display: none; }
-          .table-wrap { overflow: visible; }
+          .table-wrap { overflow: visible; max-width: 100%; }
           table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12px; }
           th, td { padding: 8px; border-bottom: 1px solid #d9e0ea; text-align: start; white-space: nowrap; }
           th { color: #667085; text-transform: uppercase; font-size: 11px; }
-          @media (max-width: 700px) { body { padding: 12px; } .report-brand { align-items: flex-start; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; } .report-footer { align-items: flex-start; flex-direction: column; } }
-          @media (max-width: 460px) { .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr; } }
-          @media print { body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: calc(100vh - 10px); padding-bottom: 178px; } .report-footer { position: fixed; right: 0; bottom: 12px; left: 0; background: #fff; } }
+          @media (max-width: 700px) { body { padding: 12px; overflow-x: hidden; } .report-page { width: 100%; max-width: 100%; padding-bottom: 110px; } .report-brand { align-items: flex-start; } .report-brand img { width: 54px; height: 54px; } .report-brand strong { font-size: 17px; line-height: 1.15; overflow-wrap: anywhere; } .report-meta { flex-direction: column; gap: 4px; overflow-wrap: anywhere; } .summary-strip, .worker-report-grid { grid-template-columns: 1fr 1fr; } .worker-report-grid .wide { grid-column: 1 / -1; } .table-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain; } .table-wrap table { min-width: 760px; } .attendance-print-table { min-width: 980px; } .attendance-overtime-grid { grid-template-columns: 1fr; } .attendance-overtime-card, .attendance-overtime-card li, .payment-history-list div { overflow-wrap: anywhere; } .report-footer { align-items: flex-start; flex-direction: column; position: static; } }
+          @media (max-width: 460px) { body { padding: 10px; } .report-brand { flex-wrap: wrap; } .summary-strip, .worker-report-grid, .attendance-print-footer { grid-template-columns: 1fr; } .print-actions { position: sticky; top: 0; z-index: 3; justify-content: stretch; padding: 8px 0; background: #fff; } .print-actions button { width: 100%; min-height: 46px; } .attendance-print-table { min-width: 1040px; } }
+          @media print { @page { size: A4 landscape; margin: 8mm; } body { padding: 0; } .print-actions { display: none; } .report-page { max-width: none; min-height: auto; padding-bottom: 0; } .report-footer { position: static; right: auto; bottom: auto; left: auto; background: #fff; break-inside: avoid; page-break-inside: avoid; } .attendance-report-page { padding-bottom: 0; } .attendance-report-page .report-footer { margin-top: 16px; } .attendance-print-table { font-size: 8px; page-break-inside: auto; } .attendance-print-table thead { display: table-header-group; } .attendance-print-table tr { break-inside: avoid; page-break-inside: avoid; } .attendance-print-table th, .attendance-print-table td { padding: 3px 2px; } .attendance-print-table th:first-child, .attendance-print-table td:first-child { width: 132px; } .attendance-mark { width: 15px; height: 15px; font-size: 8px; } .attendance-day-overtime { font-size: 6px; padding: 1px 2px; } .attendance-print-footer, .attendance-overtime-details { break-inside: avoid; page-break-inside: avoid; } .attendance-overtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .attendance-overtime-card { padding: 6px; } .attendance-overtime-card ul { font-size: 9px; } }
         </style>
       </head>
       <body>
@@ -3107,6 +3215,229 @@ function downloadSeparateWorkerReports() {
   saveData(false);
 }
 
+function monthlyAttendancePrintableWorkers(month, selection = ["all"], shift = "all") {
+  const dates = daysInMonth(month);
+  const workerSelection = Array.isArray(selection) ? selection : [selection];
+  return app.workers.filter((worker) => {
+    if (!workerMatchesSelection(worker, workerSelection)) return false;
+    const hasRecord = dates.some((date) => {
+      const record = getAttendanceRecord(date, worker.id);
+      return record.status && recordMatchesShift(record, shift);
+    });
+    const canWorkInMonth = worker.status === "active"
+      && dates.some((date) => workerJoinedByDate(worker, date))
+      && (shift === "all" || dates.some((date) => workerAssignedShift(worker, date) === shift));
+    return hasRecord || canWorkInMonth;
+  });
+}
+
+function attendancePrintMark(worker, date, shift) {
+  const record = getAttendanceRecord(date, worker.id);
+  if (!workerAvailableForAttendance(worker, date)) {
+    return { code: "-", status: "unavailable", label: t("notAvailable") };
+  }
+  if (!record.status || !recordMatchesShift(record, shift)) {
+    return { code: "-", status: "empty", label: t("notMarked") };
+  }
+  return {
+    code: { present: "P", halfday: "H", absent: "A", off: "O" }[record.status] || "-",
+    status: record.status,
+    label: statusLabel(record.status),
+  };
+}
+
+function monthlyWorkerOvertimeDetails(worker, dates, shift) {
+  return dates.map((date) => {
+    const record = getAttendanceRecord(date, worker.id);
+    if (record.status !== "present" || !recordMatchesShift(record, shift)) return null;
+    const overtime = calculateHours(record).overtime || 0;
+    if (overtime <= 0) return null;
+    return { date, overtime };
+  }).filter(Boolean);
+}
+
+function printableDateLabel(date) {
+  const value = dateFromISO(date);
+  if (Number.isNaN(value.getTime())) return date;
+  return value.toLocaleDateString(app.language === "ps" ? "ps-AF" : "en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function printableDayName(date, style = "short") {
+  const value = dateFromISO(date);
+  if (Number.isNaN(value.getTime())) return "";
+  return value.toLocaleDateString(app.language === "ps" ? "ps-AF" : "en-GB", { weekday: style });
+}
+
+function attendancePrintCell(worker, date, shift) {
+  const mark = attendancePrintMark(worker, date, shift);
+  const record = getAttendanceRecord(date, worker.id);
+  const overtime = record.status === "present" && recordMatchesShift(record, shift)
+    ? calculateHours(record).overtime || 0
+    : 0;
+  return `
+    <td>
+      <div class="attendance-day-cell">
+        <span class="attendance-mark ${escapeHTML(mark.status)}" title="${escapeHTML(mark.label)}">${escapeHTML(mark.code)}</span>
+        ${overtime > 0 ? `<span class="attendance-day-overtime">OT ${escapeHTML(formatHours(overtime))}</span>` : ""}
+      </div>
+    </td>
+  `;
+}
+
+function monthlyAttendancePrintRow(worker, dates, shift, summaryRow = null) {
+  const overtimeDetails = monthlyWorkerOvertimeDetails(worker, dates, shift);
+  const overtimeTotal = Number(summaryRow?.overtime ?? overtimeDetails.reduce((sum, item) => sum + item.overtime, 0));
+  const totals = dates.reduce((acc, date) => {
+    const record = getAttendanceRecord(date, worker.id);
+    if (!record.status || !recordMatchesShift(record, shift)) return acc;
+    if (record.status === "present") acc.present += 1;
+    if (record.status === "halfday") acc.halfday += 1;
+    if (record.status === "absent") acc.absent += 1;
+    if (record.status === "off") acc.off += 1;
+    return acc;
+  }, { present: 0, halfday: 0, absent: 0, off: 0 });
+  return `
+    <tr>
+      <td>
+        <div class="attendance-worker-line">
+          <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+          <span>${escapeHTML(worker.role || t("roleWorker"))}</span>
+        </div>
+      </td>
+      ${dates.map((date) => attendancePrintCell(worker, date, shift)).join("")}
+      <td class="attendance-total-col">${totals.present}</td>
+      <td class="attendance-total-col">${totals.halfday}</td>
+      <td class="attendance-total-col">${totals.absent}</td>
+      <td class="attendance-total-col">${totals.off}</td>
+      <td class="attendance-overtime-col">${formatHours(overtimeTotal)}</td>
+    </tr>
+  `;
+}
+
+function monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift, summaryRowsByWorker = new Map()) {
+  const cards = workers.map((worker) => {
+    const details = monthlyWorkerOvertimeDetails(worker, dates, shift);
+    const total = Number(summaryRowsByWorker.get(worker.id)?.overtime ?? details.reduce((sum, item) => sum + item.overtime, 0));
+    return `
+      <div class="attendance-overtime-card">
+        <strong>${escapeHTML(displayWorkerName(worker))}</strong>
+        ${details.length ? `
+          <ul>
+            ${details.map((item) => `<li>${escapeHTML(printableDateLabel(item.date))} - ${escapeHTML(formatHours(item.overtime))} ${escapeHTML(t("overtime").toLowerCase())}</li>`).join("")}
+          </ul>
+        ` : `<p class="help-text">${formatHours(0)} ${escapeHTML(t("overtime").toLowerCase())}</p>`}
+        <div class="attendance-overtime-total">${t("totalOvertime")}: ${formatHours(total)}</div>
+      </div>
+    `;
+  }).join("");
+  return `
+    <section class="attendance-overtime-details">
+      <h4>${t("overtimeDetails")}</h4>
+      <div class="attendance-overtime-grid">${cards}</div>
+    </section>
+  `;
+}
+
+function monthlyAttendanceReportHtml({ allWorkers = false } = {}) {
+  renderReport();
+  const month = $("#reportMonth")?.value || monthISO();
+  const dates = daysInMonth(month);
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const shift = selectedReportShift();
+  const selectedIds = allWorkers ? ["all"] : selectedReportWorkerIds();
+  const workers = monthlyAttendancePrintableWorkers(month, selectedIds, shift);
+  if (!workers.length) return "";
+  const summaryRowsByWorker = new Map(monthSummary(month, workers.map((worker) => worker.id), shift).map((row) => [row.worker.id, row]));
+  const totals = workers.reduce((acc, worker) => {
+    const summaryRow = summaryRowsByWorker.get(worker.id);
+    acc.overtime += Number(summaryRow?.overtime || 0);
+    dates.forEach((date) => {
+      const record = getAttendanceRecord(date, worker.id);
+      if (!record.status || !recordMatchesShift(record, shift)) return;
+      if (record.status === "present") acc.present += 1;
+      if (record.status === "halfday") acc.halfday += 1;
+      if (record.status === "absent") acc.absent += 1;
+      if (record.status === "off") acc.off += 1;
+    });
+    return acc;
+  }, { present: 0, halfday: 0, absent: 0, off: 0, overtime: 0 });
+  const subject = allWorkers || selectedIds.includes("all")
+    ? t("companyWideReport")
+    : workers.length === 1
+      ? displayWorkerName(workers[0])
+      : `${t("selectedWorkerReports")} (${workers.length})`;
+  const shiftLabel = shift === "all" ? t("allShifts") : attendanceShiftLabel(shift);
+  return `
+    <section class="attendance-report-page">
+      <div class="report-brand">
+        <img src="ahmad-times-logo.png" alt="Ahmad Times logo">
+        <div>
+          <strong>Ahmad Times For Building Maintenance L.L.C</strong>
+          <span>${t("monthlyAttendanceReport")}</span>
+        </div>
+      </div>
+      <div class="report-meta">
+        <span>${t("monthlyReport")} · ${month}</span>
+        <span>${t("shift")}: ${shiftLabel}</span>
+        <span>${t("serialNo")}: ATBM-ATT-${start.replaceAll("-", "")}-${end.replaceAll("-", "")}</span>
+      </div>
+      <h3>${t("monthlyAttendanceReport")} · ${month}</h3>
+      <p class="help-text">${escapeHTML(subject)} · ${start} ${t("to")} ${end}</p>
+      <p class="attendance-print-note">
+        ${t("attendanceCode")}: P = ${t("present")}, H = ${t("halfday")}, A = ${t("absent")}, O = ${t("off")}, - = ${t("notMarked")}. OT = ${t("overtime")} on that exact date.
+      </p>
+      <div class="table-wrap">
+        <table class="attendance-print-table">
+          <thead>
+            <tr>
+              <th>${t("worker")}</th>
+              ${dates.map((date) => `<th><span class="attendance-day-heading"><span>${escapeHTML(printableDayName(date))}</span><strong>${Number(date.slice(-2))}</strong><span>${escapeHTML(date.slice(5))}</span></span></th>`).join("")}
+              <th class="attendance-total-col">P</th>
+              <th class="attendance-total-col">H</th>
+              <th class="attendance-total-col">A</th>
+              <th class="attendance-total-col">O</th>
+              <th class="attendance-overtime-col">OT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${workers.map((worker) => monthlyAttendancePrintRow(worker, dates, shift, summaryRowsByWorker.get(worker.id))).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="attendance-print-footer">
+        <div><span>${t("present")}</span><strong>${totals.present}</strong></div>
+        <div><span>${t("halfday")}</span><strong>${totals.halfday}</strong></div>
+        <div><span>${t("absent")}</span><strong>${totals.absent}</strong></div>
+        <div><span>${t("off")}</span><strong>${totals.off}</strong></div>
+        <div><span>${t("totalOvertime")}</span><strong>${formatHours(totals.overtime)}</strong></div>
+      </div>
+      ${monthlyAttendanceOvertimeDetailsHtml(workers, dates, shift, summaryRowsByWorker)}
+      <footer class="report-footer">
+        <div class="report-stamp-box">
+          <img class="report-stamp" src="ahmad-times-stamp.png" alt="Ahmad Times stamp" width="136" height="136" onerror="this.onerror=null;this.src='ahmad-times-logo.png';">
+          <p class="help-text">Generated: ${new Date().toLocaleString()}</p>
+        </div>
+      </footer>
+    </section>
+  `;
+}
+
+function printMonthlyAttendanceReport(allWorkers = false) {
+  const report = monthlyAttendanceReportHtml({ allWorkers });
+  if (!report.trim()) {
+    toast(t("noRecordsReport"));
+    return;
+  }
+  openPrintableReport(report);
+  addLog("Monthly attendance report printed", allWorkers ? "All workers" : selectedReportWorkerIds().join(", "));
+  saveData(false);
+}
+
 function formatHours(value) {
   if (!value) return "0h";
   const totalMinutes = Math.round(Number(value || 0) * 60);
@@ -3125,10 +3456,10 @@ function daysInMonth(month) {
 
 function datesBetween(start, end) {
   const dates = [];
-  const current = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
+  const current = dateFromISO(start);
+  const last = dateFromISO(end);
   while (current <= last) {
-    dates.push(current.toISOString().slice(0, 10));
+    dates.push(localDateISO(current));
     current.setDate(current.getDate() + 1);
   }
   return dates;
@@ -3137,10 +3468,10 @@ function datesBetween(start, end) {
 function recordsForRange(start, end, workerId = "all", shift = "all") {
   const rows = [];
   const workerSelection = Array.isArray(workerId) ? workerId : [workerId];
-  const current = new Date(`${start}T00:00:00`);
-  const last = new Date(`${end}T00:00:00`);
+  const current = dateFromISO(start);
+  const last = dateFromISO(end);
   while (current <= last) {
-    const date = current.toISOString().slice(0, 10);
+    const date = localDateISO(current);
     const day = app.attendance[date] || {};
     app.workers.forEach((worker) => {
       if (!workerMatchesSelection(worker, workerSelection)) return;
@@ -3564,6 +3895,113 @@ function closeWorkerSummary() {
   renderWorkers();
 }
 
+function validISODate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
+}
+
+function earliestDashboardDate() {
+  const dates = [];
+  const add = (value) => {
+    const date = validISODate(value);
+    if (date) dates.push(date);
+  };
+  Object.keys(app.attendance || {}).forEach(add);
+  (app.workers || []).forEach((worker) => {
+    add(worker.joinDate);
+    normalizeWageHistory(worker).forEach((entry) => add(entry.date));
+  });
+  paymentLedgerEntries().forEach((payment) => {
+    add(payment.start);
+    add(payment.end);
+    add(payment.date);
+  });
+  (app.supplierEntries || []).forEach((entry) => add(entry.date));
+  supplierPaymentEntries().forEach((payment) => {
+    add(payment.start);
+    add(payment.end);
+    add(payment.date);
+  });
+  (app.expenses || []).forEach((expense) => add(expense.date));
+  (app.projectBudgets || []).forEach((entry) => add(entry.date));
+  return dates.length ? dates.sort()[0] : `${monthISO()}-01`;
+}
+
+function dashboardPeriodRange() {
+  const period = $("#dashboardPeriod")?.value || "all";
+  const today = $("#todayInput")?.value || todayISO();
+  const selectedMonth = $("#dashboardMonth")?.value || monthISO();
+  let start = earliestDashboardDate();
+  let end = today;
+  let title = t("allMonthsCombined");
+
+  if (period === "current") {
+    const month = monthFromDate(today) || monthISO();
+    start = `${month}-01`;
+    end = today;
+    title = t("currentMonth");
+  } else if (period === "previous") {
+    const month = previousMonth(monthFromDate(today) || monthISO());
+    const dates = daysInMonth(month);
+    start = dates[0];
+    end = dates[dates.length - 1];
+    title = `${t("previousMonth")} · ${month}`;
+  } else if (period === "month") {
+    const dates = daysInMonth(selectedMonth);
+    start = dates[0];
+    end = dates[dates.length - 1];
+    title = `${t("specificMonth")} · ${selectedMonth}`;
+  } else if (period === "custom") {
+    const from = $("#dashboardStartDate")?.value || start;
+    const to = $("#dashboardEndDate")?.value || end;
+    start = from <= to ? from : to;
+    end = from <= to ? to : from;
+    title = `${t("customDateRange")} · ${start} ${t("to")} ${end}`;
+  }
+
+  if (end > today && period !== "previous" && period !== "month") end = today;
+  if (start > end) start = end;
+  return { period, start, end, title, month: selectedMonth };
+}
+
+function periodSummary(start, end, shift = "all") {
+  const rowsByWorker = new Map(summarizeRecords(recordsForRange(start, end, "all", shift)).map((row) => [row.worker.id, row]));
+  app.workers.forEach((worker) => {
+    if (rowsByWorker.has(worker.id)) return;
+    rowsByWorker.set(worker.id, {
+      worker,
+      present: 0,
+      halfday: 0,
+      absent: 0,
+      off: 0,
+      hours: 0,
+      overtime: 0,
+      dailyWage: wageForDate(worker, end),
+      baseWage: 0,
+      overtimeWage: 0,
+      foodDeduction: 0,
+      paidAmount: paymentLedgerTotal(worker.id, start, end),
+      wage: 0,
+    });
+  });
+  return Array.from(rowsByWorker.values()).sort((a, b) => Number(a.worker.order ?? 0) - Number(b.worker.order ?? 0) || displayWorkerName(a.worker).localeCompare(displayWorkerName(b.worker)));
+}
+
+function expenseTotalsBetween(start, end) {
+  return expenseRowsBetween(start, end).reduce((acc, expense) => {
+    const ledger = expenseLedger(expense);
+    acc.amount = roundMoney(acc.amount + Number(expense.amount || 0));
+    acc.paid = roundMoney(acc.paid + ledger.paid);
+    acc.unpaid = roundMoney(acc.unpaid + ledger.unpaid);
+    return acc;
+  }, { amount: 0, paid: 0, unpaid: 0 });
+}
+
+function budgetReceivedBetween(start, end) {
+  return roundMoney((app.projectBudgets || [])
+    .filter((entry) => validISODate(entry.date) && entry.date >= start && entry.date <= end)
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+}
+
 function workerSummaryPanel(worker) {
   const month = $("#dashboardMonth")?.value || monthISO();
   const dates = daysInMonth(month);
@@ -3815,13 +4253,13 @@ function renderDayAttendance() {
 }
 
 function weekRange(dateValue = todayISO()) {
-  const start = new Date(`${dateValue}T00:00:00`);
+  const start = dateFromISO(dateValue);
   const day = start.getDay();
   start.setDate(start.getDate() - day);
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
-    return date.toISOString().slice(0, 10);
+    return localDateISO(date);
   });
 }
 
@@ -4170,6 +4608,7 @@ function renderReport() {
       ? escapeHTML(displayWorkerName(selectedWorker))
       : `${t("selectedWorkerReports")} (${rows.length})`;
   const includePreviousMonth = type === "monthly" && Boolean($("#includePreviousMonthReport")?.checked);
+  const includePaymentHistory = Boolean($("#includePaymentHistoryReport")?.checked);
   const previousReportMonth = previousMonth(month);
   const previousDates = daysInMonth(previousReportMonth);
   const previousRows = includePreviousMonth
@@ -4217,7 +4656,7 @@ function renderReport() {
       <div><span>${t("workerBalance")}</span><strong>${money(payTotals.extraPaid)}</strong></div>
       <div><span>${t("balanceOnCompany")}</span><strong>${money(payTotals.pending)}</strong></div>
     </div>
-    <section class="report-payment-history">
+    ${includePaymentHistory ? `<section class="report-payment-history">
       <h3>${t("paymentHistory")}</h3>
       ${rows.map((row) => {
         const history = workerPaymentHistory(row.worker.id, start, end);
@@ -4228,7 +4667,7 @@ function renderReport() {
           </div>
         `;
       }).join("") || `<p class="help-text">${t("noPaymentHistory")}</p>`}
-    </section>
+    </section>` : ""}
     <div class="payment-list">
       <h3>${t("payments")}</h3>
       ${rows.map((row) => {
@@ -4243,7 +4682,7 @@ function renderReport() {
               <strong>${escapeHTML(displayWorkerName(row.worker))}</strong>
               <p>${t("serialNo")}: ${serial}</p>
               <p>${t("grossPayable")}: ${money(row.wage)} · ${t("paid")}: ${money(paid)} · ${t("unpaid")}: ${money(pending)} · ${t("workerBalance")}: ${money(extraPaid)} · ${t("balanceOnCompany")}: ${money(pending)}</p>
-              <div class="payment-row-history">${renderPaymentHistory(history, { editable: true, type: "worker" })}</div>
+              ${includePaymentHistory ? `<div class="payment-row-history">${renderPaymentHistory(history, { editable: true, type: "worker" })}</div>` : ""}
             </div>
             <label>${t("paidAmount")}<input type="number" min="0" step="0.01" data-payment-field="paidAmount" value=""></label>
             <label>${t("paymentDate")}<input type="date" data-payment-field="paymentDate" value="${$("#todayInput")?.value || todayISO()}"></label>
@@ -4490,24 +4929,38 @@ function supplierNamesFromEntries(entries = app.supplierEntries || []) {
 }
 
 function supplierTotals(entries = [], start = "", end = "") {
-  const totals = entries.reduce((acc, entry) => {
-    const totals = supplierEntryTotals(entry);
-    acc.total = roundMoney(acc.total + totals.total);
-    acc.paid = roundMoney(acc.paid + totals.paid);
-    acc.normal = roundMoney(acc.normal + totals.normalAmount);
-    acc.overtime = roundMoney(acc.overtime + totals.overtimeAmount);
-    acc.transportationCharges = roundMoney(acc.transportationCharges + totals.transportationCharges);
-    acc.previousLoan = roundMoney(acc.previousLoan + totals.previousLoan);
-    acc.workers += totals.workers;
-    return acc;
-  }, { total: 0, paid: 0, unpaid: 0, normal: 0, overtime: 0, transportationCharges: 0, previousLoan: 0, workers: 0 });
   const entryDates = entries.map((entry) => entry.date).filter(Boolean).sort();
   const rangeStart = start || entryDates[0] || todayISO();
   const rangeEnd = end || entryDates[entryDates.length - 1] || rangeStart;
-  const ledgerPaid = supplierNamesFromEntries(entries)
-    .reduce((sum, supplierName) => sum + supplierPaymentTotal(supplierName, rangeStart, rangeEnd), 0);
-  totals.paid = roundMoney(totals.paid + ledgerPaid);
-  totals.unpaid = roundMoney(Math.max(0, totals.total - totals.paid));
+  const bySupplier = new Map();
+  const totals = entries.reduce((acc, entry) => {
+    const entryTotals = supplierEntryTotals(entry);
+    const supplierName = String(entry.supplierName || "").trim() || "-";
+    const supplier = bySupplier.get(supplierName) || { total: 0, paid: 0 };
+    supplier.total = roundMoney(supplier.total + entryTotals.total);
+    supplier.paid = roundMoney(supplier.paid + entryTotals.paid);
+    bySupplier.set(supplierName, supplier);
+    acc.total = roundMoney(acc.total + entryTotals.total);
+    acc.normal = roundMoney(acc.normal + entryTotals.normalAmount);
+    acc.overtime = roundMoney(acc.overtime + entryTotals.overtimeAmount);
+    acc.transportationCharges = roundMoney(acc.transportationCharges + entryTotals.transportationCharges);
+    acc.previousLoan = roundMoney(acc.previousLoan + entryTotals.previousLoan);
+    acc.workers += entryTotals.workers;
+    return acc;
+  }, { total: 0, paid: 0, unpaid: 0, overpaid: 0, normal: 0, overtime: 0, transportationCharges: 0, previousLoan: 0, workers: 0 });
+  supplierPaymentEntries()
+    .filter((payment) => paymentAppliesToRange(payment, rangeStart, rangeEnd))
+    .forEach((payment) => {
+      const supplierName = String(payment.supplierName || "").trim() || "-";
+      const supplier = bySupplier.get(supplierName) || { total: 0, paid: 0 };
+      supplier.paid = roundMoney(supplier.paid + Number(payment.amount || 0));
+      bySupplier.set(supplierName, supplier);
+    });
+  bySupplier.forEach((supplier) => {
+    totals.paid = roundMoney(totals.paid + supplier.paid);
+    totals.unpaid = roundMoney(totals.unpaid + Math.max(0, supplier.total - supplier.paid));
+    totals.overpaid = roundMoney(totals.overpaid + Math.max(0, supplier.paid - supplier.total));
+  });
   return totals;
 }
 
@@ -4745,6 +5198,7 @@ function companyExpenseReportData() {
     .filter((expense) => project === "all" || projectNameOf(expense.project) === project)
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
   const expenseTotalsData = expenseTotalsForRows(expenseRows, "all");
+  const buyerTotals = expenseBuyerTotals(expenseRows);
   const expenseCategories = [
     "materialExpenses",
     "transportExpenses",
@@ -4777,6 +5231,7 @@ function companyExpenseReportData() {
     supplierTotals: supplierTotalsData,
     expenseRows,
     expenseTotals: expenseTotalsData,
+    buyerTotals,
     expenseCategories,
     summary: { totalPaid, totalUnpaid, grandTotal },
   };
@@ -4824,6 +5279,13 @@ function companyExpenseReportHtml(data) {
     money(item.unpaid),
     String(item.rows.length),
   ]);
+  const buyerRows = (data.buyerTotals || []).map((buyer) => [
+    buyer.buyer,
+    money(buyer.amount),
+    money(buyer.paid),
+    money(buyer.unpaid),
+    money(buyer.balance),
+  ]);
   const expenseRows = data.expenseRows.map((expense) => {
     const ledger = expenseLedger(expense);
     return [
@@ -4855,6 +5317,8 @@ function companyExpenseReportHtml(data) {
     ${reportTable([t("supplierName"), t("projectName"), t("workersProvided"), t("dailyRate"), t("overtime"), t("paid"), t("unpaid"), t("totalSupplierAmount")], supplierRows, t("noSupplierEntries"))}
     <h2>${t("companyExpenses")}</h2>
     ${reportTable([t("expenseCategory"), t("expenseAmount"), t("paid"), t("unpaid"), t("records")], expenseCategoryRows, t("noExpenses"))}
+    <h2>${t("buyerTotals")}</h2>
+    ${reportTable([t("buyerName"), t("totalExpenses"), t("paid"), t("unpaid"), t("buyerBalance")], buyerRows, t("noExpenses"))}
     <h2>${t("companyExpenses")} · ${t("details")}</h2>
     ${reportTable([t("date"), t("buyerName"), t("expenseCategory"), t("projectName"), t("marketName"), t("expenseDescription"), t("expenseAmount"), t("paid"), t("unpaid")], expenseRows, t("noExpenses"))}
     <h2>${t("paymentSummary")}</h2>
@@ -4956,9 +5420,9 @@ function monthsBetweenRange(startMonth = monthISO(), endMonth = startMonth) {
   const first = start <= end ? start : end;
   const last = start <= end ? end : start;
   const months = [];
-  const cursor = new Date(`${first}-01T00:00:00`);
-  while (cursor.toISOString().slice(0, 7) <= last) {
-    months.push(cursor.toISOString().slice(0, 7));
+  const cursor = dateFromISO(`${first}-01`);
+  while (localMonthISO(cursor) <= last) {
+    months.push(localMonthISO(cursor));
     cursor.setMonth(cursor.getMonth() + 1);
   }
   return months;
@@ -6348,6 +6812,142 @@ function printPlainReport(title, bodyHtml) {
   win.document.close();
 }
 
+function printDashboardWageSummary() {
+  const { start, end, title } = dashboardPeriodRange();
+  const rows = periodSummary(start, end)
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end));
+  const totals = paymentTotals(rows, start, end);
+  const overtime = rows.reduce((sum, row) => sum + Number(row.overtime || 0), 0);
+  const attendanceDays = rows.reduce((sum, row) => sum + Number(row.present || 0) + Number(row.halfday || 0) * 0.5, 0);
+  const headers = [
+    t("worker"),
+    t("days"),
+    t("hours"),
+    t("overtime"),
+    t("dailyWage"),
+    t("advanceDeducted"),
+    t("payableAfterAdvance"),
+    t("paymentDeducted"),
+    t("workerBalance"),
+    t("extraPaidBalance"),
+  ];
+  const bodyRows = rows.map((row) => {
+    const advance = rowAdvanceDeduction(row, start, end);
+    const finalPayable = rowFinalPayable(row, start, end);
+    const paymentDeducted = rowPaymentDeducted(row, start, end);
+    const unpaid = rowUnpaidAmount(row, start, end);
+    const extraPaid = rowExtraPaidBalance(row, start, end);
+    return [
+      displayWorkerName(row.worker),
+      String(row.present + (row.halfday * 0.5)),
+      formatHours(row.hours),
+      formatHours(row.overtime),
+      money(row.dailyWage || currentDailyWage(row.worker)),
+      money(advance),
+      money(finalPayable),
+      money(paymentDeducted),
+      money(unpaid),
+      money(extraPaid),
+    ];
+  });
+  const table = bodyRows.length
+    ? `<table><thead><tr>${headers.map((header) => `<th>${escapeHTML(header)}</th>`).join("")}</tr></thead><tbody>${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : `<p>${t("noWageRecords")}</p>`;
+  printPlainReport(t("wageSummary"), `
+    <p>${escapeHTML(title)} · ${escapeHTML(start)} ${t("to")} ${escapeHTML(end)}</p>
+    <div class="summary-grid">
+      <div class="row"><span>${t("totalWorkers")}</span><strong>${rows.length}</strong></div>
+      <div class="row"><span>${t("attendanceDays")}</span><strong>${attendanceDays}</strong></div>
+      <div class="row"><span>${t("overtime")}</span><strong>${formatHours(overtime)}</strong></div>
+      <div class="row"><span>${t("totalLabourWages")}</span><strong>${money(totals.gross)}</strong></div>
+      <div class="row"><span>${t("payableAfterAdvance")}</span><strong>${money(totals.finalPayable)}</strong></div>
+      <div class="row"><span>${t("totalPaidAmount")}</span><strong>${money(totals.paid)}</strong></div>
+      <div class="row"><span>${t("totalUnpaidAmount")}</span><strong>${money(totals.pending)}</strong></div>
+      <div class="row"><span>${t("extraPaidBalance")}</span><strong>${money(totals.extraPaid)}</strong></div>
+    </div>
+    ${table}
+  `);
+  addLog("Dashboard wage summary printed", `${start} to ${end}`);
+}
+
+function printDashboardProjectReport() {
+  return withLanguage(app.language || "en", () => {
+    const { start, end, title } = dashboardPeriodRange();
+    const labourRows = periodSummary(start, end)
+      .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
+      .sort((a, b) => displayWorkerName(a.worker).localeCompare(displayWorkerName(b.worker)));
+    const labourTotals = paymentTotals(labourRows, start, end);
+    const supplierEntries = supplierEntriesForRange(start, end);
+    const supplierRows = Array.from(supplierEntries.reduce((map, entry) => {
+      const name = String(entry.supplierName || "-").trim() || "-";
+      const current = map.get(name) || { name, projects: new Set(), workers: 0, dailyRates: new Set(), overtimeHours: 0, total: 0, paidFromEntries: 0, normal: 0, overtimeAmount: 0 };
+      const totals = supplierEntryTotals(entry);
+      if (projectNameOf(entry.project)) current.projects.add(projectNameOf(entry.project));
+      current.workers += totals.workers;
+      if (totals.dailyWage) current.dailyRates.add(money(totals.dailyWage));
+      current.overtimeHours += totals.overtimeHours;
+      current.normal = roundMoney(current.normal + totals.normalAmount);
+      current.overtimeAmount = roundMoney(current.overtimeAmount + totals.overtimeAmount);
+      current.total = roundMoney(current.total + totals.total);
+      current.paidFromEntries = roundMoney(current.paidFromEntries + totals.paid);
+      map.set(name, current);
+      return map;
+    }, new Map()).values()).map((row) => {
+      const ledgerPaid = supplierPaymentTotal(row.name, start, end);
+      const paid = roundMoney(row.paidFromEntries + ledgerPaid);
+      return {
+        ...row,
+        projectText: row.projects.size ? Array.from(row.projects).join(" / ") : "-",
+        dailyRateText: row.dailyRates.size ? Array.from(row.dailyRates).join(" / ") : money(0),
+        paid,
+        unpaid: roundMoney(Math.max(0, row.total - paid)),
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    const supplierTotalsData = supplierTotals(supplierEntries, start, end);
+    const expenseRows = expenseRowsBetween(start, end).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    const expenseTotalsData = expenseTotalsForRows(expenseRows, "all");
+    const buyerTotals = expenseBuyerTotals(expenseRows);
+    const expenseCategories = [
+      "materialExpenses",
+      "transportExpenses",
+      "fuelExpenses",
+      "carRent",
+      "toolsEquipment",
+      "foodGroceryExpenses",
+      "projectExpenses",
+      "otherSmallExpenses",
+    ].map((key) => {
+      const rows = expenseRows.filter((expense) => investorExpenseCategoryKey(expense) === key);
+      const totals = expenseTotalsForRows(rows, "all");
+      return { key, label: t(key), rows, ...totals };
+    });
+    const data = {
+      start,
+      end,
+      title,
+      project: "all",
+      shift: "all",
+      supplierNames: [],
+      labourRows,
+      labourTotals,
+      supplierRows,
+      supplierTotals: supplierTotalsData,
+      expenseRows,
+      expenseTotals: expenseTotalsData,
+      buyerTotals,
+      expenseCategories,
+      summary: {
+        totalPaid: roundMoney(labourTotals.paid + supplierTotalsData.paid + expenseTotalsData.paid),
+        totalUnpaid: roundMoney(labourTotals.pending + supplierTotalsData.unpaid + expenseTotalsData.unpaid),
+        grandTotal: roundMoney(labourTotals.gross + supplierTotalsData.total + expenseTotalsData.amount),
+      },
+    };
+    printPlainReport(t("companyExpenseReport"), companyExpenseReportHtml(data));
+    addLog("Dashboard complete project report printed", `${start} to ${end}`);
+    saveData(false);
+  });
+}
+
 function printSettlement() {
   const worker = app.workers.find((item) => item.id === $("#settlementWorker").value);
   if (!worker) return;
@@ -6984,7 +7584,7 @@ function bindEvents() {
     }
   });
 
-  ["todayInput", "dashboardMonth", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
+  ["todayInput", "dashboardPeriod", "dashboardMonth", "dashboardStartDate", "dashboardEndDate", "attendanceDate", "attendanceWeekDate", "attendanceMonth", "attendanceWorkerSelect", "quickAttendanceDate", "settlementWorker", "lockMonth", "approvalMonth", "expenseMonth", "expenseBuyerFilter", "expenseReportBuyers", "reportType", "reportDate", "reportMonth", "reportStartDate", "reportEndDate", "reportWorker", "reportShiftFilter", "reportLanguage", "includePreviousMonthReport", "includePaymentHistoryReport", "companyExpenseProjectFilter", "companyExpenseSupplierFilter"].forEach((id) => {
     $(`#${id}`)?.addEventListener("change", renderAll);
   });
   $("#reportWorkerMobileList")?.addEventListener("change", (event) => {
@@ -7012,6 +7612,8 @@ function bindEvents() {
   });
   $(".payment-entry-panel")?.addEventListener("toggle", renderPaymentEntryPanel);
   $("#addPaymentEntry")?.addEventListener("click", addPaymentEntryFromPanel);
+  $("#printDashboardWageSummary")?.addEventListener("click", printDashboardWageSummary);
+  $("#printDashboardProjectReport")?.addEventListener("click", printDashboardProjectReport);
   $("#expenseBuyerFilter").addEventListener("input", renderExpenses);
   $("#printExpenseReport")?.addEventListener("click", printExpenseReport);
 
@@ -7112,6 +7714,8 @@ function bindEvents() {
   });
   $("#printSeparateWorkerReports")?.addEventListener("click", printSeparateWorkerReports);
   $("#downloadSeparateWorkerReports")?.addEventListener("click", downloadSeparateWorkerReports);
+  $("#printMonthlyAttendance")?.addEventListener("click", () => printMonthlyAttendanceReport(false));
+  $("#printAllMonthlyAttendance")?.addEventListener("click", () => printMonthlyAttendanceReport(true));
   $("#exportReport").addEventListener("click", exportReportCSV);
   $("#exportBackup").addEventListener("click", exportBackup);
   $("#downloadLatestBackup").addEventListener("click", downloadLatestDailyBackup);
@@ -7178,60 +7782,73 @@ function bulkSetMonth(status) {
 
 function renderDashboard() {
   const date = $("#todayInput").value || todayISO();
-  const month = $("#dashboardMonth").value || monthISO();
-  const previous = previousMonth(month);
-  const summary = monthSummary(month);
+  const { start, end, title, month } = dashboardPeriodRange();
+  const previous = previousMonth(monthFromDate(end) || month);
+  const summary = periodSummary(start, end);
   const todayRecords = app.attendance[date] || {};
-  const monthExpensesTotal = companyExpenseTotal(month);
-  const budgetSummary = projectBudgetSummary(month, "all");
-  const monthExpenseLedger = monthExpenses(month).reduce((acc, expense) => {
-    const ledger = expenseLedger(expense);
-    acc.paid = roundMoney(acc.paid + ledger.paid);
-    acc.unpaid = roundMoney(acc.unpaid + ledger.unpaid);
-    return acc;
-  }, { paid: 0, unpaid: 0 });
-  const monthDates = daysInMonth(month);
-  const dashboardPayTotals = paymentTotals(summary, monthDates[0], monthDates[monthDates.length - 1]);
-  const supplierDashboardTotals = supplierTotals(monthSupplierEntries(month), monthDates[0], monthDates[monthDates.length - 1]);
+  const expenseTotals = expenseTotalsBetween(start, end);
+  const budgetReceived = budgetReceivedBetween(start, end);
+  const dashboardPayTotals = paymentTotals(summary, start, end);
+  const supplierDashboardTotals = supplierTotals(supplierEntriesForRange(start, end), start, end);
   const monthWages = dashboardPayTotals.finalPayable;
-  const selectedMonthCompanyCost = roundMoney(monthWages + supplierDashboardTotals.total + monthExpensesTotal);
+  const selectedMonthCompanyCost = roundMoney(monthWages + supplierDashboardTotals.total + expenseTotals.amount);
   const previousMonthCompanyCost = companyCostForMonth(previous);
   const directPaid = dashboardPayTotals.paid;
   const directUnpaid = dashboardPayTotals.pending;
-  const totalUnpaidBalance = roundMoney(directUnpaid + supplierDashboardTotals.unpaid + monthExpenseLedger.unpaid);
-  const workerAdvanceRemaining = roundMoney(app.workers.reduce((sum, worker) => sum + workerRemainingAdvance(worker, monthDates[monthDates.length - 1]), 0));
+  const totalUnpaidBalance = roundMoney(directUnpaid + supplierDashboardTotals.unpaid + expenseTotals.unpaid);
+  const attendanceInPeriod = summary.reduce((sum, row) => sum + row.present + row.halfday, 0);
 
   if ($("#statTotalWorkers")) $("#statTotalWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   $("#statActiveWorkers").textContent = app.workers.filter((worker) => worker.status === "active").length;
   if ($("#statInactiveWorkers")) $("#statInactiveWorkers").textContent = app.workers.filter((worker) => worker.status === "inactive").length;
-  $("#statPresentToday").textContent = Object.values(todayRecords).filter((record) => ["present", "halfday"].includes(normalizeAttendanceRecord(record).status)).length;
+  $("#statPresentToday").textContent = attendanceInPeriod;
+  if ($("#statCompleteLabourWages")) $("#statCompleteLabourWages").textContent = money(dashboardPayTotals.gross);
   $("#statMonthWages").textContent = money(monthWages);
   if ($("#statSupplierTotal")) $("#statSupplierTotal").textContent = money(supplierDashboardTotals.total);
-  $("#statMonthExpenses").textContent = money(monthExpensesTotal);
+  $("#statMonthExpenses").textContent = money(expenseTotals.amount);
   $("#statGrandTotal").textContent = money(selectedMonthCompanyCost);
   if ($("#statPreviousMonthCost")) $("#statPreviousMonthCost").textContent = money(previousMonthCompanyCost);
-  if ($("#statTwoMonthCost")) $("#statTwoMonthCost").textContent = money(roundMoney(selectedMonthCompanyCost + previousMonthCompanyCost));
   if ($("#statAttendanceDays")) $("#statAttendanceDays").textContent = formatHours(summary.reduce((sum, row) => sum + row.overtime, 0));
   $("#statUnpaidWages").textContent = money(directUnpaid);
   if ($("#statTotalUnpaidBalance")) $("#statTotalUnpaidBalance").textContent = money(totalUnpaidBalance);
   if ($("#statPaidWages")) $("#statPaidWages").textContent = money(directPaid);
   if ($("#statSupplierPaid")) $("#statSupplierPaid").textContent = money(supplierDashboardTotals.paid);
   if ($("#statSupplierUnpaid")) $("#statSupplierUnpaid").textContent = money(supplierDashboardTotals.unpaid);
-  if ($("#statWorkerAdvance")) $("#statWorkerAdvance").textContent = money(workerAdvanceRemaining);
-  if ($("#statAdvanceDeducted")) $("#statAdvanceDeducted").textContent = money(dashboardPayTotals.advance);
-  if ($("#statBudgetReceived")) $("#statBudgetReceived").textContent = money(budgetSummary.received);
-  if ($("#statBudgetRemaining")) $("#statBudgetRemaining").textContent = money(budgetSummary.remaining);
+  if ($("#statBudgetReceived")) $("#statBudgetReceived").textContent = money(budgetReceived);
+  if ($("#statBudgetRemaining")) $("#statBudgetRemaining").textContent = money(roundMoney(budgetReceived - selectedMonthCompanyCost));
   if ($("#dashboardDateLabel")) $("#dashboardDateLabel").textContent = date;
+  if ($("#dashboardPeriodLabel")) $("#dashboardPeriodLabel").textContent = `${t("dashboardPeriodShowing")}: ${title} · ${start} ${t("to")} ${end}`;
+  if ($("#dashboardSummaryPeriod")) $("#dashboardSummaryPeriod").textContent = `${start} ${t("to")} ${end}`;
+  if ($("#dashboardLabourTotals")) {
+    $("#dashboardLabourTotals").innerHTML = `
+      <article><span>${t("totalWorkers")}</span><strong>${summary.length}</strong></article>
+      <article><span>${t("attendanceDays")}</span><strong>${attendanceInPeriod}</strong></article>
+      <article><span>${t("totalLabourWages")}</span><strong>${money(dashboardPayTotals.gross)}</strong></article>
+      <article><span>${t("payableAfterAdvance")}</span><strong>${money(dashboardPayTotals.finalPayable)}</strong></article>
+      <article><span>${t("totalPaidAmount")}</span><strong>${money(dashboardPayTotals.paid)}</strong></article>
+      <article><span>${t("totalUnpaidAmount")}</span><strong>${money(dashboardPayTotals.pending)}</strong></article>
+      <article><span>${t("extraPaidBalance")}</span><strong>${money(dashboardPayTotals.extraPaid)}</strong></article>
+      <article><span>${t("overtime")}</span><strong>${formatHours(summary.reduce((sum, row) => sum + Number(row.overtime || 0), 0))}</strong></article>
+    `;
+  }
+
+  const balanceMonth = monthFromDate(date) || monthISO();
+  const balanceMonthDates = daysInMonth(balanceMonth);
+  const balanceStart = balanceMonthDates[0];
+  const balanceEnd = balanceMonthDates[balanceMonthDates.length - 1];
+  const currentMonthRowsByWorker = new Map(monthSummary(balanceMonth, "all", "all").map((row) => [row.worker.id, row]));
 
   $("#dashboardSummary").innerHTML = summary
-    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]) || rowAdvanceDeduction(row, monthDates[0], monthDates[monthDates.length - 1]))
+    .filter((row) => row.present || row.halfday || row.absent || row.off || row.wage || rowPaidAmount(row, start, end) || rowAdvanceDeduction(row, start, end))
     .map((row) => {
-      const paid = rowPaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
-      const unpaid = rowUnpaidAmount(row, monthDates[0], monthDates[monthDates.length - 1]);
-      const advance = rowAdvanceDeduction(row, monthDates[0], monthDates[monthDates.length - 1]);
-      const finalPayable = rowFinalPayable(row, monthDates[0], monthDates[monthDates.length - 1]);
-      const paymentDeducted = rowPaymentDeducted(row, monthDates[0], monthDates[monthDates.length - 1]);
-      const extraPaid = rowExtraPaidBalance(row, monthDates[0], monthDates[monthDates.length - 1]);
+      const paid = rowPaidAmount(row, start, end);
+      const unpaid = rowUnpaidAmount(row, start, end);
+      const advance = rowAdvanceDeduction(row, start, end);
+      const finalPayable = rowFinalPayable(row, start, end);
+      const paymentDeducted = rowPaymentDeducted(row, start, end);
+      const extraPaid = rowExtraPaidBalance(row, start, end);
+      const currentMonthRow = currentMonthRowsByWorker.get(row.worker.id);
+      const currentMonthBalance = currentMonthRow ? rowWorkerBalance(currentMonthRow, balanceStart, balanceEnd) : 0;
       return `
         <tr>
           <td data-label="${t("worker")}">${escapeHTML(displayWorkerName(row.worker))}</td>
@@ -7243,10 +7860,11 @@ function renderDashboard() {
           <td data-label="${t("payableAfterAdvance")}"><strong>${money(finalPayable)}</strong></td>
           <td data-label="${t("paymentDeducted")}">${money(paymentDeducted)}</td>
           <td data-label="${t("workerBalance")}"><strong>${money(unpaid)}</strong></td>
+          <td data-label="${t("currentMonthBalance")}"><strong>${money(currentMonthBalance)}</strong></td>
           <td data-label="${t("extraPaidBalance")}"><strong>${money(extraPaid)}</strong></td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="10">${t("noWageRecords")}</td></tr>`;
+    }).join("") || `<tr><td colspan="11">${t("noWageRecords")}</td></tr>`;
 
   if ($("#todayList")) $("#todayList").innerHTML = activeWorkers().map((worker) => {
     const record = normalizeAttendanceRecord(todayRecords[worker.id]);
